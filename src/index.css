@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Design tokens — paleta extraída del logo de Dulce Flor.
+ * Crema de fondo, rosas empolvados, burdeos como color de marca
+ * y dorado artesanal como acento. Valores en HSL sin unidad
+ * para poder aplicar opacidades con Tailwind.
+ */
+@layer base {
+  :root {
+    --background: 35 68% 95%; /* crema #FBF4EA */
+    --background-soft: 18 63% 92%; /* rubor #F7E4DC */
+    --foreground: 340 25% 21%; /* ciruela oscuro */
+
+    --card: 36 60% 97%;
+    --card-foreground: 340 25% 21%;
+
+    --primary: 344 46% 33%; /* burdeos del logo #7C2E43 */
+    --primary-foreground: 35 68% 96%;
+
+    --secondary: 4 66% 73%; /* rosa salmón #E8938D */
+    --secondary-foreground: 344 46% 25%;
+
+    --accent: 28 42% 40%; /* dorado artesanal oscurecido para contraste AA sobre crema */
+    --accent-foreground: 35 68% 96%;
+
+    --muted: 24 40% 90%;
+    --muted-foreground: 340 10% 38%;
+
+    --blush: 12 60% 86%; /* rosa empolvado suave */
+
+    --destructive: 0 52% 45%;
+    --success: 140 26% 34%;
+    --warning: 33 60% 32%; /* oscurecido: AA sobre bg-warning/10-15 */
+
+    --border: 24 42% 84%;
+    --ring: 344 46% 33%;
+
+    --cocoa: 18 24% 11%; /* fondo oscuro de las cartas */
+    --cocoa-foreground: 18 40% 92%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Marco ornamental vintage inspirado en las cartas impresas */
+  .vintage-frame {
+    @apply relative rounded-xl border border-secondary/50;
+    box-shadow: inset 0 0 0 3px hsl(var(--background)),
+      inset 0 0 0 4px hsl(var(--secondary) / 0.35);
+  }
+
+  /* Separador con corazón, como en las cartas */
+  .ornament-divider {
+    @apply flex items-center justify-center gap-3 text-secondary;
+  }
+  .ornament-divider::before,
+  .ornament-divider::after {
+    content: "";
+    @apply h-px w-12 bg-secondary/60 sm:w-20;
+  }
+
+  .eyebrow {
+    @apply font-script text-2xl text-accent sm:text-3xl;
+  }
+}
