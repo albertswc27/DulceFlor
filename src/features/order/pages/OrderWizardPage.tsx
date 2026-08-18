@@ -69,8 +69,11 @@ export default function OrderWizardPage() {
   const draft = useOrderDraft();
   const { state, derived } = draft;
 
+  // Solo se salta la elección particular/empresa si la compra ya está en
+  // marcha (hay productos en el pedido). Con el carrito vacío siempre se
+  // pregunta, aunque quede un tipo guardado de una visita anterior.
   const [step, setStep] = React.useState<StepId>(
-    state.customerType ? "product" : "customer-type"
+    state.customerType && state.items.length > 0 ? "product" : "customer-type"
   );
   const [configuringProduct, setConfiguringProduct] = React.useState<CatalogProduct | null>(
     null
