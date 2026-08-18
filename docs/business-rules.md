@@ -19,14 +19,18 @@ Fuente de verdad de catálogo y precios: [`src/domain/catalog.ts`](../src/domain
 | Cartas claras = empresas | Confirmado 17/08/2026 | catálogo `availableFor` |
 | Lista de toppings | Confirmada 17/08/2026 (derivada de las cartas) | `TOPPINGS` |
 | Dedicatoria +2 € y papel comestible +7 € | Aplican a todos los productos (confirmado 17/08/2026) | `EXTRAS` |
+| Dirección de la tienda | C. Ntra. Sra. de Montserrat, 13, bajos · 08922 Santa Coloma de Gramenet (confirmada 18/08/2026) | `BUSINESS_ADDRESS` |
+| Zonas de entrega | Confirmadas 18/08/2026 tal como estaban; fuera de estas zonas, gastos de envío **según distancia** (se confirman por WhatsApp) | `DELIVERY_ZONES` |
+| Instagram | @dulceflor.bcn | `INSTAGRAM_URL` |
 
 ### Excepción documentada en carta
 
 - Tres leches tamaño 28–30 porciones: el suplemento/topping cuesta **6 €** en lugar de 2 € (`toppingPriceOverridesBySizeId` en el catálogo).
 
-## Reglas PROVISIONALES (pendientes de confirmación por Dulce Flor)
+## Pendiente de Dulce Flor
 
-Solo quedan pendientes las **zonas de entrega** y los **datos fiscales/dirección** del negocio.
+- **Nombre completo del titular (autónomo)** para el aviso legal. El NIF ya fue facilitado por WhatsApp; por privacidad no se guarda en este repositorio público.
+- Días de cierre semanales, si los hubiera (hoy: abierto todos los días, 10:00–22:00).
 
 ### Zonas de entrega — `DELIVERY_ZONES`
 

@@ -101,7 +101,7 @@ const STEPS = [
 ] as const;
 
 function deliveryFeeLabel(feeCents: number | null): string {
-  if (feeCents === null) return "Consultar disponibilidad";
+  if (feeCents === null) return "Envío según distancia";
   if (feeCents === 0) return "Gratis";
   return formatEuros(feeCents);
 }
@@ -428,7 +428,6 @@ function DeliverySection() {
                 <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <Truck className="h-5 w-5" aria-hidden="true" />
                 </span>
-                <Badge variant="warning">Zonas provisionales</Badge>
               </div>
               <CardTitle className="pt-1 text-lg">Entrega a domicilio</CardTitle>
             </CardHeader>
@@ -446,9 +445,9 @@ function DeliverySection() {
                   </li>
                 ))}
                 <li className="flex items-center justify-between gap-3 py-2.5">
-                  <span className="text-foreground/90">Resto de zonas</span>
+                  <span className="text-foreground/90">Fuera de estas zonas</span>
                   <span className="shrink-0 font-medium text-primary">
-                    Consultar disponibilidad
+                    Envío según distancia
                   </span>
                 </li>
               </ul>

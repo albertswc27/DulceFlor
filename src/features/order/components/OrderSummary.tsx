@@ -32,7 +32,7 @@ export function OrderSummary({ showDepositInfo = true }: { showDepositInfo?: boo
               {state.address === null
                 ? "—"
                 : derived.needsDeliveryConsultation
-                  ? "A consultar"
+                  ? "Según distancia"
                   : formatEuros(derived.deliveryFeeCents ?? 0)}
             </dd>
           </div>
@@ -54,9 +54,9 @@ export function OrderSummary({ showDepositInfo = true }: { showDepositInfo?: boo
 
       {isDelivery && derived.needsDeliveryConsultation && state.address !== null && (
         <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
-          Tu dirección está fuera de nuestras zonas con tarifa automática. Te confirmaremos
-          la disponibilidad y el coste de entrega por WhatsApp. El total mostrado no incluye
-          el transporte.
+          Tu dirección está fuera de nuestras zonas fijas: los gastos de envío se calculan
+          según la distancia y te los confirmaremos por WhatsApp. El total mostrado no
+          incluye el transporte.
         </p>
       )}
 

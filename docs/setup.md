@@ -46,12 +46,10 @@ cuando exista backend/proveedor de identidad real.
 
 ## Configuración pendiente de Dulce Flor
 
-Editar **solo** [`src/config/business.ts`](../src/config/business.ts) cuando lleguen los datos definitivos:
+Casi todo está confirmado (horario 10:00–22:00 todos los días, antelación 3 días, zonas de entrega, dirección, toppings y extras). Queda pendiente:
 
-- `DELIVERY_ZONES` (zonas/tarifas definitivas de entrega).
-- Días de cierre semanales, si los hubiera (`BUSINESS_HOURS`; hoy 10:00–22:00 todos los días).
-
-Confirmado el 17/08/2026 por WhatsApp: horario 10:00–22:00, antelación mínima 3 días, lista de toppings, extras disponibles en todos los productos y cartas claras = empresas.
+- Nombre completo del titular (autónomo) para el aviso legal — el NIF ya se recibió por WhatsApp y, por privacidad, no se guarda en este repositorio público.
+- Días de cierre semanales, si los hubiera (`BUSINESS_HOURS` en `src/config/business.ts`).
 
 ## Nota sobre datos
 

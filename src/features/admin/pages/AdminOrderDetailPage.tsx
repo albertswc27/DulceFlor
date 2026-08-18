@@ -316,7 +316,7 @@ export default function AdminOrderDetailPage() {
                     </dt>
                     <dd className="font-medium">
                       {pricing.deliveryFeeCents === null
-                        ? "A consultar"
+                        ? "Según distancia (a confirmar)"
                         : formatEuros(pricing.deliveryFeeCents)}
                     </dd>
                   </div>

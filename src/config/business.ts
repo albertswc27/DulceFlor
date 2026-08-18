@@ -6,8 +6,9 @@
  *   - Horario: 10:00–22:00 («Hacemos de 10am hasta las 10pm»); no indicaron
  *     días de cierre, se asume abierto todos los días hasta que digan lo contrario.
  *
- * ⚠️ PROVISIONAL pendiente de confirmación:
- *   - DELIVERY_ZONES (zonas y tarifas de entrega)
+ * Confirmado por Dulce Flor (18/08/2026): dirección de la tienda, zonas de
+ * entrega tal como estaban, y fuera de Barcelona los gastos de envío se
+ * calculan según distancia (se confirman por WhatsApp).
  * Ver docs/business-rules.md para el detalle completo.
  */
 
@@ -29,6 +30,25 @@ export const SLOT_INTERVAL_MINUTES = 30;
 /** WhatsApp de Dulce Flor. */
 export const WHATSAPP_PHONE = "34624213113";
 export const WHATSAPP_PHONE_DISPLAY = "+34 624 21 31 13";
+
+/** Dirección de la tienda (confirmada 18/08/2026). */
+export const BUSINESS_ADDRESS = {
+  street: "C. Ntra. Sra. de Montserrat, 13, bajos",
+  postalCode: "08922",
+  city: "Santa Coloma de Gramenet",
+  province: "Barcelona",
+} as const;
+
+export const BUSINESS_ADDRESS_DISPLAY = `${BUSINESS_ADDRESS.street} · ${BUSINESS_ADDRESS.postalCode} ${BUSINESS_ADDRESS.city}`;
+
+/** Enlace a Google Maps para la dirección de la tienda. */
+export const BUSINESS_MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+  `${BUSINESS_ADDRESS.street}, ${BUSINESS_ADDRESS.postalCode} ${BUSINESS_ADDRESS.city}`
+)}`;
+
+/** Instagram oficial. */
+export const INSTAGRAM_HANDLE = "@dulceflor.bcn";
+export const INSTAGRAM_URL = "https://www.instagram.com/dulceflor.bcn";
 
 export interface TimeWindow {
   /** "HH:MM" en hora local */
@@ -66,8 +86,9 @@ export interface DeliveryZone {
 }
 
 /**
- * PROVISIONAL — zonas de entrega pendientes de confirmación por Dulce Flor.
- * La zona 2 (Badalona / Sant Adrià / Montcada) es temporal.
+ * Zonas de entrega confirmadas por Dulce Flor (18/08/2026).
+ * Fuera de estas zonas: gastos de envío según distancia, a confirmar por
+ * WhatsApp (feeCents null → la UI lo comunica así).
  */
 export const DELIVERY_ZONES: DeliveryZone[] = [
   {

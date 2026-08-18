@@ -4,7 +4,11 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
+  BUSINESS_ADDRESS_DISPLAY,
   BUSINESS_HOURS,
+  BUSINESS_MAPS_URL,
+  INSTAGRAM_HANDLE,
+  INSTAGRAM_URL,
   MIN_ORDER_LEAD_TIME_HOURS,
   WHATSAPP_PHONE,
   WHATSAPP_PHONE_DISPLAY,
@@ -161,12 +165,32 @@ function Footer() {
           <ul className="mt-3 space-y-2 text-sm">
             <li>
               <a
+                href={BUSINESS_MAPS_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="underline-offset-4 hover:underline"
+              >
+                {BUSINESS_ADDRESS_DISPLAY}
+              </a>
+            </li>
+            <li>
+              <a
                 href={`https://wa.me/${WHATSAPP_PHONE}`}
                 target="_blank"
                 rel="noreferrer"
                 className="underline-offset-4 hover:underline"
               >
                 WhatsApp: {WHATSAPP_PHONE_DISPLAY}
+              </a>
+            </li>
+            <li>
+              <a
+                href={INSTAGRAM_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="underline-offset-4 hover:underline"
+              >
+                Instagram: {INSTAGRAM_HANDLE}
               </a>
             </li>
             <li className="text-cocoa-foreground/70">

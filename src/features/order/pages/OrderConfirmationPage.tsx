@@ -117,7 +117,7 @@ export default function OrderConfirmationPage() {
               <span className="text-muted-foreground">Entrega</span>
               <span>
                 {order.pricing.deliveryFeeCents === null
-                  ? "A consultar"
+                  ? "Según distancia (a confirmar)"
                   : formatEuros(order.pricing.deliveryFeeCents)}
               </span>
             </div>

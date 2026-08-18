@@ -8,7 +8,14 @@
 import * as React from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowLeft, Building2, ReceiptText, ShoppingBag, User } from "lucide-react";
+import {
+  ArrowLeft,
+  Building2,
+  CheckCircle2,
+  ReceiptText,
+  ShoppingBag,
+  User,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,6 +77,8 @@ export default function OrderWizardPage() {
   );
   const [contactErrors, setContactErrors] = React.useState<string[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
+  /** Último producto añadido: aviso visible sin scroll al volver al catálogo. */
+  const [lastAddedName, setLastAddedName] = React.useState<string | null>(null);
 
   // Campos controlados de contacto/dirección
   const [name, setName] = React.useState(state.customer?.name ?? "");
@@ -103,6 +112,8 @@ export default function OrderWizardPage() {
   }, [state.items.length, step]);
 
   function goTo(next: StepId) {
+    // El aviso de "añadido" solo vive en la vuelta inmediata al catálogo.
+    if (next !== "product") setLastAddedName(null);
     setStep(next);
   }
 
@@ -311,6 +322,37 @@ export default function OrderWizardPage() {
 
               {step === "product" && (
                 <div className="space-y-6">
+                  {/* Confirmación visible sin scroll: primero lo ya añadido, luego el catálogo */}
+                  {state.items.length > 0 && (
+                    <>
+                      {lastAddedName && (
+                        <motion.p
+                          role="status"
+                          initial={reduced ? false : { opacity: 0, scale: 0.96 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.25, ease: "easeOut" }}
+                          className="flex items-center gap-2.5 rounded-xl border border-success/40 bg-success/10 px-4 py-3 text-sm font-medium text-success"
+                        >
+                          <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden="true" />
+                          <span>
+                            <strong>{lastAddedName}</strong> se ha añadido a tu pedido.
+                          </span>
+                        </motion.p>
+                      )}
+                      <div className="space-y-3 rounded-2xl bg-background-soft/70 p-4">
+                        <h2 className="font-display text-lg font-semibold text-primary">
+                          Tu pedido hasta ahora
+                        </h2>
+                        <OrderItemsList />
+                        <Button size="lg" className="w-full" onClick={() => goTo("fulfillment")}>
+                          Continuar · {formatEuros(derived.pricing.subtotalCents)}
+                        </Button>
+                      </div>
+                      <h2 className="ornament-divider font-display text-lg font-semibold text-primary">
+                        ¿Quieres añadir algo más?
+                      </h2>
+                    </>
+                  )}
                   {(["pasteles", "cheesecake", "tres-leches", "especialidades"] as const).map(
                     (category) => {
                       const catProducts = products.filter((p) => p.category === category);
@@ -348,17 +390,6 @@ export default function OrderWizardPage() {
                     }
                   )}
 
-                  {state.items.length > 0 && (
-                    <div className="space-y-3 rounded-2xl bg-background-soft/70 p-4">
-                      <h2 className="font-display text-lg font-semibold text-primary">
-                        Tu pedido hasta ahora
-                      </h2>
-                      <OrderItemsList />
-                      <Button size="lg" className="w-full" onClick={() => goTo("fulfillment")}>
-                        Continuar · {formatEuros(derived.pricing.subtotalCents)}
-                      </Button>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -377,7 +408,8 @@ export default function OrderWizardPage() {
                       onConfirm={({ selection, customization, quantity }) => {
                         const ok = draft.addConfiguredItem(selection, customization, quantity);
                         if (ok) {
-                          toast.success("Añadido al pedido");
+                          toast.success(`${configuringProduct.name} añadido al pedido`);
+                          setLastAddedName(configuringProduct.name);
                           setConfiguringProduct(null);
                           goTo("product");
                         } else {
@@ -405,9 +437,9 @@ export default function OrderWizardPage() {
                       title="Entrega a domicilio"
                       subtitle={`Según zona: ${DELIVERY_ZONES.map((z) =>
                         z.feeCents === null
-                          ? `${z.label} a consultar`
+                          ? `${z.label} según distancia`
                           : `${z.label} ${formatEuros(z.feeCents)}`
-                      ).join(" · ")} · resto a consultar`}
+                      ).join(" · ")} · resto según distancia`}
                     />
                   </div>
 
@@ -470,8 +502,8 @@ export default function OrderWizardPage() {
                               role="status"
                               className="rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning"
                             >
-                              Dirección fuera de nuestras zonas con tarifa automática:
-                              consultaremos la disponibilidad de entrega y su coste por
+                              Dirección fuera de nuestras zonas fijas: los gastos de envío
+                              se calculan según la distancia y te los confirmaremos por
                               WhatsApp.
                             </p>
                           ) : (

@@ -67,7 +67,7 @@ export function buildOrderWhatsAppMessage(order: Order): string {
   if (order.fulfillmentType === "delivery") {
     lines.push(
       order.pricing.deliveryFeeCents === null
-        ? "Entrega: a consultar (fuera de zonas automáticas)"
+        ? "Entrega: según distancia (a confirmar)"
         : `Entrega: ${formatEuros(order.pricing.deliveryFeeCents)}`
     );
   }
