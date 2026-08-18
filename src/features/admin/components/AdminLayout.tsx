@@ -2,7 +2,7 @@
  * Estructura común del panel de administración: cabecera compacta con
  * navegación, identidad de la sesión y <Outlet/> para cada página.
  */
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, Navigate, NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   ClipboardList,
   ExternalLink,
@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAdminAuth } from "@/features/admin/state/AdminAuthContext";
+import { isKioskLocked } from "@/services/auth";
 import logo from "@/assets/logo-dulce-flor.jpeg";
 
 const NAV_ITEMS = [
@@ -24,6 +25,13 @@ const NAV_ITEMS = [
 export default function AdminLayout() {
   const { session, logout } = useAdminAuth();
   const navigate = useNavigate();
+
+  // Modo kiosk bloqueado: la tablet está de cara al público. Cualquier intento
+  // de llegar al panel (botón atrás, URL directa) rebota al kiosk hasta que se
+  // desbloquee con contraseña desde el propio kiosk.
+  if (isKioskLocked()) {
+    return <Navigate to="/admin/kiosk" replace />;
+  }
 
   function handleLogout() {
     logout();

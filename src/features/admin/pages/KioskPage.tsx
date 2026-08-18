@@ -21,6 +21,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
+  DialogContent,
+  DialogDescription,
   DialogDrawerContent,
   DialogHeader,
   DialogTitle,
@@ -29,7 +31,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
 import { formatEuros } from "@/domain/money";
 import {
   CATEGORY_LABELS,
@@ -44,6 +45,8 @@ import {
   type CustomerType,
   type Order,
 } from "@/domain/types";
+import { useAdminAuth } from "@/features/admin/state/AdminAuthContext";
+import { lockKiosk, unlockKiosk, verifyPassword } from "@/services/auth";
 import { useOrderDraft } from "@/features/order/state/OrderDraftContext";
 import { ProductConfigurator } from "@/features/order/components/ProductConfigurator";
 import { OrderItemsList } from "@/features/order/components/OrderItemsList";
@@ -92,9 +95,43 @@ export default function KioskPage() {
   const navigate = useNavigate();
   const draft = useOrderDraft();
   const { state, derived } = draft;
+  const { session } = useAdminAuth();
+
+  // Modo kiosk bloqueado: la tablet queda de cara al público. Salir del kiosk
+  // (o abrir el detalle de un pedido) exige la contraseña de administración;
+  // mientras tanto, el resto de rutas admin rebotan aquí (ver AdminLayout).
+  React.useEffect(() => {
+    lockKiosk();
+  }, []);
+
+  const [exitTarget, setExitTarget] = React.useState<string | null>(null);
+  const [exitPassword, setExitPassword] = React.useState("");
+  const [exitError, setExitError] = React.useState<string | null>(null);
+  const [exitBusy, setExitBusy] = React.useState(false);
+
+  async function handleExitSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (exitBusy || !exitTarget || !session) return;
+    setExitBusy(true);
+    setExitError(null);
+    const ok = await verifyPassword(session.username, exitPassword);
+    if (!ok) {
+      setExitError("Contraseña incorrecta.");
+      setExitBusy(false);
+      return;
+    }
+    unlockKiosk();
+    navigate(exitTarget);
+  }
+
+  function openExitDialog(target: string) {
+    setExitPassword("");
+    setExitError(null);
+    setExitBusy(false);
+    setExitTarget(target);
+  }
 
   const [choosingType, setChoosingType] = React.useState(false);
-  const [category, setCategory] = React.useState<CategoryId | null>(null);
   const [configuring, setConfiguring] = React.useState<CatalogProduct | null>(null);
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
@@ -110,10 +147,12 @@ export default function KioskPage() {
   const [details, setDetails] = React.useState(state.address?.details ?? "");
 
   const products = state.customerType ? getProductsFor(state.customerType) : [];
-  const categories = ALL_CATEGORIES.filter((c) => products.some((p) => p.category === c));
-  const activeCategory =
-    category && categories.includes(category) ? category : (categories[0] ?? null);
-  const visibleProducts = products.filter((p) => p.category === activeCategory);
+  // Todos los productos del tipo de cliente en una sola parrilla (ordenados
+  // por categoría): con un catálogo corto aprovecha mejor la pantalla que
+  // unas pestañas con una o dos tarjetas.
+  const orderedProducts = ALL_CATEGORIES.flatMap((c) =>
+    products.filter((p) => p.category === c)
+  );
 
   // Recogida en tienda por defecto en el kiosk.
   React.useEffect(() => {
@@ -158,7 +197,6 @@ export default function KioskPage() {
     }
     draft.setCustomerType(type);
     setChoosingType(false);
-    setCategory(null);
     setConfiguring(null);
   }
 
@@ -200,7 +238,6 @@ export default function KioskPage() {
   function startNewOrder() {
     setSuccess(null);
     setChoosingType(false);
-    setCategory(null);
     setConfiguring(null);
   }
 
@@ -354,6 +391,64 @@ export default function KioskPage() {
   }
 
   /* ------------------------------------------------------------------ */
+  /* Diálogo de salida protegida (compartido por éxito y pantalla normal) */
+  /* ------------------------------------------------------------------ */
+  const exitDialog = (
+    <Dialog
+      open={exitTarget !== null}
+      onOpenChange={(open) => {
+        if (!open) setExitTarget(null);
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Salida protegida</DialogTitle>
+          <DialogDescription>
+            El kiosk está bloqueado para que los clientes no puedan acceder al panel.
+            Introduce la contraseña de administración para continuar.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleExitSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="kiosk-exit-password">
+              Contraseña de {session?.displayName ?? "administración"}
+            </Label>
+            <Input
+              id="kiosk-exit-password"
+              type="password"
+              autoFocus
+              autoComplete="current-password"
+              value={exitPassword}
+              onChange={(e) => setExitPassword(e.target.value)}
+            />
+          </div>
+          {exitError && (
+            <p
+              role="alert"
+              className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              {exitError}
+            </p>
+          )}
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => setExitTarget(null)}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" className="flex-1" disabled={exitBusy || !exitPassword}>
+              Desbloquear
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+
+  /* ------------------------------------------------------------------ */
   /* Pantalla de éxito                                                   */
   /* ------------------------------------------------------------------ */
   if (success) {
@@ -388,11 +483,12 @@ export default function KioskPage() {
             type="button"
             size="xl"
             variant="outline"
-            onClick={() => navigate(`/admin/pedidos/${success.id}`)}
+            onClick={() => openExitDialog(`/admin/pedidos/${success.id}`)}
           >
             Ver detalle
           </Button>
         </div>
+        {exitDialog}
       </div>
     );
   }
@@ -442,7 +538,7 @@ export default function KioskPage() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => navigate("/admin/panel")}
+            onClick={() => openExitDialog("/admin/panel")}
           >
             <LogOut />
             Salir
@@ -542,59 +638,69 @@ export default function KioskPage() {
             </div>
           ) : (
             <div>
-              {/* Categorías grandes */}
-              <div
-                role="radiogroup"
-                aria-label="Categorías de producto"
-                className="mb-5 flex gap-2 overflow-x-auto pb-1"
-              >
-                {categories.map((cat) => {
-                  const isActive = cat === activeCategory;
-                  return (
-                    <button
-                      key={cat}
-                      type="button"
-                      role="radio"
-                      aria-checked={isActive}
-                      onClick={() => setCategory(cat)}
-                      className={cn(
-                        "h-14 shrink-0 rounded-xl border px-6 font-display text-lg font-semibold transition-all",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                        isActive
-                          ? "border-primary bg-primary text-primary-foreground shadow-soft"
-                          : "border-border bg-card text-primary hover:border-secondary"
-                      )}
-                    >
-                      {CATEGORY_LABELS[cat]}
-                    </button>
-                  );
-                })}
-              </div>
+              <h1 className="font-display text-2xl font-bold text-primary sm:text-3xl">
+                ¿Qué te apetece hoy?
+              </h1>
+              <p className="mt-1 text-muted-foreground">
+                Toca un producto para personalizarlo.
+              </p>
 
-              {/* Grid de productos */}
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {visibleProducts.map((product) => {
+              {/* Parrilla única de productos, con tarjetas grandes que
+                  aprovechan la pantalla (el catálogo es corto). */}
+              <div className="mt-6 grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
+                {orderedProducts.map((product) => {
                   const from =
                     state.customerType && minPriceCents(product, state.customerType);
+                  const sizesCount = state.customerType
+                    ? getSizesFor(product, state.customerType).length
+                    : 0;
+                  const facts: string[] = [];
+                  if (product.flavors?.length) {
+                    facts.push(
+                      `${product.flavors.length} ${
+                        product.id === "cheesecake" ? "sabores" : "bizcochos"
+                      }`
+                    );
+                  }
+                  if (product.fillings?.length) {
+                    facts.push(`${product.fillings.length} rellenos`);
+                  }
+                  if (sizesCount > 1) facts.push(`${sizesCount} tamaños`);
+                  if (product.allowsToppings) facts.push("admite toppings");
                   return (
                     <button
                       key={product.id}
                       type="button"
                       onClick={() => setConfiguring(product)}
-                      className="group flex min-h-[10rem] flex-col rounded-2xl border border-border bg-card p-5 text-left shadow-card transition-all hover:border-secondary hover:shadow-lifted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      className="group flex min-h-[15rem] flex-col rounded-2xl border border-border bg-card p-6 text-left shadow-card transition-all hover:border-secondary hover:shadow-lifted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:p-7"
                     >
-                      <span className="font-display text-xl font-bold text-primary">
+                      <span className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
+                        {CATEGORY_LABELS[product.category]}
+                      </span>
+                      <span className="mt-1.5 font-display text-2xl font-bold leading-tight text-primary">
                         {product.name}
                       </span>
-                      <span className="mt-1 flex-1 text-sm leading-snug text-muted-foreground">
+                      <span className="mt-2 flex-1 text-base leading-snug text-muted-foreground">
                         {product.description}
                       </span>
-                      <span className="mt-4 flex items-center justify-between">
-                        <span className="font-display text-lg font-semibold text-primary">
+                      {facts.length > 0 && (
+                        <span className="mt-4 flex flex-wrap gap-1.5">
+                          {facts.map((fact) => (
+                            <span
+                              key={fact}
+                              className="rounded-full bg-secondary/15 px-3 py-1 text-sm font-medium text-primary"
+                            >
+                              {fact}
+                            </span>
+                          ))}
+                        </span>
+                      )}
+                      <span className="mt-5 flex items-center justify-between">
+                        <span className="font-display text-2xl font-bold text-primary">
                           {typeof from === "number" ? `Desde ${formatEuros(from)}` : ""}
                         </span>
-                        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-secondary/20 text-primary transition-transform group-hover:scale-110">
-                          <Plus className="h-5 w-5" />
+                        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary/20 text-primary transition-transform group-hover:scale-110">
+                          <Plus className="h-6 w-6" />
                         </span>
                       </span>
                     </button>
@@ -655,6 +761,7 @@ export default function KioskPage() {
           </div>
         </div>
       )}
+      {exitDialog}
     </div>
   );
 }

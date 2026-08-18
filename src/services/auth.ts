@@ -95,3 +95,35 @@ export function getSession(): AdminSession | null {
 export function logout(): void {
   sessionStorage.removeItem(SESSION_KEY);
 }
+
+/**
+ * Reverifica la contraseña de un usuario ya autenticado, sin tocar la sesión.
+ * Se usa para acciones protegidas como salir del modo kiosk.
+ */
+export async function verifyPassword(username: string, password: string): Promise<boolean> {
+  const user = ADMIN_USERS.find((u) => u.username === username.trim().toLowerCase());
+  if (!user) return false;
+  return user.passwordSha256 === (await sha256Hex(password));
+}
+
+/* ------------------------------------------------------------------ */
+/* Modo kiosk bloqueado                                                */
+/*                                                                     */
+/* Mientras el candado está activo, la tablet del kiosk queda de cara  */
+/* al público: el resto de la zona de administración rebota al kiosk   */
+/* (ver AdminLayout / AdminLoginPage) y salir exige la contraseña.     */
+/* ------------------------------------------------------------------ */
+
+const KIOSK_LOCK_KEY = "dulce-flor:kiosk-lock";
+
+export function lockKiosk(): void {
+  sessionStorage.setItem(KIOSK_LOCK_KEY, "1");
+}
+
+export function unlockKiosk(): void {
+  sessionStorage.removeItem(KIOSK_LOCK_KEY);
+}
+
+export function isKioskLocked(): boolean {
+  return sessionStorage.getItem(KIOSK_LOCK_KEY) === "1";
+}

@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAdminAuth } from "@/features/admin/state/AdminAuthContext";
+import { isKioskLocked } from "@/services/auth";
 import logo from "@/assets/logo-dulce-flor.jpeg";
 
 export default function AdminLoginPage() {
@@ -34,6 +35,9 @@ export default function AdminLoginPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
 
+  // Con el kiosk bloqueado y sesión activa, esta pantalla también rebota al
+  // kiosk: un cliente no debe poder navegar por la zona de administración.
+  if (session && isKioskLocked()) return <Navigate to="/admin/kiosk" replace />;
   if (session) return <Navigate to={from ?? "/admin/panel"} replace />;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
