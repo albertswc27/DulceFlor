@@ -33,7 +33,23 @@ type TypeFilter = CustomerType | "all";
 type FulfillmentFilter = FulfillmentType | "all";
 
 function depositLabel(order: Order): string {
+  if (order.pricing.pendingQuote) return "—";
   return order.pricing.depositRequired ? formatEuros(order.pricing.depositCents) : "—";
+}
+
+/**
+ * Total mostrado en el listado. Con presupuesto pendiente (fondant) el total
+ * del dominio es parcial: se indica explícitamente en vez de un importe
+ * engañoso.
+ */
+function totalLabel(order: Order): string {
+  const { pricing } = order;
+  if (pricing.pendingQuote) {
+    return pricing.subtotalCents > 0
+      ? `${formatEuros(pricing.subtotalCents)} + fondant`
+      : "A presupuestar";
+  }
+  return formatEuros(pricing.totalCents);
 }
 
 export default function AdminOrdersPage() {
@@ -245,7 +261,7 @@ export default function AdminOrdersPage() {
                       {FULFILLMENT_LABELS[order.fulfillmentType]}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right font-display font-semibold text-primary">
-                      {formatEuros(order.pricing.totalCents)}
+                      {totalLabel(order)}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right text-muted-foreground">
                       {depositLabel(order)}
@@ -293,7 +309,7 @@ export default function AdminOrdersPage() {
                     {FULFILLMENT_LABELS[order.fulfillmentType]}
                   </span>
                   <span className="font-display text-lg font-bold text-primary">
-                    {formatEuros(order.pricing.totalCents)}
+                    {totalLabel(order)}
                   </span>
                 </div>
                 <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">

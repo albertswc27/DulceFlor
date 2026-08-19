@@ -24,6 +24,11 @@ function countValidToppings(toppingIds: string[]): number {
   return toppingIds.filter((id) => TOPPINGS.some((t) => t.id === id)).length;
 }
 
+/** ¿El producto se presupuesta a mano (fondant) en lugar de tener precio automático? */
+export function isQuoteProduct(productId: string): boolean {
+  return getProduct(productId)?.pricingType === "quote";
+}
+
 export interface ItemSelection {
   productId: string;
   customerType: CustomerType;
@@ -98,8 +103,12 @@ export function computeUnitPriceBreakdown(
   };
 }
 
+/** Subtotal de los artículos con precio automático (los "quote" no suman). */
 export function computeItemsSubtotalCents(items: OrderItem[]): number {
-  return items.reduce((sum, item) => sum + item.unitPriceCents * item.quantity, 0);
+  return items.reduce(
+    (sum, item) => (item.requiresQuote ? sum : sum + item.unitPriceCents * item.quantity),
+    0
+  );
 }
 
 /**
@@ -122,16 +131,28 @@ export function computeDeposit(totalCents: number): {
 
 /**
  * Cálculo completo del pedido.
- * deliveryFeeCents null = fuera de zona automática (consultar); el total se
- * calcula sin transporte y la UI debe indicarlo claramente.
+ * - deliveryFeeCents null = fuera de zona automática (según distancia); el
+ *   total se calcula sin transporte y la UI debe indicarlo claramente.
+ * - Artículos "quote" (fondant): mientras no exista quotedPriceCents, el
+ *   pedido queda pendingQuote (total parcial, SIN señal). Cuando
+ *   administración introduce el presupuesto, se suma al total y la señal se
+ *   calcula con normalidad.
  */
 export function computeOrderPricing(
   items: OrderItem[],
-  deliveryFeeCents: number | null
+  deliveryFeeCents: number | null,
+  quotedPriceCents?: number | null
 ): OrderPricing {
   const subtotalCents = computeItemsSubtotalCents(items);
-  const totalCents = subtotalCents + (deliveryFeeCents ?? 0);
-  const deposit = computeDeposit(totalCents);
+  const hasQuoteItems = items.some((item) => item.requiresQuote);
+  const quoted = hasQuoteItems ? (quotedPriceCents ?? null) : null;
+  const pendingQuote = hasQuoteItems && quoted === null;
+
+  const totalCents = subtotalCents + (deliveryFeeCents ?? 0) + (quoted ?? 0);
+  const deposit = pendingQuote
+    ? { depositRequired: false, depositCents: 0, remainingCents: totalCents }
+    : computeDeposit(totalCents);
+
   return {
     subtotalCents,
     deliveryFeeCents,
@@ -139,6 +160,8 @@ export function computeOrderPricing(
     depositRequired: deposit.depositRequired,
     depositCents: deposit.depositCents,
     remainingCents: deposit.remainingCents,
+    pendingQuote: hasQuoteItems ? pendingQuote : undefined,
+    quotedPriceCents: quoted ?? undefined,
   };
 }
 
@@ -153,9 +176,25 @@ export function buildOrderItem(params: {
   if (!params?.selection?.productId || !params.customization?.size) return null;
   const product = getProduct(params.selection.productId);
   if (!product) return null;
+  const quantity = Math.max(1, Math.floor(params.quantity));
+
+  // Fondant: sin precio automático. Los importes quedan a 0 internamente,
+  // pero requiresQuote obliga a la UI a mostrar "A consultar", nunca 0 €.
+  if (product.pricingType === "quote") {
+    return {
+      id: params.id,
+      productId: product.id,
+      productName: product.name,
+      customization: params.customization,
+      quantity,
+      unitPriceCents: 0,
+      totalCents: 0,
+      requiresQuote: true,
+    };
+  }
+
   const unitPriceCents = computeUnitPriceCents(params.selection);
   if (unitPriceCents === null) return null;
-  const quantity = Math.max(1, Math.floor(params.quantity));
   return {
     id: params.id,
     productId: product.id,

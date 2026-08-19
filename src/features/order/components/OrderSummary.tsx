@@ -48,9 +48,25 @@ export function OrderSummary({ showDepositInfo = true }: { showDepositInfo?: boo
       <Separator />
 
       <div className="flex items-center justify-between">
-        <span className="font-display text-base font-semibold text-primary">TOTAL</span>
-        <AnimatedPrice cents={pricing.totalCents} className="text-2xl" />
+        <span className="font-display text-base font-semibold text-primary">
+          {pricing.pendingQuote ? "TOTAL (parcial)" : "TOTAL"}
+        </span>
+        {pricing.pendingQuote && pricing.totalCents === 0 ? (
+          <span className="font-display text-xl font-bold text-primary">
+            A presupuestar
+          </span>
+        ) : (
+          <AnimatedPrice cents={pricing.totalCents} className="text-2xl" />
+        )}
       </div>
+
+      {pricing.pendingQuote && (
+        <p className="rounded-lg bg-secondary/15 px-3 py-2 text-xs text-foreground">
+          Tu pedido incluye una <strong>tarta de fondant pendiente de presupuesto</strong>:
+          su precio no está incluido en el total. Te enviaremos el presupuesto
+          personalizado por WhatsApp.
+        </p>
+      )}
 
       {isDelivery && derived.needsDeliveryConsultation && state.address !== null && (
         <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">

@@ -51,3 +51,15 @@ export const dedicationSchema = z
   .trim()
   .min(1, "Escribe el texto de la dedicatoria")
   .max(120, "Máximo 120 caracteres");
+
+export const customToppingSchema = z
+  .string()
+  .trim()
+  .min(2, "Escribe el topping que buscas")
+  .max(80, "Máximo 80 caracteres");
+
+export const designDescriptionSchema = z
+  .string()
+  .trim()
+  .min(10, "Cuéntanos el diseño con un poco más de detalle (mínimo 10 caracteres)")
+  .max(600, "Máximo 600 caracteres");

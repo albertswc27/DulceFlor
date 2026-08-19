@@ -24,7 +24,13 @@ function formatDateHuman(isoDate: string): string {
 
 export function buildOrderWhatsAppMessage(order: Order): string {
   const lines: string[] = [];
-  lines.push("NUEVO PEDIDO DULCE FLOR");
+  const hasQuoteItems = order.items.some((item) => item.requiresQuote);
+  const onlyQuoteItems = hasQuoteItems && order.items.every((item) => item.requiresQuote);
+  lines.push(
+    onlyQuoteItems
+      ? "SOLICITUD DE PRESUPUESTO — TARTA DE FONDANT"
+      : "NUEVO PEDIDO DULCE FLOR"
+  );
   lines.push("");
   lines.push(`Pedido: ${order.publicId}`);
   lines.push("");
@@ -45,11 +51,24 @@ export function buildOrderWhatsAppMessage(order: Order): string {
       lines.push("Toppings:");
       for (const t of c.toppings) lines.push(`- ${t.label}`);
     }
+    if (c.customToppingRequest) {
+      lines.push(`Topping solicitado (a confirmar disponibilidad): ${c.customToppingRequest}`);
+    }
     for (const extra of c.extras) {
       lines.push(`Extra: ${extra.label} (${formatEuros(extra.priceCents)})`);
     }
     if (c.dedicationText) lines.push(`Dedicatoria: "${c.dedicationText}"`);
+    if (c.designDescription) lines.push(`Diseño: ${c.designDescription}`);
     if (c.notes) lines.push(`Indicaciones: ${c.notes}`);
+    if (item.requiresQuote) lines.push("Precio: pendiente de presupuesto");
+    if (c.referenceImageId) {
+      lines.push(`Imagen de referencia adjunta al pedido ${order.publicId} (visible en el panel)`);
+    }
+    lines.push("");
+  }
+
+  if (order.customerType === "business" && order.reusableTray) {
+    lines.push("Entrega en fuente de cristal reutilizable");
     lines.push("");
   }
 
@@ -63,20 +82,38 @@ export function buildOrderWhatsAppMessage(order: Order): string {
   lines.push(`Hora: ${order.requestedTime}`);
   lines.push("");
 
-  lines.push(`Subtotal: ${formatEuros(order.pricing.subtotalCents)}`);
-  if (order.fulfillmentType === "delivery") {
-    lines.push(
-      order.pricing.deliveryFeeCents === null
-        ? "Entrega: según distancia (a confirmar)"
-        : `Entrega: ${formatEuros(order.pricing.deliveryFeeCents)}`
-    );
-  }
-  lines.push(`TOTAL: ${formatEuros(order.pricing.totalCents)}`);
-  if (order.pricing.depositRequired) {
-    lines.push(
-      `Paga y señal (${DEPOSIT_PERCENTAGE}%): ${formatEuros(order.pricing.depositCents)}`
-    );
-    lines.push(`Pendiente: ${formatEuros(order.pricing.remainingCents)}`);
+  if (order.pricing.pendingQuote) {
+    // Solicitud con fondant sin presupuestar: nunca mostrar un total inexistente.
+    if (order.pricing.subtotalCents > 0) {
+      lines.push(`Subtotal (sin el fondant): ${formatEuros(order.pricing.subtotalCents)}`);
+    }
+    if (order.fulfillmentType === "delivery") {
+      lines.push(
+        order.pricing.deliveryFeeCents === null
+          ? "Entrega: según distancia (a confirmar)"
+          : `Entrega: ${formatEuros(order.pricing.deliveryFeeCents)}`
+      );
+    }
+    lines.push("TOTAL: pendiente de presupuesto");
+  } else {
+    lines.push(`Subtotal: ${formatEuros(order.pricing.subtotalCents)}`);
+    if (order.pricing.quotedPriceCents !== undefined) {
+      lines.push(`Fondant (presupuesto): ${formatEuros(order.pricing.quotedPriceCents)}`);
+    }
+    if (order.fulfillmentType === "delivery") {
+      lines.push(
+        order.pricing.deliveryFeeCents === null
+          ? "Entrega: según distancia (a confirmar)"
+          : `Entrega: ${formatEuros(order.pricing.deliveryFeeCents)}`
+      );
+    }
+    lines.push(`TOTAL: ${formatEuros(order.pricing.totalCents)}`);
+    if (order.pricing.depositRequired) {
+      lines.push(
+        `Paga y señal (${DEPOSIT_PERCENTAGE}%): ${formatEuros(order.pricing.depositCents)}`
+      );
+      lines.push(`Pendiente: ${formatEuros(order.pricing.remainingCents)}`);
+    }
   }
 
   return lines.join("\n");

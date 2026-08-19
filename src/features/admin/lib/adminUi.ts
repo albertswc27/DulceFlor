@@ -13,6 +13,7 @@ export const STATUS_BADGE_VARIANT: Record<
   NonNullable<BadgeProps["variant"]>
 > = {
   pending: "warning",
+  pending_quote: "destructive",
   confirmed: "secondary",
   in_preparation: "accent",
   ready: "success",
@@ -22,6 +23,7 @@ export const STATUS_BADGE_VARIANT: Record<
 
 /** Orden natural de los estados para selects y botoneras. */
 export const ORDER_STATUS_SEQUENCE: OrderStatus[] = [
+  "pending_quote",
   "pending",
   "confirmed",
   "in_preparation",

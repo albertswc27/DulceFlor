@@ -20,9 +20,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { DEPOSIT_PERCENTAGE } from "@/config/business";
 import { formatEuros } from "@/domain/money";
+import { getImage } from "@/services/imageStore";
 import { buildOrderWhatsAppMessage } from "@/domain/whatsapp";
 import {
   CUSTOMER_TYPE_LABELS,
@@ -50,6 +61,59 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
   );
 }
 
+/**
+ * Miniatura de la imagen de referencia de un artículo, ampliable en diálogo.
+ * getImage puede devolver null: las imágenes viven en el navegador donde se
+ * creó el pedido (limitación documentada de la POC).
+ */
+function ReferenceImageThumb({
+  imageId,
+  productName,
+}: {
+  imageId: string;
+  productName: string;
+}) {
+  const dataUrl = React.useMemo(() => getImage(imageId), [imageId]);
+  const alt = `Imagen de referencia de ${productName}`;
+
+  if (!dataUrl) {
+    return (
+      <li>
+        <span className="text-foreground">Imagen de referencia:</span>{" "}
+        Imagen no disponible en este dispositivo
+      </li>
+    );
+  }
+
+  return (
+    <li>
+      <span className="text-foreground">Imagen de referencia:</span>
+      <Dialog>
+        <DialogTrigger asChild>
+          <button
+            type="button"
+            aria-label={`Ampliar ${alt.toLowerCase()}`}
+            className="mt-1.5 block overflow-hidden rounded-lg border border-border bg-card shadow-card transition-shadow hover:shadow-lifted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <img src={dataUrl} alt={alt} className="h-24 w-24 object-cover" />
+          </button>
+        </DialogTrigger>
+        <DialogContent className="max-w-3xl p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>Imagen de referencia</DialogTitle>
+            <DialogDescription className="sr-only">{alt}</DialogDescription>
+          </DialogHeader>
+          <img
+            src={dataUrl}
+            alt={alt}
+            className="max-h-[70vh] w-full rounded-lg object-contain"
+          />
+        </DialogContent>
+      </Dialog>
+    </li>
+  );
+}
+
 function OrderItemCard({ item }: { item: OrderItem }) {
   const c = item.customization;
   return (
@@ -62,13 +126,19 @@ function OrderItemCard({ item }: { item: OrderItem }) {
           )}
         </p>
         <div className="shrink-0 text-right">
-          <p className="font-display text-lg font-bold text-primary">
-            {formatEuros(item.totalCents)}
-          </p>
-          {item.quantity > 1 && (
-            <p className="text-xs text-muted-foreground">
-              {item.quantity} × {formatEuros(item.unitPriceCents)}
-            </p>
+          {item.requiresQuote ? (
+            <p className="font-display text-lg font-bold text-primary">A consultar</p>
+          ) : (
+            <>
+              <p className="font-display text-lg font-bold text-primary">
+                {formatEuros(item.totalCents)}
+              </p>
+              {item.quantity > 1 && (
+                <p className="text-xs text-muted-foreground">
+                  {item.quantity} × {formatEuros(item.unitPriceCents)}
+                </p>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -93,6 +163,17 @@ function OrderItemCard({ item }: { item: OrderItem }) {
             {c.toppings.map((t) => t.label).join(", ")}
           </li>
         )}
+        {c.customToppingRequest && (
+          <li>
+            <span className="text-foreground">Topping solicitado (a confirmar):</span>{" "}
+            {c.customToppingRequest}
+          </li>
+        )}
+        {c.designDescription && (
+          <li>
+            <span className="text-foreground">Diseño:</span> {c.designDescription}
+          </li>
+        )}
         {c.extras.map((extra) => (
           <li key={extra.id}>
             <span className="text-foreground">Extra:</span> {extra.label} (+
@@ -109,6 +190,12 @@ function OrderItemCard({ item }: { item: OrderItem }) {
             <span className="not-italic text-foreground">Notas:</span> “{c.notes}”
           </li>
         )}
+        {c.referenceImageId && (
+          <ReferenceImageThumb
+            imageId={c.referenceImageId}
+            productName={item.productName}
+          />
+        )}
       </ul>
     </div>
   );
@@ -119,6 +206,7 @@ export default function AdminOrderDetailPage() {
   const [order, setOrder] = React.useState<Order | null>(() =>
     orderId ? (orderRepository.getById(orderId) ?? null) : null
   );
+  const [quoteInput, setQuoteInput] = React.useState("");
 
   if (!order) {
     return (
@@ -164,8 +252,30 @@ export default function AdminOrderDetailPage() {
     }
   }
 
+  function handleQuoteSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!order) return;
+    const euros = Number(quoteInput.trim().replace(",", "."));
+    if (!Number.isFinite(euros) || euros <= 0) {
+      toast.error("Introduce un importe válido mayor que 0 €.");
+      return;
+    }
+    const cents = Math.round(euros * 100);
+    const updated = orderRepository.setQuotedPrice(order.id, cents);
+    if (!updated) {
+      toast.error("No se pudo guardar el presupuesto del pedido.");
+      return;
+    }
+    setOrder(updated);
+    setQuoteInput("");
+    toast.success(`Presupuesto del fondant guardado: ${formatEuros(cents)}`);
+  }
+
   const { pricing } = order;
   const isDelivery = order.fulfillmentType === "delivery";
+  const hasQuoteItems = order.items.some((item) => item.requiresQuote);
+  const isQuoted =
+    hasQuoteItems && !pricing.pendingQuote && pricing.quotedPriceCents !== undefined;
 
   return (
     <div className="space-y-6">
@@ -276,6 +386,11 @@ export default function AdminOrderDetailPage() {
                     </DetailRow>
                   </>
                 )}
+                {order.reusableTray && (
+                  <DetailRow label="Fuente de cristal reutilizable">
+                    Sí (recogemos la anterior en la siguiente entrega)
+                  </DetailRow>
+                )}
               </dl>
             </CardContent>
           </Card>
@@ -296,16 +411,49 @@ export default function AdminOrderDetailPage() {
 
         {/* Columna lateral */}
         <div className="space-y-6">
+          {pricing.pendingQuote && (
+            <div
+              role="alert"
+              className="rounded-xl border-2 border-destructive/50 bg-destructive/10 p-4"
+            >
+              <Badge variant="destructive">REQUIERE PRESUPUESTO MANUAL</Badge>
+              <p className="mt-2 text-sm text-foreground">
+                El pedido incluye una tarta de fondant sin precio automático: hay
+                que preparar el presupuesto y enviárselo al cliente por WhatsApp.
+                Hasta entonces no hay total definitivo ni señal.
+              </p>
+            </div>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle>Resumen económico</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <dl className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <dt className="text-muted-foreground">Subtotal</dt>
-                  <dd className="font-medium">{formatEuros(pricing.subtotalCents)}</dd>
-                </div>
+                {pricing.pendingQuote ? (
+                  pricing.subtotalCents > 0 && (
+                    <div className="flex items-center justify-between">
+                      <dt className="text-muted-foreground">Subtotal (sin fondant)</dt>
+                      <dd className="font-medium">
+                        {formatEuros(pricing.subtotalCents)}
+                      </dd>
+                    </div>
+                  )
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">Subtotal</dt>
+                    <dd className="font-medium">{formatEuros(pricing.subtotalCents)}</dd>
+                  </div>
+                )}
+                {isQuoted && (
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">Fondant (presupuesto)</dt>
+                    <dd className="font-medium">
+                      {formatEuros(pricing.quotedPriceCents ?? 0)}
+                    </dd>
+                  </div>
+                )}
                 {isDelivery ? (
                   <div className="flex items-center justify-between">
                     <dt className="text-muted-foreground">
@@ -328,13 +476,19 @@ export default function AdminOrderDetailPage() {
                 )}
               </dl>
               <Separator />
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <span className="font-display text-base font-semibold text-primary">
                   TOTAL
                 </span>
-                <span className="font-display text-2xl font-bold text-primary">
-                  {formatEuros(pricing.totalCents)}
-                </span>
+                {pricing.pendingQuote ? (
+                  <span className="text-right font-display text-lg font-bold text-destructive">
+                    Pendiente de presupuesto
+                  </span>
+                ) : (
+                  <span className="font-display text-2xl font-bold text-primary">
+                    {formatEuros(pricing.totalCents)}
+                  </span>
+                )}
               </div>
               {isDelivery && pricing.deliveryFeeCents === null && (
                 <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
@@ -342,7 +496,7 @@ export default function AdminOrderDetailPage() {
                   automática y debe confirmarse con el cliente.
                 </p>
               )}
-              {pricing.depositRequired && (
+              {!pricing.pendingQuote && pricing.depositRequired && (
                 <div className="space-y-1 rounded-lg bg-secondary/15 px-3 py-2.5 text-sm">
                   <p className="font-medium text-primary">
                     Requiere paga y señal del {DEPOSIT_PERCENTAGE}%.
@@ -366,6 +520,44 @@ export default function AdminOrderDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {hasQuoteItems && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Introducir presupuesto del fondant</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleQuoteSubmit} className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="presupuesto-fondant">Importe (euros)</Label>
+                    <Input
+                      id="presupuesto-fondant"
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      inputMode="decimal"
+                      placeholder="Ej.: 45,50"
+                      value={quoteInput}
+                      onChange={(e) => setQuoteInput(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={quoteInput.trim() === ""}
+                  >
+                    Guardar presupuesto
+                  </Button>
+                  {isQuoted && (
+                    <p className="text-xs text-muted-foreground">
+                      Presupuesto actual: {formatEuros(pricing.quotedPriceCents ?? 0)}.
+                      Puedes introducir un importe nuevo para corregirlo.
+                    </p>
+                  )}
+                </form>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

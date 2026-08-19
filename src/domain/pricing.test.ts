@@ -57,30 +57,57 @@ describe("paga y señal", () => {
   });
 });
 
-describe("toppings", () => {
-  it("caso 5: 2 toppings suman 4 € extra", () => {
-    const sinToppings = computeUnitPriceCents({
+describe("toppings (precio actualizado: 2,50 €)", () => {
+  function priceWithToppings(toppingIds: string[]): number | null {
+    return computeUnitPriceCents({
       productId: "pastel-clasico",
       customerType: "individual",
       sizeId: "4-6-1d",
+      flavorId: "chocolate",
+      toppingIds,
+      extraIds: [],
+    });
+  }
+
+  it("1 topping → +2,50 €", () => {
+    expect(priceWithToppings([])).toBe(2000);
+    expect(priceWithToppings(["oreo"])).toBe(2250);
+  });
+
+  it("2 toppings → +5,00 €", () => {
+    expect(priceWithToppings(["oreo", "kinder-bueno"])).toBe(2500);
+  });
+
+  it("3 toppings → +7,50 €", () => {
+    expect(priceWithToppings(["oreo", "kinder-bueno", "fresas"])).toBe(2750);
+  });
+
+  it("los toppings a 2,50 € pueden hacer superar el umbral de señal de 40 €", () => {
+    // Pastel clásico 20-22 personas · 1 disco = 39 € → sin señal.
+    // Con 1 topping (2,50 €) el total pasa a 41,50 € → señal del 30 %.
+    const base = computeUnitPriceCents({
+      productId: "pastel-clasico",
+      customerType: "individual",
+      sizeId: "20-22-1d",
       flavorId: "chocolate",
       toppingIds: [],
       extraIds: [],
-    });
-    const conToppings = computeUnitPriceCents({
+    })!;
+    expect(computeDeposit(base).depositRequired).toBe(false);
+    const conTopping = computeUnitPriceCents({
       productId: "pastel-clasico",
       customerType: "individual",
-      sizeId: "4-6-1d",
+      sizeId: "20-22-1d",
       flavorId: "chocolate",
-      toppingIds: ["oreo", "kinder-bueno"],
+      toppingIds: ["fresas"],
       extraIds: [],
-    });
-    expect(sinToppings).toBe(2000);
-    expect(conToppings).toBe(2400);
+    })!;
+    expect(conTopping).toBe(4150);
+    expect(computeDeposit(conTopping).depositRequired).toBe(true);
   });
 
   it("excepción de carta: suplemento 6 € en tres leches de 28–30 porciones", () => {
-    expect(getToppingPriceCents("tres-leches", "5-6")).toBe(200);
+    expect(getToppingPriceCents("tres-leches", "5-6")).toBe(250);
     expect(getToppingPriceCents("tres-leches", "28-30")).toBe(600);
   });
 });
@@ -155,8 +182,107 @@ describe("buildOrderItem", () => {
       },
       quantity: 2,
     });
-    // 2900 (kinder bueno mediano) + 200 topping + 200 dedicatoria = 3300
-    expect(item?.unitPriceCents).toBe(3300);
-    expect(item?.totalCents).toBe(6600);
+    // 2900 (kinder bueno mediano) + 250 topping + 200 dedicatoria = 3350
+    expect(item?.unitPriceCents).toBe(3350);
+    expect(item?.totalCents).toBe(6700);
+  });
+
+  it("conserva el topping personalizado y la imagen de referencia en el artículo", () => {
+    const item = buildOrderItem({
+      id: "x",
+      selection: {
+        productId: "pastel-clasico",
+        customerType: "individual",
+        sizeId: "4-6-1d",
+        flavorId: "vainilla",
+        toppingIds: [],
+        extraIds: [],
+      },
+      customization: {
+        size: { id: "4-6-1d", label: "4–6 personas · 1 disco (8 cm)" },
+        flavor: { id: "vainilla", label: "Vainilla" },
+        toppings: [],
+        customToppingRequest: "Ferrero Rocher",
+        extras: [],
+        referenceImageId: "img-123",
+      },
+      quantity: 1,
+    });
+    expect(item?.customization.customToppingRequest).toBe("Ferrero Rocher");
+    expect(item?.customization.referenceImageId).toBe("img-123");
+    // El topping personalizado NO se cobra automáticamente.
+    expect(item?.unitPriceCents).toBe(2000);
+  });
+});
+
+describe("fondant (presupuesto manual)", () => {
+  const fondantSelection = {
+    productId: "pastel-fondant",
+    customerType: "individual" as const,
+    sizeId: "10-12",
+    flavorId: "vainilla",
+    toppingIds: [],
+    extraIds: [],
+  };
+  const fondantCustomization = {
+    size: { id: "10-12", label: "10–12 personas (aprox.)" },
+    flavor: { id: "vainilla", label: "Vainilla" },
+    toppings: [],
+    extras: [],
+    designDescription: "Tarta de dos pisos con flores moradas y topper dorado",
+  };
+
+  it("no obtiene precio automático: requiresQuote y sin importe", () => {
+    const item = buildOrderItem({
+      id: "f1",
+      selection: fondantSelection,
+      customization: fondantCustomization,
+      quantity: 1,
+    });
+    expect(item?.requiresQuote).toBe(true);
+    expect(item?.unitPriceCents).toBe(0);
+  });
+
+  it("un pedido con fondant queda pendiente de presupuesto y SIN señal", () => {
+    const fondant = buildOrderItem({
+      id: "f1",
+      selection: fondantSelection,
+      customization: fondantCustomization,
+      quantity: 1,
+    })!;
+    const pricing = computeOrderPricing([fondant], 0);
+    expect(pricing.pendingQuote).toBe(true);
+    expect(pricing.subtotalCents).toBe(0);
+    expect(pricing.depositRequired).toBe(false);
+    expect(pricing.depositCents).toBe(0);
+  });
+
+  it("pedido mixto: subtotal solo de artículos con precio, sin señal hasta presupuestar", () => {
+    const fondant = buildOrderItem({
+      id: "f1",
+      selection: fondantSelection,
+      customization: fondantCustomization,
+      quantity: 1,
+    })!;
+    const pricing = computeOrderPricing([fondant, makeItem(5500)], 0);
+    expect(pricing.subtotalCents).toBe(5500);
+    expect(pricing.pendingQuote).toBe(true);
+    expect(pricing.depositRequired).toBe(false);
+  });
+
+  it("al introducir el presupuesto, el total y la señal se calculan con normalidad", () => {
+    const fondant = buildOrderItem({
+      id: "f1",
+      selection: fondantSelection,
+      customization: fondantCustomization,
+      quantity: 1,
+    })!;
+    const pricing = computeOrderPricing([fondant], 0, 12000);
+    expect(pricing.pendingQuote).toBe(false);
+    expect(pricing.quotedPriceCents).toBe(12000);
+    expect(pricing.totalCents).toBe(12000);
+    expect(pricing.depositRequired).toBe(true);
+    expect(pricing.depositCents).toBe(3600);
+    expect(pricing.remainingCents).toBe(8400);
   });
 });

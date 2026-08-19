@@ -348,7 +348,10 @@ export default function OrderWizardPage() {
                         </h2>
                         <OrderItemsList />
                         <Button size="lg" className="w-full" onClick={() => goTo("fulfillment")}>
-                          Continuar · {formatEuros(derived.pricing.subtotalCents)}
+                          Continuar
+                          {derived.pricing.pendingQuote && derived.pricing.subtotalCents === 0
+                            ? " · a presupuestar"
+                            : ` · ${formatEuros(derived.pricing.subtotalCents)}`}
                         </Button>
                       </div>
                       <h2 className="ornament-divider font-display text-lg font-semibold text-primary">
@@ -383,7 +386,9 @@ export default function OrderWizardPage() {
                                   {product.description}
                                 </span>
                                 <span className="mt-3 text-sm font-medium text-accent">
-                                  Personalizar →
+                                  {product.pricingType === "quote"
+                                    ? "Precio personalizado · Solicitar presupuesto →"
+                                    : "Personalizar →"}
                                 </span>
                               </button>
                             ))}
@@ -523,6 +528,19 @@ export default function OrderWizardPage() {
                         })()}
                       </CardContent>
                     </Card>
+                  )}
+
+                  {/* Empresas: fuentes de cristal reutilizables (opcional) */}
+                  {state.customerType === "business" && (
+                    <div className="space-y-2">
+                      <OptionCard
+                        role="checkbox"
+                        selected={state.reusableTray}
+                        onSelect={() => draft.setReusableTray(!state.reusableTray)}
+                        title="Entrega en fuente de cristal reutilizable"
+                        subtitle="Opcional. En el siguiente pedido podemos recoger la fuente anterior y sustituirla por la nueva."
+                      />
+                    </div>
                   )}
 
                   {contactErrors.length > 0 && (
@@ -673,6 +691,12 @@ export default function OrderWizardPage() {
                           {state.customer.companyName}
                         </p>
                       )}
+                      {state.customerType === "business" && state.reusableTray && (
+                        <p>
+                          <span className="text-muted-foreground">Presentación: </span>
+                          Fuente de cristal reutilizable
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
 
@@ -745,7 +769,9 @@ export default function OrderWizardPage() {
                     {state.items.length === 1 ? "producto" : "productos"} · ver resumen
                   </span>
                   <span className="font-display text-xl font-bold text-primary">
-                    {formatEuros(derived.pricing.totalCents)}
+                    {derived.pricing.pendingQuote && derived.pricing.totalCents === 0
+                      ? "A presupuestar"
+                      : formatEuros(derived.pricing.totalCents)}
                   </span>
                 </button>
               </DialogTrigger>

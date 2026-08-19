@@ -93,6 +93,8 @@ export function submitOrder(
     requestedDate: state.requestedDate!,
     requestedTime: state.requestedTime!,
     pricing,
+    reusableTray:
+      state.customerType === "business" && state.reusableTray ? true : undefined,
     source,
   });
 

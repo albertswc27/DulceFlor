@@ -7,7 +7,7 @@ Fuente de verdad de catálogo y precios: [`src/domain/catalog.ts`](../src/domain
 
 | Regla | Valor | Constante |
 | --- | --- | --- |
-| Precio por topping | +2 € cada uno | `TOPPING_PRICE_CENTS = 200` |
+| Precio por topping | +2,50 € cada uno (actualizado en la 2ª revisión del cliente) | `TOPPING_PRICE_CENTS = 250` |
 | Paga y señal | 30 % cuando el total **supera** 40 € (40,00 € exactos NO la requieren) | `DEPOSIT_THRESHOLD_CENTS = 4000`, `DEPOSIT_PERCENTAGE = 30` |
 | Métodos de señal | Bizum, transferencia bancaria o pago presencial. **Sin pago online** | — |
 | Pedidos ≤ 40 € | Se abonan al recoger/recibir | — |
@@ -22,6 +22,12 @@ Fuente de verdad de catálogo y precios: [`src/domain/catalog.ts`](../src/domain
 | Dirección de la tienda | C. Ntra. Sra. de Montserrat, 13, bajos · 08922 Santa Coloma de Gramenet (confirmada 18/08/2026) | `BUSINESS_ADDRESS` |
 | Zonas de entrega | Confirmadas 18/08/2026 tal como estaban; fuera de estas zonas, gastos de envío **según distancia** (se confirman por WhatsApp) | `DELIVERY_ZONES` |
 | Instagram | @dulceflor.bcn | `INSTAGRAM_URL` |
+
+| Topping fuera de catálogo | El cliente puede solicitarlo por texto; Dulce Flor confirma disponibilidad y precio. NO se cobra automáticamente | `customToppingRequest` |
+| Imagen de referencia | El cliente puede adjuntar una foto por tarta (comprimida, guardada aparte del pedido) | `referenceImageId` + `services/imageStore` |
+| Fondant | Sin precio automático: solicitud de presupuesto (estado «Pendiente de presupuesto»); administración introduce después `quotedPriceCents` y el total/señal se recalculan | `pricingType: "quote"`, `pending_quote` |
+| Fuentes reutilizables (empresas) | Entrega opcional en fuente de cristal reutilizable; la anterior se recoge en la siguiente entrega. Sin depósitos ni condiciones económicas | `Order.reusableTray` |
+| Cartas fotografiadas | Ya NO se muestran al público (retiradas de la web); siguen siendo la fuente de verdad interna del catálogo | `src/assets/carta-*.jpeg` |
 
 ### Excepción documentada en carta
 

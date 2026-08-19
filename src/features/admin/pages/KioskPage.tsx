@@ -48,6 +48,7 @@ import {
 import { useAdminAuth } from "@/features/admin/state/AdminAuthContext";
 import { lockKiosk, unlockKiosk, verifyPassword } from "@/services/auth";
 import { useOrderDraft } from "@/features/order/state/OrderDraftContext";
+import { OptionCard } from "@/features/order/components/OptionCard";
 import { ProductConfigurator } from "@/features/order/components/ProductConfigurator";
 import { OrderItemsList } from "@/features/order/components/OrderItemsList";
 import { OrderSummary } from "@/features/order/components/OrderSummary";
@@ -326,6 +327,19 @@ export default function KioskPage() {
           )}
         </section>
 
+        {isBusiness && (
+          <section>
+            <SectionHeading>Fuente reutilizable</SectionHeading>
+            <OptionCard
+              role="checkbox"
+              selected={state.reusableTray}
+              onSelect={() => draft.setReusableTray(!state.reusableTray)}
+              title="Entrega en fuente de cristal reutilizable"
+              subtitle="Opcional. En el siguiente pedido podemos recoger la fuente anterior y sustituirla por la nueva."
+            />
+          </section>
+        )}
+
         <section>
           <SectionHeading>Fecha y hora</SectionHeading>
           <SlotPicker
@@ -466,13 +480,21 @@ export default function KioskPage() {
           {success.requestedTime} h
         </p>
         <p className="mt-1 font-display text-2xl font-bold text-primary">
-          {formatEuros(success.pricing.totalCents)}
+          {success.pricing.pendingQuote
+            ? "Pendiente de presupuesto"
+            : formatEuros(success.pricing.totalCents)}
         </p>
-        {success.pricing.depositRequired && (
+        {success.pricing.pendingQuote ? (
           <p className="mt-3 max-w-sm rounded-lg bg-secondary/15 px-4 py-2.5 text-sm text-foreground">
-            Requiere señal de {formatEuros(success.pricing.depositCents)} (Bizum,
-            transferencia o en tienda).
+            Solicitud de fondant: enviaremos presupuesto por WhatsApp.
           </p>
+        ) : (
+          success.pricing.depositRequired && (
+            <p className="mt-3 max-w-sm rounded-lg bg-secondary/15 px-4 py-2.5 text-sm text-foreground">
+              Requiere señal de {formatEuros(success.pricing.depositCents)} (Bizum,
+              transferencia o en tienda).
+            </p>
+          )
         )}
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Button type="button" size="xl" onClick={startNewOrder}>
@@ -649,8 +671,13 @@ export default function KioskPage() {
                   aprovechan la pantalla (el catálogo es corto). */}
               <div className="mt-6 grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
                 {orderedProducts.map((product) => {
+                  // Productos "quote" (fondant): sin precio automático — el
+                  // mínimo del catálogo sería 0 € y no debe mostrarse nunca.
+                  const isQuoteProduct = product.pricingType === "quote";
                   const from =
-                    state.customerType && minPriceCents(product, state.customerType);
+                    !isQuoteProduct &&
+                    state.customerType &&
+                    minPriceCents(product, state.customerType);
                   const sizesCount = state.customerType
                     ? getSizesFor(product, state.customerType).length
                     : 0;
@@ -697,7 +724,11 @@ export default function KioskPage() {
                       )}
                       <span className="mt-5 flex items-center justify-between">
                         <span className="font-display text-2xl font-bold text-primary">
-                          {typeof from === "number" ? `Desde ${formatEuros(from)}` : ""}
+                          {isQuoteProduct
+                            ? "Precio personalizado"
+                            : typeof from === "number"
+                              ? `Desde ${formatEuros(from)}`
+                              : ""}
                         </span>
                         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary/20 text-primary transition-transform group-hover:scale-110">
                           <Plus className="h-6 w-6" />

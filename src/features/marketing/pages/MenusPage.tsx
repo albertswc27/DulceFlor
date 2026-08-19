@@ -33,52 +33,6 @@ import type { CustomerType } from "@/domain/types";
 import { buildCakeMatrix } from "../lib/catalogView";
 import { Reveal } from "../components/Reveal";
 import { SectionHeading } from "../components/SectionHeading";
-import { MenuGallery, type MenuImage } from "../components/MenuGallery";
-import cartaPastelesClasicos from "@/assets/carta-pasteles-clasicos-precios-particulares.jpeg";
-import cartaPastelesButtercream from "@/assets/carta-pasteles-buttercream-precios-particulares.jpeg";
-import cartaCheesecakeParticulares from "@/assets/carta-cheesecake-precios-particulares.jpeg";
-import cartaCheesecakeEmpresas from "@/assets/carta-cheesecake-precios-empresas.jpeg";
-import cartaTresLechesParticulares from "@/assets/carta-tres-leches-precios-particulares.jpeg";
-import cartaTresLechesEmpresas from "@/assets/carta-tres-leches-y-tortas-precios-empresas.jpeg";
-import cartaRellenos from "@/assets/carta-rellenos-pasteles.jpeg";
-
-const MENU_IMAGES: MenuImage[] = [
-  {
-    src: cartaPastelesClasicos,
-    alt: "Carta de pasteles clásicos con precios para particulares",
-    caption: "Pasteles clásicos (particulares)",
-  },
-  {
-    src: cartaPastelesButtercream,
-    alt: "Carta de pasteles con buttercream con precios para particulares",
-    caption: "Pasteles con buttercream (particulares)",
-  },
-  {
-    src: cartaCheesecakeParticulares,
-    alt: "Carta de cheesecakes con precios para particulares",
-    caption: "Cheesecakes (particulares)",
-  },
-  {
-    src: cartaTresLechesParticulares,
-    alt: "Carta de tarta tres leches con precios para particulares",
-    caption: "Tres leches (particulares)",
-  },
-  {
-    src: cartaRellenos,
-    alt: "Carta de rellenos de pasteles incluidos en el precio",
-    caption: "Rellenos de pasteles",
-  },
-  {
-    src: cartaCheesecakeEmpresas,
-    alt: "Carta de cheesecakes con precios para empresas",
-    caption: "Cheesecakes (empresas)",
-  },
-  {
-    src: cartaTresLechesEmpresas,
-    alt: "Carta de tres leches y tortas con precios para empresas",
-    caption: "Tres leches y tortas (empresas)",
-  },
-];
 
 function priceOrDash(cents: number | null): string {
   return cents === null ? "—" : formatEuros(cents);
@@ -562,20 +516,6 @@ export default function MenusPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Galería de cartas */}
-      <section className="container py-10">
-        <Reveal>
-          <SectionHeading
-            eyebrow="Tal cual las verás en tienda"
-            title="Nuestras cartas"
-            subtitle="Las cartas originales de Dulce Flor, fotografiadas. Toca cualquiera para ampliarla."
-          />
-        </Reveal>
-        <Reveal delay={0.08} className="mt-8">
-          <MenuGallery images={MENU_IMAGES} />
-        </Reveal>
-      </section>
 
       {/* CTA final */}
       <section className="container py-12">

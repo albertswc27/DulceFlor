@@ -1,8 +1,10 @@
 /**
  * Configurador de producto — reutilizado por el wizard público y el kiosk.
  * No calcula precios por su cuenta: todo pasa por src/domain/pricing.
+ * Los productos "quote" (fondant) no muestran precio: solicitan presupuesto.
  */
 import * as React from "react";
+import { Sparkles } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -20,11 +22,19 @@ import {
   getToppingPriceCents,
   type ItemSelection,
 } from "@/domain/pricing";
-import { dedicationSchema, freeTextSchema } from "@/domain/validation";
+import {
+  customToppingSchema,
+  dedicationSchema,
+  designDescriptionSchema,
+  freeTextSchema,
+} from "@/domain/validation";
 import type { CustomerType, ItemCustomization } from "@/domain/types";
+import { saveImage, IMAGE_ERROR_MESSAGES } from "@/services/imageStore";
 import { OptionCard } from "./OptionCard";
 import { QuantityStepper } from "./QuantityStepper";
 import { AnimatedPrice } from "./AnimatedPrice";
+import { SizePicker } from "./SizePicker";
+import { ReferenceImagePicker } from "./ReferenceImagePicker";
 
 export interface ConfiguratorResult {
   selection: ItemSelection;
@@ -60,6 +70,7 @@ export function ProductConfigurator({
   initial,
 }: ProductConfiguratorProps) {
   const sizes = getSizesFor(product, customerType);
+  const isQuote = product.pricingType === "quote";
 
   const [sizeId, setSizeId] = React.useState<string>(initial?.sizeId ?? "");
   const [flavorId, setFlavorId] = React.useState<string>(initial?.flavorId ?? "");
@@ -69,6 +80,10 @@ export function ProductConfigurator({
   const [dedicationText, setDedicationText] = React.useState(initial?.dedicationText ?? "");
   const [notes, setNotes] = React.useState(initial?.notes ?? "");
   const [quantity, setQuantity] = React.useState(initial?.quantity ?? 1);
+  const [customToppingOpen, setCustomToppingOpen] = React.useState(false);
+  const [customToppingText, setCustomToppingText] = React.useState("");
+  const [designDescription, setDesignDescription] = React.useState("");
+  const [referenceImage, setReferenceImage] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   // Al cambiar de producto se reinicia la selección (salvo edición inicial).
@@ -81,6 +96,10 @@ export function ProductConfigurator({
     setDedicationText(initial?.dedicationText ?? "");
     setNotes(initial?.notes ?? "");
     setQuantity(initial?.quantity ?? 1);
+    setCustomToppingOpen(false);
+    setCustomToppingText("");
+    setDesignDescription("");
+    setReferenceImage(null);
     setError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.id, customerType]);
@@ -99,7 +118,7 @@ export function ProductConfigurator({
   };
 
   const breakdown =
-    sizeId && (!isCheesecake || flavorId)
+    !isQuote && sizeId && (!isCheesecake || flavorId)
       ? computeUnitPriceBreakdown(selection)
       : null;
 
@@ -128,6 +147,13 @@ export function ProductConfigurator({
       setError(isCheesecake ? "Selecciona un sabor." : "Selecciona el sabor del bizcocho.");
       return;
     }
+    if (isQuote) {
+      const parsed = designDescriptionSchema.safeParse(designDescription);
+      if (!parsed.success) {
+        setError(parsed.error.issues[0].message);
+        return;
+      }
+    }
     if (dedicationSelected) {
       const parsed = dedicationSchema.safeParse(dedicationText);
       if (!parsed.success) {
@@ -135,14 +161,35 @@ export function ProductConfigurator({
         return;
       }
     }
+    let customToppingRequest: string | undefined;
+    if (customToppingOpen && customToppingText.trim()) {
+      const parsed = customToppingSchema.safeParse(customToppingText);
+      if (!parsed.success) {
+        setError(parsed.error.issues[0].message);
+        return;
+      }
+      customToppingRequest = parsed.data;
+    }
     const notesParsed = freeTextSchema.safeParse(notes);
     if (!notesParsed.success) {
       setError(notesParsed.error.issues[0].message);
       return;
     }
-    if (!breakdown) {
+    if (!isQuote && !breakdown) {
       setError("Esta combinación no está disponible. Revisa tamaño y sabor.");
       return;
+    }
+
+    // La imagen se guarda en el almacén al confirmar; el artículo solo
+    // referencia el id (nunca base64 dentro del pedido).
+    let referenceImageId: string | undefined;
+    if (referenceImage) {
+      const saved = saveImage(referenceImage);
+      if (!saved.ok) {
+        setError(IMAGE_ERROR_MESSAGES[saved.error]);
+        return;
+      }
+      referenceImageId = saved.id;
     }
 
     const size = sizes.find((s) => s.id === sizeId)!;
@@ -156,11 +203,14 @@ export function ProductConfigurator({
         id: t.id,
         label: t.label,
       })),
+      customToppingRequest,
       extras: product.extras
         .filter((e) => extraIds.includes(e.id))
         .map((e) => ({ id: e.id, label: e.label, priceCents: e.priceCents })),
       dedicationText: dedicationSelected ? dedicationText.trim() : undefined,
+      designDescription: isQuote ? designDescription.trim() : undefined,
       notes: notes.trim() || undefined,
+      referenceImageId,
     };
 
     setError(null);
@@ -173,41 +223,30 @@ export function ProductConfigurator({
 
   return (
     <div className="space-y-6">
-      {/* Tamaño */}
+      {isQuote && (
+        <p className="flex items-start gap-2.5 rounded-xl bg-secondary/15 px-4 py-3 text-sm text-foreground">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+          <span>
+            Los diseños de fondant se presupuestan a mano según su complejidad:
+            cuéntanos tu idea y te enviaremos un <strong>presupuesto personalizado</strong>{" "}
+            por WhatsApp. Aquí no se muestra ningún precio.
+          </span>
+        </p>
+      )}
+
+      {/* Tamaño (selección visual) */}
       <fieldset>
-        <legend className="mb-2 flex items-baseline justify-between gap-2 w-full">
+        <legend className="mb-2 flex w-full items-baseline justify-between gap-2">
           <span className="font-display text-base font-semibold text-primary">Tamaño</span>
           <span className="text-xs text-muted-foreground">Obligatorio</span>
         </legend>
-        <div role="group" aria-label="Tamaño" className={gridCols}>
-          {sizes.map((size) => {
-            const price = isCheesecake
-              ? flavorId
-                ? computeUnitPriceBreakdown({
-                    ...selection,
-                    sizeId: size.id,
-                    toppingIds: [],
-                    extraIds: [],
-                  })?.baseCents
-                : undefined
-              : size.priceCents;
-            return (
-              <OptionCard
-                key={size.id}
-                selected={sizeId === size.id}
-                onSelect={() => setSizeId(size.id)}
-                title={size.label}
-                price={price !== undefined && price !== null ? formatEuros(price) : undefined}
-              />
-            );
-          })}
-        </div>
-        {isCheesecake && !flavorId && (
-          <p className="mt-2 text-sm text-muted-foreground">
-            El precio del cheesecake depende del sabor: elige primero el sabor para ver los
-            precios por tamaño.
-          </p>
-        )}
+        <SizePicker
+          product={product}
+          customerType={customerType}
+          flavorId={flavorId || undefined}
+          selectedSizeId={sizeId}
+          onSelect={setSizeId}
+        />
       </fieldset>
 
       {/* Sabor */}
@@ -278,6 +317,47 @@ export function ProductConfigurator({
               />
             ))}
           </div>
+
+          {/* Topping fuera de catálogo */}
+          <div className="mt-3">
+            {!customToppingOpen ? (
+              <button
+                type="button"
+                onClick={() => setCustomToppingOpen(true)}
+                className="text-sm font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+              >
+                ¿No encuentras el topping que buscas? Solicitar otro topping
+              </button>
+            ) : (
+              <div className="space-y-1.5 rounded-xl bg-background-soft/70 p-3">
+                <Label htmlFor={`custom-topping-${product.id}`}>
+                  ¿Qué topping te gustaría?
+                </Label>
+                <Input
+                  id={`custom-topping-${product.id}`}
+                  value={customToppingText}
+                  onChange={(e) => setCustomToppingText(e.target.value)}
+                  placeholder="Por ejemplo: Ferrero Rocher"
+                  maxLength={80}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Dulce Flor revisará la disponibilidad y te lo confirmará junto con su
+                  precio. No se añade automáticamente al total.
+                </p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setCustomToppingOpen(false);
+                    setCustomToppingText("");
+                  }}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            )}
+          </div>
         </fieldset>
       )}
 
@@ -315,19 +395,56 @@ export function ProductConfigurator({
         </fieldset>
       )}
 
+      {/* Descripción del diseño (fondant, obligatoria) */}
+      {isQuote && (
+        <div className="space-y-1.5">
+          <Label htmlFor="diseno">Descripción del diseño</Label>
+          <Textarea
+            id="diseno"
+            value={designDescription}
+            onChange={(e) => setDesignDescription(e.target.value)}
+            placeholder="Cuéntanos cómo la imaginas: temática, colores, pisos, figuras, texto…"
+            maxLength={600}
+          />
+          <p className="text-xs text-muted-foreground">
+            Obligatoria: nos ayuda a preparar el presupuesto.
+          </p>
+        </div>
+      )}
+
+      {/* Imagen de referencia */}
+      <div className="space-y-1.5">
+        <p className="font-display text-base font-semibold text-primary">
+          Imagen de referencia
+        </p>
+        <p className="text-sm text-muted-foreground">
+          ¿Tienes una idea concreta? Adjunta una imagen de referencia y la utilizaremos
+          para entender mejor cómo quieres tu tarta.
+        </p>
+        <ReferenceImagePicker value={referenceImage} onChange={setReferenceImage} />
+      </div>
+
       {/* Texto libre */}
       <div className="space-y-1.5">
-        <Label htmlFor="notas">¿Alguna personalización especial?</Label>
+        <Label htmlFor="notas">
+          {isQuote ? "Observaciones" : "¿Alguna personalización especial?"}
+        </Label>
         <Textarea
           id="notas"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Cuéntanos cómo la imaginas: colores, decoración, temática…"
+          placeholder={
+            isQuote
+              ? "Alergias, fecha flexible, dudas…"
+              : "Cuéntanos cómo la imaginas: colores, decoración, temática…"
+          }
           maxLength={500}
         />
-        <p className="text-xs text-muted-foreground">
-          Opcional. Este campo complementa las opciones anteriores, no las sustituye.
-        </p>
+        {!isQuote && (
+          <p className="text-xs text-muted-foreground">
+            Opcional. Este campo complementa las opciones anteriores, no las sustituye.
+          </p>
+        )}
       </div>
 
       <Separator />
@@ -337,9 +454,13 @@ export function ProductConfigurator({
         <QuantityStepper value={quantity} onChange={setQuantity} />
         <div className="text-right">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">
-            {quantity > 1 ? `Precio (${quantity} uds.)` : "Precio"}
+            {isQuote ? "Precio" : quantity > 1 ? `Precio (${quantity} uds.)` : "Precio"}
           </p>
-          {breakdown ? (
+          {isQuote ? (
+            <p className="font-display text-xl font-bold text-primary">
+              Precio personalizado
+            </p>
+          ) : breakdown ? (
             <AnimatedPrice cents={breakdown.unitTotalCents * quantity} className="text-2xl" />
           ) : (
             <p className="font-display text-lg text-muted-foreground">—</p>
@@ -347,7 +468,7 @@ export function ProductConfigurator({
         </div>
       </div>
 
-      {breakdown && (breakdown.toppingsCents > 0 || breakdown.extrasCents > 0) && (
+      {!isQuote && breakdown && (breakdown.toppingsCents > 0 || breakdown.extrasCents > 0) && (
         <div className="rounded-lg bg-background-soft px-4 py-3 text-sm">
           <div className="flex justify-between">
             <span>Base</span>
@@ -375,8 +496,8 @@ export function ProductConfigurator({
       )}
 
       <Button type="button" size="xl" className="w-full" onClick={handleConfirm}>
-        {confirmLabel}
-        {breakdown && ` · ${formatEuros(breakdown.unitTotalCents * quantity)}`}
+        {isQuote ? "Solicitar presupuesto" : confirmLabel}
+        {!isQuote && breakdown && ` · ${formatEuros(breakdown.unitTotalCents * quantity)}`}
       </Button>
     </div>
   );

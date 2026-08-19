@@ -14,6 +14,7 @@ import {
   CircleCheckBig,
   Coins,
   Hourglass,
+  ReceiptEuro,
   Store,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -106,6 +107,7 @@ export default function AdminDashboardPage() {
 
   const metrics = React.useMemo(() => {
     const pending = orders.filter((o) => o.status === "pending").length;
+    const pendingQuote = orders.filter((o) => o.status === "pending_quote").length;
     const forToday = orders.filter(
       (o) => o.status !== "cancelled" && o.requestedDate === todayIso
     ).length;
@@ -117,10 +119,20 @@ export default function AdminDashboardPage() {
     ).length;
     const inPreparation = orders.filter((o) => o.status === "in_preparation").length;
     const ready = orders.filter((o) => o.status === "ready").length;
+    // Sin cancelados ni pendientes de presupuesto: el total de estos últimos
+    // es parcial (o 0) hasta que administración introduce el presupuesto.
     const expectedRevenueCents = orders
-      .filter((o) => o.status !== "cancelled")
+      .filter((o) => o.status !== "cancelled" && o.status !== "pending_quote")
       .reduce((sum, o) => sum + o.pricing.totalCents, 0);
-    return { pending, forToday, next7Days, inPreparation, ready, expectedRevenueCents };
+    return {
+      pending,
+      pendingQuote,
+      forToday,
+      next7Days,
+      inPreparation,
+      ready,
+      expectedRevenueCents,
+    };
   }, [orders, todayIso, weekEndIso]);
 
   const upcoming = React.useMemo(
@@ -176,8 +188,13 @@ export default function AdminDashboardPage() {
         </Card>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
             <MetricCard icon={Hourglass} label="Pendientes" value={String(metrics.pending)} />
+            <MetricCard
+              icon={ReceiptEuro}
+              label="Pendientes de presupuesto"
+              value={String(metrics.pendingQuote)}
+            />
             <MetricCard icon={CalendarDays} label="Para hoy" value={String(metrics.forToday)} />
             <MetricCard
               icon={CalendarRange}

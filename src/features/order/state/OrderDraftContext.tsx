@@ -20,6 +20,8 @@ import type {
   OrderItem,
   OrderPricing,
 } from "@/domain/types";
+import { deleteImage, pruneImagesExcept } from "@/services/imageStore";
+import { orderRepository } from "@/services/orderRepository";
 
 export interface DraftItem {
   id: string;
@@ -36,6 +38,8 @@ export interface OrderDraftState {
   requestedDate: string | null;
   requestedTime: string | null;
   customer: CustomerInfo | null;
+  /** Solo empresas: entrega en fuente de cristal reutilizable (opcional). */
+  reusableTray: boolean;
   /** Idempotencia del envío: estable hasta que el pedido se registra. */
   clientRequestId: string;
 }
@@ -48,6 +52,7 @@ const initialState = (): OrderDraftState => ({
   requestedDate: null,
   requestedTime: null,
   customer: null,
+  reusableTray: false,
   clientRequestId: newInternalId(),
 });
 
@@ -61,6 +66,7 @@ type Action =
   | { type: "setAddress"; address: DeliveryAddress | null }
   | { type: "setSlot"; date: string | null; time: string | null }
   | { type: "setCustomer"; customer: CustomerInfo }
+  | { type: "setReusableTray"; reusableTray: boolean }
   | { type: "reset" };
 
 function reducer(state: OrderDraftState, action: Action): OrderDraftState {
@@ -103,6 +109,8 @@ function reducer(state: OrderDraftState, action: Action): OrderDraftState {
       return { ...state, requestedDate: action.date, requestedTime: action.time };
     case "setCustomer":
       return { ...state, customer: action.customer };
+    case "setReusableTray":
+      return { ...state, reusableTray: action.reusableTray };
     case "reset":
       return initialState();
     default:
@@ -137,9 +145,12 @@ const draftStateSchema = z.object({
         flavor: selectedOptionSchema.optional(),
         filling: selectedOptionSchema.optional(),
         toppings: z.array(selectedOptionSchema),
+        customToppingRequest: z.string().optional(),
         extras: z.array(selectedOptionSchema.extend({ priceCents: z.number() })),
         dedicationText: z.string().optional(),
+        designDescription: z.string().optional(),
         notes: z.string().optional(),
+        referenceImageId: z.string().optional(),
       }),
       quantity: z.number().int().min(1),
     })
@@ -163,6 +174,8 @@ const draftStateSchema = z.object({
       companyName: z.string().optional(),
     })
     .nullable(),
+  // default(false): borradores antiguos sin este campo siguen siendo válidos.
+  reusableTray: z.boolean().default(false),
   clientRequestId: z.string().min(1),
 });
 
@@ -202,6 +215,7 @@ interface OrderDraftContextValue {
   setAddress: (a: DeliveryAddress | null) => void;
   setSlot: (date: string | null, time: string | null) => void;
   setCustomer: (c: CustomerInfo) => void;
+  setReusableTray: (value: boolean) => void;
   reset: () => void;
 }
 
@@ -238,6 +252,40 @@ export function OrderDraftProvider({
       // Sin sessionStorage (modo privado extremo): el borrador no persiste.
     }
   }, [state, storageKey]);
+
+  // Limpieza de imágenes huérfanas: conserva solo las referenciadas por algún
+  // pedido guardado o por CUALQUIER borrador activo (web pública y kiosk).
+  React.useEffect(() => {
+    try {
+      const referenced = new Set<string>();
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (!key?.startsWith("dulce-flor:order-draft")) continue;
+        const raw = sessionStorage.getItem(key);
+        if (!raw) continue;
+        try {
+          const parsed = JSON.parse(raw) as {
+            items?: Array<{ customization?: { referenceImageId?: string } }>;
+          };
+          parsed.items?.forEach((item) => {
+            const id = item?.customization?.referenceImageId;
+            if (id) referenced.add(id);
+          });
+        } catch {
+          // borrador ilegible: se ignora
+        }
+      }
+      for (const order of orderRepository.list()) {
+        for (const item of order.items) {
+          const id = item.customization?.referenceImageId;
+          if (id) referenced.add(id);
+        }
+      }
+      pruneImagesExcept(referenced);
+    } catch {
+      // sin almacenamiento disponible
+    }
+  }, []);
 
   const derived = React.useMemo<OrderDraftDerived>(() => {
     const orderItems = toOrderItems(state.items);
@@ -288,12 +336,20 @@ export function OrderDraftProvider({
         return true;
       },
       updateConfiguredItem: (item) => dispatch({ type: "updateItem", item }),
-      removeItem: (itemId) => dispatch({ type: "removeItem", itemId }),
+      removeItem: (itemId) => {
+        // Al quitar un artículo, su imagen de referencia deja de usarse.
+        const item = state.items.find((i) => i.id === itemId);
+        if (item?.customization.referenceImageId) {
+          deleteImage(item.customization.referenceImageId);
+        }
+        dispatch({ type: "removeItem", itemId });
+      },
       setQuantity: (itemId, quantity) => dispatch({ type: "setQuantity", itemId, quantity }),
       setFulfillment: (fulfillmentType) => dispatch({ type: "setFulfillment", fulfillmentType }),
       setAddress: (address) => dispatch({ type: "setAddress", address }),
       setSlot: (date, time) => dispatch({ type: "setSlot", date, time }),
       setCustomer: (customer) => dispatch({ type: "setCustomer", customer }),
+      setReusableTray: (reusableTray) => dispatch({ type: "setReusableTray", reusableTray }),
       reset: () => dispatch({ type: "reset" }),
     }),
     [state, derived]

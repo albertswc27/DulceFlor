@@ -8,6 +8,7 @@
  * donde se crean.
  */
 import { formatPublicOrderId, newInternalId } from "@/domain/orderId";
+import { computeOrderPricing } from "@/domain/pricing";
 import type { Order, OrderStatus } from "@/domain/types";
 
 export interface OrderRepository {
@@ -15,6 +16,11 @@ export interface OrderRepository {
   list(): Order[];
   getById(id: string): Order | undefined;
   updateStatus(id: string, status: OrderStatus): Order | undefined;
+  /**
+   * Introduce el presupuesto manual de un pedido con artículos de fondant y
+   * recalcula el total y la señal desde el motor de dominio.
+   */
+  setQuotedPrice(id: string, quotedPriceCents: number): Order | undefined;
 }
 
 const ORDERS_KEY = "dulce-flor:orders";
@@ -75,12 +81,15 @@ class LocalStorageOrderRepository implements OrderRepository {
     if (existing) return existing;
 
     const now = new Date();
+    // Las solicitudes con artículos de fondant nacen "pendiente de
+    // presupuesto"; el resto, "pendiente de confirmación".
+    const requiresQuote = draft.items.some((item) => item.requiresQuote);
     const order: Order = {
       ...draft,
       id: newInternalId(),
       publicId: formatPublicOrderId(now.getFullYear(), nextSequence(now.getFullYear())),
       createdAt: now.toISOString(),
-      status: "pending",
+      status: requiresQuote ? "pending_quote" : "pending",
     };
     orders.push(order);
     writeOrders(orders);
@@ -100,6 +109,21 @@ class LocalStorageOrderRepository implements OrderRepository {
     const index = orders.findIndex((o) => o.id === id);
     if (index === -1) return undefined;
     orders[index] = { ...orders[index], status };
+    writeOrders(orders);
+    return orders[index];
+  }
+
+  setQuotedPrice(id: string, quotedPriceCents: number): Order | undefined {
+    const orders = readOrders();
+    const index = orders.findIndex((o) => o.id === id);
+    if (index === -1) return undefined;
+    const order = orders[index];
+    const pricing = computeOrderPricing(
+      order.items,
+      order.pricing.deliveryFeeCents,
+      quotedPriceCents
+    );
+    orders[index] = { ...order, pricing };
     writeOrders(orders);
     return orders[index];
   }

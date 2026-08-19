@@ -58,7 +58,9 @@ export default function OrderConfirmationPage() {
           <CheckCircle2 className="h-9 w-9" />
         </span>
         <h1 className="mt-4 font-display text-3xl font-bold text-primary">
-          Solicitud de pedido registrada
+          {order.pricing.pendingQuote
+            ? "Solicitud de presupuesto registrada"
+            : "Solicitud de pedido registrada"}
         </h1>
         <p className="mx-auto mt-2 max-w-md text-muted-foreground">
           Tu solicitud <strong>{order.publicId}</strong> ha quedado registrada y está{" "}
@@ -123,9 +125,20 @@ export default function OrderConfirmationPage() {
             </div>
           )}
           <div className="flex justify-between border-t border-border pt-2 font-display text-base font-bold text-primary">
-            <span>TOTAL</span>
-            <span>{formatEuros(order.pricing.totalCents)}</span>
+            <span>{order.pricing.pendingQuote ? "TOTAL (parcial)" : "TOTAL"}</span>
+            <span>
+              {order.pricing.pendingQuote && order.pricing.totalCents === 0
+                ? "Pendiente de presupuesto"
+                : formatEuros(order.pricing.totalCents)}
+            </span>
           </div>
+          {order.pricing.pendingQuote && (
+            <p className="rounded-lg bg-secondary/15 p-3 text-xs text-foreground">
+              Tu solicitud incluye una <strong>tarta de fondant</strong>: revisaremos el
+              diseño y te enviaremos un presupuesto personalizado por WhatsApp antes de
+              confirmar el pedido.
+            </p>
+          )}
           {order.pricing.depositRequired ? (
             <div className="rounded-lg bg-secondary/15 p-3 text-sm">
               <p className="font-medium text-primary">

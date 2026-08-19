@@ -34,6 +34,12 @@ export interface CatalogProduct {
   category: CategoryId;
   description: string;
   availableFor: CustomerType[];
+  /**
+   * "fixed" (por defecto): precio automático desde el catálogo.
+   * "quote": sin precio automático (fondant) → solicitud de presupuesto;
+   * la UI muestra "Precio personalizado / A consultar", nunca 0 €.
+   */
+  pricingType?: "fixed" | "quote";
   /** Tamaños (con precio base) por tipo de cliente. */
   sizes: Partial<Record<CustomerType, SizeOption[]>>;
   /**
@@ -120,18 +126,33 @@ const EDIBLE_PAPER_EXTRA: ExtraOption = {
 /* Pasteles (matriz personas × discos) — solo particulares en cartas   */
 /* ------------------------------------------------------------------ */
 
-const CAKE_TIERS = [
-  { id: "4-6", label: "4–6 personas" },
-  { id: "10-12", label: "10–12 personas" },
-  { id: "16-18", label: "16–18 personas" },
-  { id: "20-22", label: "20–22 personas" },
+/** Rangos de personas de las cartas de pasteles (fuente: cartas fotografiadas). */
+export const CAKE_TIERS = [
+  { id: "4-6", label: "4–6 personas", minPeople: 4, maxPeople: 6 },
+  { id: "10-12", label: "10–12 personas", minPeople: 10, maxPeople: 12 },
+  { id: "16-18", label: "16–18 personas", minPeople: 16, maxPeople: 18 },
+  { id: "20-22", label: "20–22 personas", minPeople: 20, maxPeople: 22 },
 ] as const;
 
-const CAKE_DISCS = [
-  { id: "1d", label: "1 disco (8 cm)" },
-  { id: "2d", label: "2 discos (13 cm)" },
-  { id: "3d", label: "3 discos (20 cm)" },
+/** Alturas de las cartas: nº de discos y altura en cm. */
+export const CAKE_DISCS = [
+  { id: "1d", discs: 1, heightCm: 8, label: "1 disco (8 cm)" },
+  { id: "2d", discs: 2, heightCm: 13, label: "2 discos (13 cm)" },
+  { id: "3d", discs: 3, heightCm: 20, label: "3 discos (20 cm)" },
 ] as const;
+
+/** Compone/descompone el id de tamaño de pastel (`<tier>-<disc>`). */
+export function buildCakeSizeId(tierId: string, discId: string): string {
+  return `${tierId}-${discId}`;
+}
+
+export function splitCakeSizeId(
+  sizeId: string
+): { tierId: string; discId: string } | null {
+  const match = sizeId.match(/^(.+)-([123]d)$/);
+  if (!match) return null;
+  return { tierId: match[1], discId: match[2] };
+}
 
 /** Precios carta "pasteles" clásicos: fila = rango personas, col = discos. */
 const CLASSIC_CAKE_PRICES: number[][] = [
@@ -236,6 +257,28 @@ export const PRODUCTS: CatalogProduct[] = [
     allowsToppings: true,
     extras: [DEDICATION_EXTRA, EDIBLE_PAPER_EXTRA],
     menuImage: "carta-pasteles-buttercream-precios-particulares",
+  },
+  {
+    id: "pastel-fondant",
+    name: "Tarta de fondant personalizada",
+    category: "pasteles",
+    description:
+      "¿Tienes un diseño especial en mente? Cuéntanos tu idea y adjunta una imagen de referencia: prepararemos un presupuesto personalizado según la complejidad del diseño.",
+    availableFor: ["individual"],
+    // Sin precio automático: los diseños de fondant se presupuestan a mano.
+    pricingType: "quote",
+    sizes: {
+      individual: CAKE_TIERS.map((tier) => ({
+        id: tier.id,
+        label: `${tier.label} (aprox.)`,
+        servings: tier.label,
+        priceCents: 0, // nunca se muestra: pricingType "quote" → "A consultar"
+      })),
+    },
+    flavors: SPONGE_FLAVORS,
+    fillings: CAKE_FILLINGS,
+    allowsToppings: false,
+    extras: [],
   },
   {
     id: "cheesecake",

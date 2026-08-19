@@ -6,6 +6,7 @@ import {
   Heart,
   MessageCircle,
   PartyPopper,
+  Recycle,
   Sparkles,
   Store,
   Truck,
@@ -37,7 +38,6 @@ import { getMinPriceCents, getScheduleRows } from "../lib/catalogView";
 import { Reveal } from "../components/Reveal";
 import { SectionHeading } from "../components/SectionHeading";
 import logo from "@/assets/logo-dulce-flor.jpeg";
-import cartaRellenos from "@/assets/carta-rellenos-pasteles.jpeg";
 
 /* Datos derivados del catálogo — sin precios ni cifras escritos a mano. */
 const PRODUCT_CARDS = [
@@ -333,13 +333,28 @@ function AudiencesSection() {
                 {businessProductNames}.
               </CardDescription>
             </CardHeader>
-            <CardContent className="mt-auto flex flex-col gap-3 sm:flex-row">
-              <Button asChild size="lg" className="w-full sm:w-auto">
-                <Link to="/pedido">Hacer pedido</Link>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
-                <Link to="/carta">Ver precios de empresa</Link>
-              </Button>
+            <CardContent className="mt-auto space-y-4">
+              <div className="flex items-start gap-3 rounded-lg bg-accent/10 px-3.5 py-3">
+                <Recycle className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Fuentes reutilizables
+                  </p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
+                    Podemos preparar los productos en fuentes de cristal reutilizables:
+                    en el siguiente pedido recogemos la fuente anterior y la sustituimos
+                    por la nueva.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Button asChild size="lg" className="w-full sm:w-auto">
+                  <Link to="/pedido">Hacer pedido</Link>
+                </Button>
+                <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
+                  <Link to="/carta">Ver precios de empresa</Link>
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </Reveal>
@@ -351,38 +366,42 @@ function AudiencesSection() {
 function AboutSection() {
   return (
     <section id="sobre" className="scroll-mt-24 bg-background-soft/50 py-16 sm:py-20">
-      <div className="container grid items-center gap-10 lg:grid-cols-2">
+      <div className="container max-w-3xl text-center">
         <Reveal>
-          <div className="vintage-frame mx-auto max-w-sm overflow-hidden bg-card p-3">
+          <div className="mx-auto w-fit rounded-full bg-card p-1.5 shadow-soft ring-1 ring-secondary/40">
             <img
-              src={cartaRellenos}
-              alt="Carta de rellenos de pasteles de Dulce Flor con sus nueve opciones"
+              src={logo}
+              alt=""
               loading="lazy"
-              className="aspect-[3/4] w-full rounded-lg object-cover"
+              width={112}
+              height={112}
+              className="h-28 w-28 rounded-full object-cover"
             />
           </div>
         </Reveal>
 
         <Reveal delay={0.1}>
-          <p className="eyebrow">Sobre Dulce Flor</p>
+          <p className="eyebrow mt-6">Sobre Dulce Flor</p>
           <h2 className="mt-1 font-display text-3xl font-bold text-primary sm:text-4xl">
             Receta casera con mucho amor
           </h2>
-          <p className="mt-4 text-base text-muted-foreground sm:text-lg">
+          <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
             Dulce Flor es un obrador de repostería casera en Santa Coloma de Gramenet.
             Preparamos cada pastel, cheesecake y tres leches por encargo, con sabor
             casero que encanta y el cariño de lo hecho a mano.
           </p>
-          <p className="mt-3 text-base text-muted-foreground sm:text-lg">
+          <p className="mx-auto mt-3 max-w-2xl text-base text-muted-foreground sm:text-lg">
             Grandes momentos, grandes sabores: cuéntanos qué celebras y lo endulzamos
             contigo.
           </p>
           <p className="mt-6 font-script text-3xl text-accent">
             Hechos con amor para compartir momentos inolvidables
           </p>
-          <Button asChild variant="outline" size="lg" className="mt-6">
-            <Link to="/carta">Descubrir la carta</Link>
-          </Button>
+          <div className="mt-6">
+            <Button asChild variant="outline" size="lg">
+              <Link to="/carta">Descubrir la carta</Link>
+            </Button>
+          </div>
         </Reveal>
       </div>
     </section>

@@ -39,6 +39,17 @@ src/
 
 Principio rector: **la UI nunca calcula precios ni disponibilidad**; siempre llama al dominio. El configurador público y el kiosk comparten estado (`OrderDraftContext`), componentes (`ProductConfigurator`, `OrderSummary`, `SlotPicker`) y registro (`submitOrder`).
 
+## Imágenes de referencia (POC)
+
+`services/imageStore.ts`: las fotos de referencia del cliente se redimensionan y
+comprimen en el navegador (máx. 1280 px, JPEG) y se guardan bajo claves propias
+de localStorage; el pedido solo referencia el `referenceImageId` (nunca base64
+incrustado en el objeto del pedido). Al quitar un artículo del carrito se borra
+su imagen, y al arrancar se limpian huérfanas. Con backend real, esta interfaz
+se sustituye por subida a storage (Supabase Storage/S3) conservando los ids.
+Limitación (igual que los pedidos): las imágenes viven en el navegador donde se
+creó el pedido.
+
 ## Persistencia (POC) y camino a producción
 
 `OrderRepository` es una interfaz estrecha implementada hoy sobre `localStorage`:

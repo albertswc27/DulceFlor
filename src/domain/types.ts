@@ -6,6 +6,7 @@ export type FulfillmentType = "pickup" | "delivery";
 
 export type OrderStatus =
   | "pending"
+  | "pending_quote"
   | "confirmed"
   | "in_preparation"
   | "ready"
@@ -14,6 +15,7 @@ export type OrderStatus =
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   pending: "Pendiente",
+  pending_quote: "Pendiente de presupuesto",
   confirmed: "Confirmado",
   in_preparation: "En preparación",
   ready: "Listo",
@@ -48,11 +50,20 @@ export interface ItemCustomization {
   /** Relleno (solo pasteles). */
   filling?: SelectedOption;
   toppings: SelectedOption[];
+  /**
+   * Topping solicitado por el cliente que no está en el catálogo.
+   * Dulce Flor confirmará disponibilidad; NO se cobra automáticamente.
+   */
+  customToppingRequest?: string;
   extras: SelectedExtra[];
   /** Texto de la dedicatoria si se ha elegido el extra correspondiente. */
   dedicationText?: string;
+  /** Descripción del diseño (obligatoria en tartas de fondant). */
+  designDescription?: string;
   /** Personalización especial en texto libre. */
   notes?: string;
+  /** Imagen de referencia adjuntada por el cliente (id en el almacén de imágenes). */
+  referenceImageId?: string;
 }
 
 export interface OrderItem {
@@ -64,6 +75,12 @@ export interface OrderItem {
   /** Precio unitario = base + toppings + extras (en céntimos). */
   unitPriceCents: number;
   totalCents: number;
+  /**
+   * true en productos sin precio automático (fondant): el importe se
+   * presupuesta manualmente. unitPriceCents/totalCents valen 0 pero la UI
+   * NUNCA debe mostrarlos como precio: debe mostrar "A consultar".
+   */
+  requiresQuote?: boolean;
 }
 
 export interface CustomerInfo {
@@ -89,6 +106,13 @@ export interface OrderPricing {
   depositRequired: boolean;
   depositCents: number;
   remainingCents: number;
+  /**
+   * true cuando el pedido incluye artículos a presupuestar (fondant) y aún no
+   * hay presupuesto: el total es parcial y NO se calcula señal.
+   */
+  pendingQuote?: boolean;
+  /** Presupuesto introducido por administración para los artículos de fondant. */
+  quotedPriceCents?: number;
 }
 
 export interface Order {
@@ -116,6 +140,12 @@ export interface Order {
   requestedTime: string;
 
   pricing: OrderPricing;
+
+  /**
+   * Solo pedidos de empresa: entrega en fuente de cristal reutilizable
+   * (la fuente anterior puede recogerse en la siguiente entrega).
+   */
+  reusableTray?: boolean;
 
   status: OrderStatus;
   /** Origen del pedido: web pública o kiosk de tienda. */
