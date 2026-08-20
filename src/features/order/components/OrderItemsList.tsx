@@ -31,8 +31,10 @@ function DraftItemRow({ item }: { item: DraftItem }) {
             )}
             {c.customToppingRequest && (
               <li>
-                Topping solicitado: {c.customToppingRequest}{" "}
-                <span className="text-warning">(a confirmar)</span>
+                Topping solicitado: {c.customToppingRequest}
+                <span className="block text-warning">
+                  Precio pendiente de confirmación
+                </span>
               </li>
             )}
             {c.extras.length > 0 && (
@@ -40,7 +42,16 @@ function DraftItemRow({ item }: { item: DraftItem }) {
             )}
             {c.dedicationText && <li>Dedicatoria: “{c.dedicationText}”</li>}
             {c.designDescription && <li>Diseño: “{c.designDescription}”</li>}
-            {c.notes && <li className="italic">“{c.notes}”</li>}
+            {c.notes && (
+              <li className="italic">
+                “{c.notes}”
+                {!isQuote && (
+                  <span className="block not-italic text-warning">
+                    Cambio especial: Dulce Flor confirmará si afecta al precio
+                  </span>
+                )}
+              </li>
+            )}
           </ul>
           {referenceImage && (
             <img

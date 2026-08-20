@@ -34,6 +34,8 @@ import {
   MIN_ORDER_LEAD_TIME_HOURS,
   TOPPING_PRICE_CENTS,
 } from "@/config/business";
+import { CakeReferences } from "@/features/order/components/CakeReferences";
+import { CLASSIC_CAKE_PHOTOS } from "@/assets/cakePhotos";
 import { getMinPriceCents, getScheduleRows } from "../lib/catalogView";
 import { Reveal } from "../components/Reveal";
 import { SectionHeading } from "../components/SectionHeading";
@@ -43,9 +45,9 @@ import logo from "@/assets/logo-dulce-flor.jpeg";
 const PRODUCT_CARDS = [
   {
     id: "pasteles",
-    title: "Pasteles personalizados",
+    title: "Tartas clásicas",
     description:
-      "Clásicos o con buttercream: elige tamaño, bizcocho y relleno, y hazlo único con toppings y dedicatoria.",
+      "Clásicas o con buttercream: elige tamaño, bizcocho y relleno, y remátala con toppings y dedicatoria. Precio cerrado al momento.",
     fromCents: getMinPriceCents("pastel-clasico", "individual"),
     detail: `${SPONGE_FLAVORS.length} bizcochos · ${CAKE_FILLINGS.length} rellenos incluidos`,
   },
@@ -77,14 +79,14 @@ const STEPS = [
   {
     icon: CakeSlice,
     title: "Elige tu dulce",
-    text: "Pasteles personalizados, cheesecakes o tres leches, para particulares y empresas.",
+    text: "Tartas clásicas, cheesecakes o tres leches, para particulares y empresas.",
   },
   {
     icon: Sparkles,
     title: "Personalízalo",
     text: `Bizcocho, relleno incluido y los toppings que quieras (+${formatEuros(
       TOPPING_PRICE_CENTS
-    )} cada uno).`,
+    )} cada uno). Las decoraciones especiales se presupuestan aparte.`,
   },
   {
     icon: CalendarClock,
@@ -151,7 +153,7 @@ function Hero() {
             Hechos con pasión para endulzar tus mejores momentos
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
-            Pasteles personalizados, cheesecakes y tres leches en Santa Coloma de
+            Tartas de celebración, cheesecakes y tres leches en Santa Coloma de
             Gramenet. Hechos con amor para compartir momentos inolvidables.
           </p>
         </div>
@@ -224,6 +226,22 @@ function ProductsSection() {
           </Reveal>
         ))}
       </div>
+
+      {/* Galería de trabajos reales del obrador (fotos del cliente). */}
+      <Reveal className="mt-10">
+        <CakeReferences
+          photos={CLASSIC_CAKE_PHOTOS}
+          title="Así son nuestras tartas"
+          limit={4}
+          description={
+            <>
+              Fotografías reales de tartas hechas en nuestro obrador, sin retoques ni
+              imágenes de catálogo. Este acabado clásico —cobertura, cenefa de manga,
+              drip y los toppings que elijas— es el que tiene precio cerrado en la web.
+            </>
+          }
+        />
+      </Reveal>
 
       <Reveal className="mt-10">
         <div className="vintage-frame bg-card px-6 py-6">
@@ -308,12 +326,29 @@ function AudiencesSection() {
               </span>
               <CardTitle className="pt-2 text-xl">Para particulares</CardTitle>
               <CardDescription>
-                Tartas personalizadas para cumpleaños, aniversarios y toda clase de
-                celebraciones: elige tamaño, bizcocho, relleno, toppings y dedicatoria,
-                y recógela o recíbela el día señalado.
+                Tartas para cumpleaños, aniversarios y toda clase de celebraciones:
+                elige tamaño, bizcocho, relleno, toppings y dedicatoria, y recógela o
+                recíbela el día señalado.
               </CardDescription>
             </CardHeader>
-            <CardContent className="mt-auto">
+            <CardContent className="mt-auto space-y-4">
+              <div className="flex items-start gap-3 rounded-lg bg-secondary/20 px-3.5 py-3">
+                <Sparkles
+                  className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                  aria-hidden="true"
+                />
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Dos formas de encargarla
+                  </p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
+                    La tarta clásica (con o sin buttercream) tiene precio al momento en
+                    la web. La tarta personalizada y la de fondant se presupuestan a
+                    medida: cuéntanos tu idea, adjunta una foto de referencia y te
+                    confirmamos el precio por WhatsApp.
+                  </p>
+                </div>
+              </div>
               <Button asChild size="lg" className="w-full sm:w-auto">
                 <Link to="/pedido">Hacer pedido</Link>
               </Button>

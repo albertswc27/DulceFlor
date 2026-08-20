@@ -391,6 +391,12 @@ export default function KioskPage() {
 
         <OrderSummary />
 
+        {derived.pricing.hasPendingExtras && (
+          <p className="rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
+            Hay modificaciones pendientes de confirmar: el importe puede cambiar.
+          </p>
+        )}
+
         <Button
           type="button"
           size="xl"
@@ -486,7 +492,7 @@ export default function KioskPage() {
         </p>
         {success.pricing.pendingQuote ? (
           <p className="mt-3 max-w-sm rounded-lg bg-secondary/15 px-4 py-2.5 text-sm text-foreground">
-            Solicitud de fondant: enviaremos presupuesto por WhatsApp.
+            Solicitud de tarta a medida: enviaremos el presupuesto por WhatsApp.
           </p>
         ) : (
           success.pricing.depositRequired && (
@@ -671,8 +677,10 @@ export default function KioskPage() {
                   aprovechan la pantalla (el catálogo es corto). */}
               <div className="mt-6 grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
                 {orderedProducts.map((product) => {
-                  // Productos "quote" (fondant): sin precio automático — el
-                  // mínimo del catálogo sería 0 € y no debe mostrarse nunca.
+                  // Productos "quote" (tarta personalizada / de fondant): sin
+                  // precio automático — el mínimo del catálogo sería 0 € y no
+                  // debe mostrarse nunca. En el kiosk siguen disponibles: el
+                  // equipo puede registrar la solicitud a medida en tienda.
                   const isQuoteProduct = product.pricingType === "quote";
                   const from =
                     !isQuoteProduct &&
@@ -722,13 +730,21 @@ export default function KioskPage() {
                           ))}
                         </span>
                       )}
-                      <span className="mt-5 flex items-center justify-between">
-                        <span className="font-display text-2xl font-bold text-primary">
-                          {isQuoteProduct
-                            ? "Precio personalizado"
-                            : typeof from === "number"
-                              ? `Desde ${formatEuros(from)}`
-                              : ""}
+                      <span className="mt-5 flex items-center justify-between gap-3">
+                        <span className="min-w-0">
+                          <span className="block font-display text-2xl font-bold text-primary">
+                            {isQuoteProduct
+                              ? "Precio a consultar"
+                              : typeof from === "number"
+                                ? `Desde ${formatEuros(from)}`
+                                : ""}
+                          </span>
+                          {isQuoteProduct && (
+                            <span className="mt-0.5 block text-sm leading-snug text-muted-foreground">
+                              Abre una solicitud de presupuesto: sin importe hasta
+                              confirmarlo con el cliente.
+                            </span>
+                          )}
                         </span>
                         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary/20 text-primary transition-transform group-hover:scale-110">
                           <Plus className="h-6 w-6" />

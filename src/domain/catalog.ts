@@ -36,10 +36,17 @@ export interface CatalogProduct {
   availableFor: CustomerType[];
   /**
    * "fixed" (por defecto): precio automático desde el catálogo.
-   * "quote": sin precio automático (fondant) → solicitud de presupuesto;
-   * la UI muestra "Precio personalizado / A consultar", nunca 0 €.
+   * "quote": sin precio automático (tartas personalizadas y de fondant) →
+   * solicitud de presupuesto; la UI muestra "Precio a consultar", nunca 0 €.
    */
   pricingType?: "fixed" | "quote";
+  /**
+   * Subtipo de las tartas sin precio automático. Ambas comparten flujo,
+   * modelo y lógica; solo cambia el texto que ve el cliente.
+   */
+  customCakeType?: "custom" | "fondant";
+  /** Las solicitudes de presupuesto exigen fotografía de referencia. */
+  requiresReferenceImage?: boolean;
   /** Tamaños (con precio base) por tipo de cliente. */
   sizes: Partial<Record<CustomerType, SizeOption[]>>;
   /**
@@ -232,10 +239,10 @@ export const CHEESECAKE_FLAVORS: CatalogOption[] = Object.entries(CHEESECAKE_PRI
 export const PRODUCTS: CatalogProduct[] = [
   {
     id: "pastel-clasico",
-    name: "Pastel personalizado",
+    name: "Tarta clásica Dulce Flor",
     category: "pasteles",
     description:
-      "Nuestro pastel casero por capas: elige tamaño, bizcocho y relleno, y personalízalo a tu gusto.",
+      "Nuestro acabado clásico por capas: elige tamaño, bizcocho, relleno y toppings, y conoce el precio al momento.",
     availableFor: ["individual"],
     sizes: { individual: buildCakeSizes(CLASSIC_CAKE_PRICES) },
     flavors: SPONGE_FLAVORS,
@@ -246,10 +253,10 @@ export const PRODUCTS: CatalogProduct[] = [
   },
   {
     id: "pastel-buttercream",
-    name: "Pastel con buttercream",
+    name: "Tarta clásica con buttercream",
     category: "pasteles",
     description:
-      "Pastel por capas acabado con buttercream, ideal para decoraciones personalizadas.",
+      "Nuestro acabado clásico terminado con buttercream y cenefa de manga. Precio al momento.",
     availableFor: ["individual"],
     sizes: { individual: buildCakeSizes(BUTTERCREAM_CAKE_PRICES) },
     flavors: SPONGE_FLAVORS,
@@ -259,20 +266,45 @@ export const PRODUCTS: CatalogProduct[] = [
     menuImage: "carta-pasteles-buttercream-precios-particulares",
   },
   {
-    id: "pastel-fondant",
-    name: "Tarta de fondant personalizada",
+    id: "pastel-personalizado",
+    name: "Tarta personalizada",
     category: "pasteles",
     description:
-      "¿Tienes un diseño especial en mente? Cuéntanos tu idea y adjunta una imagen de referencia: prepararemos un presupuesto personalizado según la complejidad del diseño.",
-    availableFor: ["individual"],
-    // Sin precio automático: los diseños de fondant se presupuestan a mano.
+      "Decoración especial, dibujos, personajes o un diseño que hayas visto: envíanos tu idea con una fotografía de referencia y te confirmamos el precio por WhatsApp.",
+    availableFor: ["individual"], // confirmado: solo particulares
+    // Sin precio automático: la decoración especial se presupuesta a mano.
     pricingType: "quote",
+    customCakeType: "custom",
+    requiresReferenceImage: true,
     sizes: {
       individual: CAKE_TIERS.map((tier) => ({
         id: tier.id,
         label: `${tier.label} (aprox.)`,
         servings: tier.label,
         priceCents: 0, // nunca se muestra: pricingType "quote" → "A consultar"
+      })),
+    },
+    flavors: SPONGE_FLAVORS,
+    fillings: CAKE_FILLINGS,
+    allowsToppings: false,
+    extras: [],
+  },
+  {
+    id: "pastel-fondant",
+    name: "Tarta de fondant",
+    category: "pasteles",
+    description:
+      "Diseños especiales cubiertos de fondant. Cuéntanos tu idea y adjunta una imagen de referencia: prepararemos un presupuesto según la complejidad.",
+    availableFor: ["individual"], // confirmado: solo particulares
+    pricingType: "quote",
+    customCakeType: "fondant",
+    requiresReferenceImage: true,
+    sizes: {
+      individual: CAKE_TIERS.map((tier) => ({
+        id: tier.id,
+        label: `${tier.label} (aprox.)`,
+        servings: tier.label,
+        priceCents: 0,
       })),
     },
     flavors: SPONGE_FLAVORS,

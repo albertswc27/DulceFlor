@@ -261,15 +261,20 @@ function ToppingOverrideNotes({
 function IndividualMenu() {
   const classicCake = getProduct("pastel-clasico");
   const tresLeches = getProduct("tres-leches");
+  // Productos sin precio automático (tarta personalizada y de fondant): sus
+  // nombres y descripciones salen del catálogo, nunca escritos a mano.
+  const quoteCakes = getProductsFor("individual").filter(
+    (product) => product.pricingType === "quote"
+  );
 
   return (
     <div className="space-y-14">
-      {/* Pasteles personalizados */}
+      {/* Tartas con precio cerrado en carta */}
       <section className="space-y-6">
         <SectionHeading
           align="left"
           eyebrow="Para compartir"
-          title="Pasteles personalizados"
+          title="Tartas clásicas"
           subtitle={`Elige tamaño y número de discos. El bizcocho (${SPONGE_FLAVORS.length} sabores) y el relleno (${CAKE_FILLINGS.length} opciones) van incluidos en el precio.`}
         />
         <div className="grid gap-6 xl:grid-cols-2">
@@ -277,6 +282,37 @@ function IndividualMenu() {
           <CakePriceCard productId="pastel-buttercream" />
         </div>
       </section>
+
+      {/* Tartas a medida: sin precio en carta, se presupuestan a mano */}
+      {quoteCakes.length > 0 && (
+        <section className="space-y-6">
+          <SectionHeading
+            align="left"
+            eyebrow="A medida"
+            title="Tartas personalizadas y de fondant"
+            subtitle="Las decoraciones especiales no tienen precio en carta: se presupuestan según el diseño y la complejidad."
+          />
+          <div className="grid gap-5 md:grid-cols-2">
+            {quoteCakes.map((product) => (
+              <Card key={product.id} className="h-full">
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-3">
+                    <CardTitle className="text-lg">{product.name}</CardTitle>
+                    <Badge variant="secondary" className="shrink-0">
+                      A consultar
+                    </Badge>
+                  </div>
+                  <CardDescription>{product.description}</CardDescription>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Cuéntanos tu idea al hacer el pedido y adjunta una imagen de referencia:
+            te confirmamos el presupuesto por WhatsApp antes de ponernos a ello.
+          </p>
+        </section>
+      )}
 
       {/* Cheesecakes */}
       <section className="space-y-6">
@@ -335,7 +371,7 @@ function IndividualMenu() {
           align="left"
           eyebrow="Hazlo único"
           title="Personalización"
-          subtitle="Bizcochos, toppings y extras para que tu tarta sea exactamente como la imaginas."
+          subtitle="Bizcochos, toppings y extras para rematar el acabado clásico de tu tarta."
         />
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="h-full">

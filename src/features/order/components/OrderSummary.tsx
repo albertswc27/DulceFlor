@@ -49,7 +49,11 @@ export function OrderSummary({ showDepositInfo = true }: { showDepositInfo?: boo
 
       <div className="flex items-center justify-between">
         <span className="font-display text-base font-semibold text-primary">
-          {pricing.pendingQuote ? "TOTAL (parcial)" : "TOTAL"}
+          {pricing.pendingQuote
+            ? "TOTAL (parcial)"
+            : pricing.hasPendingExtras
+              ? "TOTAL ACTUAL"
+              : "TOTAL"}
         </span>
         {pricing.pendingQuote && pricing.totalCents === 0 ? (
           <span className="font-display text-xl font-bold text-primary">
@@ -62,9 +66,18 @@ export function OrderSummary({ showDepositInfo = true }: { showDepositInfo?: boo
 
       {pricing.pendingQuote && (
         <p className="rounded-lg bg-secondary/15 px-3 py-2 text-xs text-foreground">
-          Tu pedido incluye una <strong>tarta de fondant pendiente de presupuesto</strong>:
+          Tu pedido incluye una <strong>tarta a medida pendiente de presupuesto</strong>:
           su precio no está incluido en el total. Te enviaremos el presupuesto
           personalizado por WhatsApp.
+        </p>
+      )}
+
+      {pricing.hasPendingExtras && (
+        <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
+          Has añadido peticiones que revisaremos (topping fuera de lista, un cambio
+          especial o una imagen de referencia):{" "}
+          <strong>este importe puede variar</strong> y te confirmaremos el total final por
+          WhatsApp.
         </p>
       )}
 
@@ -96,6 +109,8 @@ export function OrderSummary({ showDepositInfo = true }: { showDepositInfo?: boo
             </div>
             <p className="pt-1 text-xs text-muted-foreground">
               Métodos: Bizum, transferencia o pago en tienda. Sin pago online.
+              {pricing.hasPendingExtras &&
+                " La señal definitiva se calculará sobre el importe final confirmado."}
             </p>
           </div>
         ) : (

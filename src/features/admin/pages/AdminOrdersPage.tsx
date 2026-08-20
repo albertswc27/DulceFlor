@@ -38,18 +38,37 @@ function depositLabel(order: Order): string {
 }
 
 /**
- * Total mostrado en el listado. Con presupuesto pendiente (fondant) el total
- * del dominio es parcial: se indica explícitamente en vez de un importe
- * engañoso.
+ * Total mostrado en el listado. Con presupuesto pendiente (tarta a medida) el
+ * total del dominio es parcial: se indica explícitamente en vez de un importe
+ * engañoso. Con modificaciones pendientes (topping fuera de lista, notas o
+ * imagen de referencia) el importe es el actual y se marca con un "+".
  */
-function totalLabel(order: Order): string {
+function TotalLabel({ order }: { order: Order }) {
   const { pricing } = order;
+
   if (pricing.pendingQuote) {
-    return pricing.subtotalCents > 0
-      ? `${formatEuros(pricing.subtotalCents)} + fondant`
-      : "A presupuestar";
+    return (
+      <>
+        {pricing.subtotalCents > 0
+          ? `${formatEuros(pricing.subtotalCents)} + a presupuestar`
+          : "A presupuestar"}
+      </>
+    );
   }
-  return formatEuros(pricing.totalCents);
+
+  if (pricing.hasPendingExtras) {
+    return (
+      <span title="Modificaciones pendientes de confirmar">
+        {formatEuros(pricing.totalCents)}{" "}
+        <span aria-hidden="true" className="font-normal text-muted-foreground">
+          +
+        </span>
+        <span className="sr-only">más modificaciones pendientes de confirmar</span>
+      </span>
+    );
+  }
+
+  return <>{formatEuros(pricing.totalCents)}</>;
 }
 
 export default function AdminOrdersPage() {
@@ -261,7 +280,7 @@ export default function AdminOrdersPage() {
                       {FULFILLMENT_LABELS[order.fulfillmentType]}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right font-display font-semibold text-primary">
-                      {totalLabel(order)}
+                      <TotalLabel order={order} />
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right text-muted-foreground">
                       {depositLabel(order)}
@@ -309,7 +328,7 @@ export default function AdminOrdersPage() {
                     {FULFILLMENT_LABELS[order.fulfillmentType]}
                   </span>
                   <span className="font-display text-lg font-bold text-primary">
-                    {totalLabel(order)}
+                    <TotalLabel order={order} />
                   </span>
                 </div>
                 <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">

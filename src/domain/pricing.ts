@@ -24,9 +24,25 @@ function countValidToppings(toppingIds: string[]): number {
   return toppingIds.filter((id) => TOPPINGS.some((t) => t.id === id)).length;
 }
 
-/** ¿El producto se presupuesta a mano (fondant) en lugar de tener precio automático? */
+/** ¿El producto se presupuesta a mano (personalizada/fondant)? */
 export function isQuoteProduct(productId: string): boolean {
   return getProduct(productId)?.pricingType === "quote";
+}
+
+/**
+ * ¿El artículo lleva peticiones que Dulce Flor debe revisar y que pueden
+ * cambiar el importe? (topping fuera de catálogo, cambio especial escrito en
+ * notas, o imagen de referencia sobre una tarta con precio automático).
+ * Los artículos "quote" no cuentan: ya están pendientes de presupuesto.
+ */
+export function itemHasPendingExtras(item: OrderItem): boolean {
+  if (item.requiresQuote) return false;
+  const c = item.customization;
+  return Boolean(
+    c.customToppingRequest?.trim() ||
+      c.notes?.trim() ||
+      c.referenceImageId
+  );
 }
 
 export interface ItemSelection {
@@ -162,6 +178,7 @@ export function computeOrderPricing(
     remainingCents: deposit.remainingCents,
     pendingQuote: hasQuoteItems ? pendingQuote : undefined,
     quotedPriceCents: quoted ?? undefined,
+    hasPendingExtras: items.some(itemHasPendingExtras) || undefined,
   };
 }
 

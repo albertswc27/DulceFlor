@@ -6,7 +6,7 @@ import {
   computeUnitPriceCents,
   getToppingPriceCents,
 } from "./pricing";
-import { getUnitBasePriceCents } from "./catalog";
+import { getProduct, getProductsFor, getUnitBasePriceCents } from "./catalog";
 import type { OrderItem } from "./types";
 
 function makeItem(unitPriceCents: number, quantity = 1): OrderItem {
@@ -212,6 +212,99 @@ describe("buildOrderItem", () => {
     expect(item?.customization.referenceImageId).toBe("img-123");
     // El topping personalizado NO se cobra automáticamente.
     expect(item?.unitPriceCents).toBe(2000);
+  });
+});
+
+describe("topping fuera de catálogo y extras pendientes", () => {
+  function itemWith(customization: Partial<OrderItem["customization"]>): OrderItem {
+    return buildOrderItem({
+      id: "x",
+      selection: {
+        productId: "pastel-clasico",
+        customerType: "individual",
+        sizeId: "4-6-1d",
+        flavorId: "chocolate",
+        toppingIds: ["oreo"],
+        extraIds: [],
+      },
+      customization: {
+        size: { id: "4-6-1d", label: "4–6 personas · 1 disco (8 cm)" },
+        flavor: { id: "chocolate", label: "Chocolate" },
+        toppings: [{ id: "oreo", label: "Oreo" }],
+        extras: [],
+        ...customization,
+      },
+      quantity: 1,
+    })!;
+  }
+
+  it("un topping solicitado NO suma importe automáticamente", () => {
+    const sinPeticion = itemWith({});
+    const conPeticion = itemWith({ customToppingRequest: "Ferrero Rocher" });
+    // 2000 base + 250 del topping de catálogo, en ambos casos.
+    expect(sinPeticion.unitPriceCents).toBe(2250);
+    expect(conPeticion.unitPriceCents).toBe(2250);
+  });
+
+  it("marca el pedido como pendiente de confirmar extras", () => {
+    expect(computeOrderPricing([itemWith({})], 0).hasPendingExtras).toBeUndefined();
+    expect(
+      computeOrderPricing([itemWith({ customToppingRequest: "Ferrero Rocher" })], 0)
+        .hasPendingExtras
+    ).toBe(true);
+    expect(
+      computeOrderPricing([itemWith({ notes: "Dos sabores de bizcocho" })], 0)
+        .hasPendingExtras
+    ).toBe(true);
+    expect(
+      computeOrderPricing([itemWith({ referenceImageId: "img-1" })], 0).hasPendingExtras
+    ).toBe(true);
+  });
+
+  it("con extras pendientes el total actual y la señal se siguen calculando", () => {
+    const pricing = computeOrderPricing([makeItem(6000)], 0);
+    expect(pricing.totalCents).toBe(6000);
+    expect(pricing.depositRequired).toBe(true);
+  });
+});
+
+describe("tartas a medida (personalizada y fondant)", () => {
+  it("ambas son solo para particulares y sin precio automático", () => {
+    for (const id of ["pastel-personalizado", "pastel-fondant"]) {
+      const product = getProduct(id)!;
+      expect(product.pricingType).toBe("quote");
+      expect(product.availableFor).toEqual(["individual"]);
+      expect(product.requiresReferenceImage).toBe(true);
+    }
+    const business = getProductsFor("business").map((p) => p.id);
+    expect(business).not.toContain("pastel-personalizado");
+    expect(business).not.toContain("pastel-fondant");
+  });
+
+  it("la tarta personalizada no obtiene precio automático", () => {
+    const item = buildOrderItem({
+      id: "c1",
+      selection: {
+        productId: "pastel-personalizado",
+        customerType: "individual",
+        sizeId: "10-12",
+        flavorId: "vainilla",
+        toppingIds: [],
+        extraIds: [],
+      },
+      customization: {
+        size: { id: "10-12", label: "10–12 personas (aprox.)" },
+        toppings: [],
+        extras: [],
+        designDescription: "Tarta con dibujo de unicornio y colores pastel",
+        referenceImageId: "img-ref",
+      },
+      quantity: 1,
+    });
+    expect(item?.requiresQuote).toBe(true);
+    const pricing = computeOrderPricing([item!], 0);
+    expect(pricing.pendingQuote).toBe(true);
+    expect(pricing.depositRequired).toBe(false);
   });
 });
 

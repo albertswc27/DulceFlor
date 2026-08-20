@@ -26,9 +26,12 @@ export function buildOrderWhatsAppMessage(order: Order): string {
   const lines: string[] = [];
   const hasQuoteItems = order.items.some((item) => item.requiresQuote);
   const onlyQuoteItems = hasQuoteItems && order.items.every((item) => item.requiresQuote);
+  const quoteItem = order.items.find((item) => item.requiresQuote);
   lines.push(
     onlyQuoteItems
-      ? "SOLICITUD DE PRESUPUESTO — TARTA DE FONDANT"
+      ? `SOLICITUD DE PRESUPUESTO — ${
+          quoteItem?.productName.toUpperCase() ?? "TARTA A MEDIDA"
+        }`
       : "NUEVO PEDIDO DULCE FLOR"
   );
   lines.push("");
@@ -52,7 +55,8 @@ export function buildOrderWhatsAppMessage(order: Order): string {
       for (const t of c.toppings) lines.push(`- ${t.label}`);
     }
     if (c.customToppingRequest) {
-      lines.push(`Topping solicitado (a confirmar disponibilidad): ${c.customToppingRequest}`);
+      lines.push(`Topping solicitado: ${c.customToppingRequest}`);
+      lines.push("  (precio pendiente de confirmación)");
     }
     for (const extra of c.extras) {
       lines.push(`Extra: ${extra.label} (${formatEuros(extra.priceCents)})`);
@@ -94,7 +98,7 @@ export function buildOrderWhatsAppMessage(order: Order): string {
           : `Entrega: ${formatEuros(order.pricing.deliveryFeeCents)}`
       );
     }
-    lines.push("TOTAL: pendiente de presupuesto");
+    lines.push("PRECIO: pendiente de presupuesto");
   } else {
     lines.push(`Subtotal: ${formatEuros(order.pricing.subtotalCents)}`);
     if (order.pricing.quotedPriceCents !== undefined) {
@@ -107,7 +111,14 @@ export function buildOrderWhatsAppMessage(order: Order): string {
           : `Entrega: ${formatEuros(order.pricing.deliveryFeeCents)}`
       );
     }
-    lines.push(`TOTAL: ${formatEuros(order.pricing.totalCents)}`);
+    lines.push(
+      `${order.pricing.hasPendingExtras ? "TOTAL ACTUAL" : "TOTAL"}: ${formatEuros(
+        order.pricing.totalCents
+      )}`
+    );
+    if (order.pricing.hasPendingExtras) {
+      lines.push("  + modificaciones pendientes de confirmar (ver indicaciones)");
+    }
     if (order.pricing.depositRequired) {
       lines.push(
         `Paga y señal (${DEPOSIT_PERCENTAGE}%): ${formatEuros(order.pricing.depositCents)}`

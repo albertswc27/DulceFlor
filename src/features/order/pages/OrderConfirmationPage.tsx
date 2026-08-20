@@ -125,7 +125,13 @@ export default function OrderConfirmationPage() {
             </div>
           )}
           <div className="flex justify-between border-t border-border pt-2 font-display text-base font-bold text-primary">
-            <span>{order.pricing.pendingQuote ? "TOTAL (parcial)" : "TOTAL"}</span>
+            <span>
+              {order.pricing.pendingQuote
+                ? "TOTAL (parcial)"
+                : order.pricing.hasPendingExtras
+                  ? "TOTAL ACTUAL"
+                  : "TOTAL"}
+            </span>
             <span>
               {order.pricing.pendingQuote && order.pricing.totalCents === 0
                 ? "Pendiente de presupuesto"
@@ -134,9 +140,17 @@ export default function OrderConfirmationPage() {
           </div>
           {order.pricing.pendingQuote && (
             <p className="rounded-lg bg-secondary/15 p-3 text-xs text-foreground">
-              Tu solicitud incluye una <strong>tarta de fondant</strong>: revisaremos el
+              Tu solicitud incluye una <strong>tarta a medida</strong>: revisaremos el
               diseño y te enviaremos un presupuesto personalizado por WhatsApp antes de
               confirmar el pedido.
+            </p>
+          )}
+          {order.pricing.hasPendingExtras && (
+            <p className="rounded-lg bg-warning/10 p-3 text-xs text-warning">
+              Has pedido algo fuera de nuestras opciones estándar (un topping que no
+              estaba en la lista, un cambio especial o una imagen de referencia).
+              Revisaremos si afecta al precio y te{" "}
+              <strong>confirmaremos el importe final por WhatsApp</strong>.
             </p>
           )}
           {order.pricing.depositRequired ? (

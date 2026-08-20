@@ -25,7 +25,10 @@ Fuente de verdad de catálogo y precios: [`src/domain/catalog.ts`](../src/domain
 
 | Topping fuera de catálogo | El cliente puede solicitarlo por texto; Dulce Flor confirma disponibilidad y precio. NO se cobra automáticamente | `customToppingRequest` |
 | Imagen de referencia | El cliente puede adjuntar una foto por tarta (comprimida, guardada aparte del pedido) | `referenceImageId` + `services/imageStore` |
-| Fondant | Sin precio automático: solicitud de presupuesto (estado «Pendiente de presupuesto»); administración introduce después `quotedPriceCents` y el total/señal se recalculan | `pricingType: "quote"`, `pending_quote` |
+| Tarta clásica | Acabado estándar de Dulce Flor (cobertura, cenefa de manga y toppings de catálogo) con precio automático. Las decoraciones especiales NO están incluidas | `pricingType: "fixed"` |
+| Tarta personalizada y de fondant | Sin precio automático: solicitud de presupuesto con fotografía de referencia **obligatoria** (estado «Pendiente de presupuesto»); administración introduce después `quotedPriceCents` y el total/señal se recalculan. **Solo particulares** | `pricingType: "quote"`, `customCakeType`, `pending_quote` |
+| Topping fuera de catálogo | NO suma importe automáticamente: «precio pendiente de confirmación» hasta que Dulce Flor lo confirme por WhatsApp | `customToppingRequest` |
+| Notas con cambios especiales | Una petición escrita en notas (p. ej. dos sabores de bizcocho) no está incluida en el precio automático: el resumen muestra «TOTAL ACTUAL + modificaciones pendientes» | `hasPendingExtras` |
 | Fuentes reutilizables (empresas) | Entrega opcional en fuente de cristal reutilizable; la anterior se recoge en la siguiente entrega. Sin depósitos ni condiciones económicas | `Order.reusableTray` |
 | Cartas fotografiadas | Ya NO se muestran al público (retiradas de la web); siguen siendo la fuente de verdad interna del catálogo | `src/assets/carta-*.jpeg` |
 

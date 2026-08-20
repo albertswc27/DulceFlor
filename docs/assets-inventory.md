@@ -17,6 +17,28 @@ Ninguna imagen ha sido eliminada.
 | `WhatsApp Image 2026-08-17 at 13.20.196.jpeg` | `src/assets/carta-tres-leches-y-tortas-precios-empresas.jpeg` | Carta "Cheesecake — tamaño de porciones" (fondo claro, estilo empresas). Sección Tres Leches (8 / 10-12 / 14-16 porciones), Pudín casero, Torta de chocolate y Torta helada. Dedicatoria +2 €. |
 | `WhatsApp Image 2026-08-17 at 13.20.197.jpeg` | `src/assets/carta-cheesecake-precios-empresas.jpeg` | Carta "Cheesecake — precio pensado en empresas y restaurantes" (fondo claro). 13 sabores × 3 tamaños (8 / 10-12 / 14-16 porciones). "Consulta por envíos a tu zona". |
 
+## Fotografías reales de tartas (añadidas 19/08/2026)
+
+Facilitadas por Dulce Flor. Renombradas por contenido y optimizadas a WebP
+(máx. 1000 px de ancho, calidad 82 → −32 % de peso). Se sirven desde
+`src/assets/cakePhotos.ts`, que separa el acabado clásico de las decoraciones a
+medida.
+
+| Original | Nuevo nombre | Contenido |
+| --- | --- | --- |
+| `2.jpeg` | `tarta-clasica-buttercream-rosa-lotus.webp` | Tarta con buttercream rosa, cenefa de manga y galletas Lotus. Acabado clásico. |
+| `3.jpeg` | `tarta-clasica-chocolate-drip-dedicatoria.webp` | Tarta de chocolate con drip, cenefa y dedicatoria escrita + topper. Acabado clásico. |
+| `5.jpeg` | `tarta-clasica-nata-drip-chocolate.webp` | Nata montada con drip de chocolate y corona de picos. Acabado clásico. |
+| `6.jpeg` | `tarta-clasica-merengue-tostado-dedicatoria.webp` | Merengue italiano tostado con dedicatoria escrita en chocolate. Acabado clásico. |
+| `7.jpeg` | `tarta-clasica-chocolate-trufa-drip.webp` | Chocolate con trufa, conchas de manga, drip y virutas. Acabado clásico. |
+| `8.jpeg` | `tarta-clasica-chocolate-crema-cafe.webp` | Bizcocho de chocolate con crema de café, rosetones y pepitas. Acabado clásico. |
+| `WhatsApp Image 2026-08-19 at 13.11.12.jpeg` | `tarta-clasica-chocolate-dulce-de-leche.webp` | Chocolate con dulce de leche y fideos (foto de obrador). Acabado clásico. |
+| `WhatsApp Image 2026-08-19 at 13.11.124.jpeg` | `tarta-personalizada-decoracion-vintage.webp` | Decoración vintage a manga en turquesa con guirnaldas y perlas. Ejemplo de tarta personalizada. |
+
+**Pendiente de Dulce Flor:** ejemplos reales de fondant, figuras modeladas,
+personajes o formas no redondas — en este lote no hay ninguno y la sección de
+tartas personalizadas se apoya de momento en una sola fotografía.
+
 ## Observaciones
 
 - Las cartas de **fondo oscuro** corresponden a la oferta para **particulares**; las de **fondo claro** indican explícitamente (o comparten diseño con la que lo indica) precios para **empresas y restaurantes**. La asignación de `...196.jpeg` a empresas es una **inferencia por estilo visual** — pendiente de confirmar con Dulce Flor.

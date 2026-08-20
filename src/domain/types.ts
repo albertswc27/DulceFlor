@@ -107,12 +107,20 @@ export interface OrderPricing {
   depositCents: number;
   remainingCents: number;
   /**
-   * true cuando el pedido incluye artículos a presupuestar (fondant) y aún no
-   * hay presupuesto: el total es parcial y NO se calcula señal.
+   * true cuando el pedido incluye artículos a presupuestar (tarta
+   * personalizada o de fondant) y aún no hay presupuesto: el total es parcial
+   * y NO se calcula señal.
    */
   pendingQuote?: boolean;
-  /** Presupuesto introducido por administración para los artículos de fondant. */
+  /** Presupuesto introducido por administración para los artículos a medida. */
   quotedPriceCents?: number;
+  /**
+   * true cuando hay peticiones que Dulce Flor debe revisar y que pueden
+   * modificar el importe: topping fuera de catálogo, nota con un cambio
+   * especial o imagen de referencia sobre una tarta clásica. El total
+   * mostrado es «actual», nunca definitivo.
+   */
+  hasPendingExtras?: boolean;
 }
 
 export interface Order {

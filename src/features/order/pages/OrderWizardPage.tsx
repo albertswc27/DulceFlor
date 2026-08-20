@@ -14,8 +14,10 @@ import {
   CheckCircle2,
   ReceiptText,
   ShoppingBag,
+  Sparkles,
   User,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -94,7 +96,14 @@ export default function OrderWizardPage() {
   const [details, setDetails] = React.useState(state.address?.details ?? "");
 
   const products = state.customerType ? getProductsFor(state.customerType) : [];
+  /** Solicitudes a medida (personalizada/fondant): sin precio automático. */
+  const quoteProducts = products.filter((p) => p.pricingType === "quote");
   const headingRef = React.useRef<HTMLHeadingElement>(null);
+
+  function openConfigurator(product: CatalogProduct) {
+    setConfiguringProduct(product);
+    goTo("configure");
+  }
 
   React.useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -359,9 +368,12 @@ export default function OrderWizardPage() {
                       </h2>
                     </>
                   )}
+                  {/* Productos con precio automático, por categoría */}
                   {(["pasteles", "cheesecake", "tres-leches", "especialidades"] as const).map(
                     (category) => {
-                      const catProducts = products.filter((p) => p.category === category);
+                      const catProducts = products.filter(
+                        (p) => p.category === category && p.pricingType !== "quote"
+                      );
                       if (catProducts.length === 0) return null;
                       return (
                         <div key={category}>
@@ -373,10 +385,7 @@ export default function OrderWizardPage() {
                               <button
                                 key={product.id}
                                 type="button"
-                                onClick={() => {
-                                  setConfiguringProduct(product);
-                                  goTo("configure");
-                                }}
+                                onClick={() => openConfigurator(product)}
                                 className="group flex flex-col rounded-2xl border border-border bg-card p-5 text-left shadow-card transition-all hover:border-secondary hover:shadow-lifted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                               >
                                 <span className="font-display text-lg font-bold text-primary group-hover:text-primary/90">
@@ -385,10 +394,9 @@ export default function OrderWizardPage() {
                                 <span className="mt-1 flex-1 text-sm text-muted-foreground">
                                   {product.description}
                                 </span>
-                                <span className="mt-3 text-sm font-medium text-accent">
-                                  {product.pricingType === "quote"
-                                    ? "Precio personalizado · Solicitar presupuesto →"
-                                    : "Personalizar →"}
+                                <span className="mt-3 flex items-center gap-2 text-sm font-medium text-accent">
+                                  Personalizar →
+                                  <Badge variant="success">Precio al momento</Badge>
                                 </span>
                               </button>
                             ))}
@@ -398,6 +406,43 @@ export default function OrderWizardPage() {
                     }
                   )}
 
+                  {/* Solicitudes a medida (sin precio automático) */}
+                  {quoteProducts.length > 0 && (
+                    <div className="rounded-2xl border border-secondary/50 bg-background-soft/60 p-4 sm:p-5">
+                      <h2 className="font-display text-lg font-semibold text-primary">
+                        ¿Buscas un diseño especial?
+                      </h2>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Dibujos, personajes, figuras o una tarta que hayas visto en una
+                        foto: eso va más allá de nuestro acabado clásico, así que lo
+                        valoramos a mano y te pasamos presupuesto por WhatsApp.
+                      </p>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        {quoteProducts.map((product) => (
+                          <button
+                            key={product.id}
+                            type="button"
+                            onClick={() => openConfigurator(product)}
+                            className="group flex flex-col rounded-2xl border border-border bg-card p-5 text-left shadow-card transition-all hover:border-secondary hover:shadow-lifted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          >
+                            <span className="flex items-center gap-2">
+                              <Sparkles className="h-4 w-4 text-accent" aria-hidden="true" />
+                              <span className="font-display text-lg font-bold text-primary">
+                                {product.name}
+                              </span>
+                            </span>
+                            <span className="mt-1 flex-1 text-sm text-muted-foreground">
+                              {product.description}
+                            </span>
+                            <span className="mt-3 flex items-center gap-2 text-sm font-medium text-accent">
+                              Solicitar presupuesto →
+                              <Badge variant="warning">Precio a consultar</Badge>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

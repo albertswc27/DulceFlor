@@ -165,8 +165,9 @@ function OrderItemCard({ item }: { item: OrderItem }) {
         )}
         {c.customToppingRequest && (
           <li>
-            <span className="text-foreground">Topping solicitado (a confirmar):</span>{" "}
-            {c.customToppingRequest}
+            <span className="text-foreground">Topping solicitado:</span>{" "}
+            {c.customToppingRequest}{" "}
+            <span className="text-xs">(precio pendiente de confirmación)</span>
           </li>
         )}
         {c.designDescription && (
@@ -268,14 +269,19 @@ export default function AdminOrderDetailPage() {
     }
     setOrder(updated);
     setQuoteInput("");
-    toast.success(`Presupuesto del fondant guardado: ${formatEuros(cents)}`);
+    toast.success(`Presupuesto guardado: ${formatEuros(cents)}`);
   }
 
   const { pricing } = order;
   const isDelivery = order.fulfillmentType === "delivery";
-  const hasQuoteItems = order.items.some((item) => item.requiresQuote);
+  const quoteItem = order.items.find((item) => item.requiresQuote);
+  const hasQuoteItems = quoteItem !== undefined;
   const isQuoted =
     hasQuoteItems && !pricing.pendingQuote && pricing.quotedPriceCents !== undefined;
+  // Nombre real del artículo a presupuestar (tarta personalizada, de fondant…).
+  const quoteItemName = quoteItem?.productName ?? "tarta a medida";
+  // Modificaciones sobre una tarta CON precio: el total mostrado es "actual".
+  const hasPendingExtras = Boolean(pricing.hasPendingExtras) && !pricing.pendingQuote;
 
   return (
     <div className="space-y-6">
@@ -418,9 +424,28 @@ export default function AdminOrderDetailPage() {
             >
               <Badge variant="destructive">REQUIERE PRESUPUESTO MANUAL</Badge>
               <p className="mt-2 text-sm text-foreground">
-                El pedido incluye una tarta de fondant sin precio automático: hay
-                que preparar el presupuesto y enviárselo al cliente por WhatsApp.
-                Hasta entonces no hay total definitivo ni señal.
+                El pedido incluye una tarta a medida sin precio automático (
+                {quoteItemName}): hay que preparar el presupuesto y enviárselo al
+                cliente por WhatsApp. Hasta entonces no hay total definitivo ni
+                señal.
+              </p>
+            </div>
+          )}
+
+          {hasPendingExtras && (
+            <div
+              role="alert"
+              className="rounded-xl border-2 border-warning/50 bg-warning/10 p-4"
+            >
+              <Badge variant="warning">
+                REVISAR: MODIFICACIONES PENDIENTES DE CONFIRMAR
+              </Badge>
+              <p className="mt-2 text-sm text-foreground">
+                El cliente ha pedido algo fuera de lo estándar sobre una tarta con
+                precio cerrado: un topping que no está en la lista, un cambio
+                escrito en las notas o una imagen de referencia. Revisa los
+                artículos, decide si cambia el importe y confírmale el total final
+                por WhatsApp.
               </p>
             </div>
           )}
@@ -434,7 +459,9 @@ export default function AdminOrderDetailPage() {
                 {pricing.pendingQuote ? (
                   pricing.subtotalCents > 0 && (
                     <div className="flex items-center justify-between">
-                      <dt className="text-muted-foreground">Subtotal (sin fondant)</dt>
+                      <dt className="text-muted-foreground">
+                        Subtotal (sin la tarta a medida)
+                      </dt>
                       <dd className="font-medium">
                         {formatEuros(pricing.subtotalCents)}
                       </dd>
@@ -448,7 +475,9 @@ export default function AdminOrderDetailPage() {
                 )}
                 {isQuoted && (
                   <div className="flex items-center justify-between">
-                    <dt className="text-muted-foreground">Fondant (presupuesto)</dt>
+                    <dt className="text-muted-foreground">
+                      Presupuesto tarta a medida
+                    </dt>
                     <dd className="font-medium">
                       {formatEuros(pricing.quotedPriceCents ?? 0)}
                     </dd>
@@ -478,7 +507,7 @@ export default function AdminOrderDetailPage() {
               <Separator />
               <div className="flex items-center justify-between gap-3">
                 <span className="font-display text-base font-semibold text-primary">
-                  TOTAL
+                  {hasPendingExtras ? "TOTAL ACTUAL" : "TOTAL"}
                 </span>
                 {pricing.pendingQuote ? (
                   <span className="text-right font-display text-lg font-bold text-destructive">
@@ -490,6 +519,11 @@ export default function AdminOrderDetailPage() {
                   </span>
                 )}
               </div>
+              {hasPendingExtras && (
+                <p className="text-right text-xs text-muted-foreground">
+                  + modificaciones pendientes de confirmar
+                </p>
+              )}
               {isDelivery && pricing.deliveryFeeCents === null && (
                 <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
                   El total no incluye el transporte: la zona está fuera de tarifa
@@ -524,14 +558,16 @@ export default function AdminOrderDetailPage() {
           {hasQuoteItems && (
             <Card>
               <CardHeader>
-                <CardTitle>Introducir presupuesto del fondant</CardTitle>
+                <CardTitle>Introducir presupuesto</CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleQuoteSubmit} className="space-y-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="presupuesto-fondant">Importe (euros)</Label>
+                    <Label htmlFor="presupuesto-a-medida">
+                      Presupuesto de la tarta a medida (euros)
+                    </Label>
                     <Input
-                      id="presupuesto-fondant"
+                      id="presupuesto-a-medida"
                       type="number"
                       min="0.01"
                       step="0.01"

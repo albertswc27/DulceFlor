@@ -30,11 +30,13 @@ import {
 } from "@/domain/validation";
 import type { CustomerType, ItemCustomization } from "@/domain/types";
 import { saveImage, IMAGE_ERROR_MESSAGES } from "@/services/imageStore";
+import { CUSTOM_CAKE_PHOTOS } from "@/assets/cakePhotos";
 import { OptionCard } from "./OptionCard";
 import { QuantityStepper } from "./QuantityStepper";
 import { AnimatedPrice } from "./AnimatedPrice";
 import { SizePicker } from "./SizePicker";
 import { ReferenceImagePicker } from "./ReferenceImagePicker";
+import { CakeReferences } from "./CakeReferences";
 
 export interface ConfiguratorResult {
   selection: ItemSelection;
@@ -107,6 +109,12 @@ export function ProductConfigurator({
   const needsFlavor = Boolean(product.flavors && product.flavors.length > 0);
   const needsFilling = Boolean(product.fillings && product.fillings.length > 0);
   const isCheesecake = product.id === "cheesecake";
+  const isFondant = product.customCakeType === "fondant";
+  /** Las solicitudes a medida exigen fotografía de referencia. */
+  const imageRequired = Boolean(product.requiresReferenceImage);
+  /** Solo las tartas clásicas por capas muestran las referencias del acabado. */
+  const showClassicReferences =
+    !isQuote && (product.id === "pastel-clasico" || product.id === "pastel-buttercream");
 
   const selection: ItemSelection = {
     productId: product.id,
@@ -175,6 +183,12 @@ export function ProductConfigurator({
       setError(notesParsed.error.issues[0].message);
       return;
     }
+    if (imageRequired && !referenceImage) {
+      setError(
+        "Para preparar el presupuesto necesitamos una fotografía de referencia del diseño."
+      );
+      return;
+    }
     if (!isQuote && !breakdown) {
       setError("Esta combinación no está disponible. Revisa tamaño y sabor.");
       return;
@@ -227,12 +241,27 @@ export function ProductConfigurator({
         <p className="flex items-start gap-2.5 rounded-xl bg-secondary/15 px-4 py-3 text-sm text-foreground">
           <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
           <span>
-            Los diseños de fondant se presupuestan a mano según su complejidad:
-            cuéntanos tu idea y te enviaremos un <strong>presupuesto personalizado</strong>{" "}
-            por WhatsApp. Aquí no se muestra ningún precio.
+            {isFondant
+              ? "Las tartas de fondant se presupuestan a mano según la complejidad del diseño."
+              : "Las decoraciones especiales se presupuestan a mano según el trabajo que requieren."}{" "}
+            Envíanos tu idea y una fotografía de referencia: Dulce Flor revisará el diseño
+            y te <strong>confirmará el precio final por WhatsApp</strong>. Aquí no se
+            muestra ningún precio.
           </span>
         </p>
       )}
+
+      {isQuote && CUSTOM_CAKE_PHOTOS.length > 0 && (
+        <CakeReferences
+          photos={CUSTOM_CAKE_PHOTOS}
+          title="Ejemplos de decoración a medida"
+          description="Trabajos reales de Dulce Flor fuera del acabado clásico. Cada diseño se valora por separado."
+          limit={3}
+        />
+      )}
+
+      {/* Referencias reales del acabado clásico */}
+      {showClassicReferences && <CakeReferences />}
 
       {/* Tamaño (selección visual) */}
       <fieldset>
@@ -340,9 +369,10 @@ export function ProductConfigurator({
                   placeholder="Por ejemplo: Ferrero Rocher"
                   maxLength={80}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Dulce Flor revisará la disponibilidad y te lo confirmará junto con su
-                  precio. No se añade automáticamente al total.
+                <p className="text-xs text-warning">
+                  <strong>Precio pendiente de confirmación:</strong> al no estar en
+                  nuestra lista, no se suma al total automáticamente. Dulce Flor revisará
+                  la disponibilidad y te confirmará el suplemento por WhatsApp.
                 </p>
                 <Button
                   type="button"
@@ -414,20 +444,31 @@ export function ProductConfigurator({
 
       {/* Imagen de referencia */}
       <div className="space-y-1.5">
-        <p className="font-display text-base font-semibold text-primary">
+        <p className="flex items-baseline justify-between gap-2 font-display text-base font-semibold text-primary">
           Imagen de referencia
+          <span className="text-xs font-normal text-muted-foreground">
+            {imageRequired ? "Obligatoria" : "Opcional"}
+          </span>
         </p>
         <p className="text-sm text-muted-foreground">
-          ¿Tienes una idea concreta? Adjunta una imagen de referencia y la utilizaremos
-          para entender mejor cómo quieres tu tarta.
+          {imageRequired
+            ? "Adjunta una fotografía del diseño que tienes en mente: es lo que nos permite valorar el trabajo y prepararte el presupuesto."
+            : "¿Tienes una idea concreta? Adjunta una imagen de referencia y la utilizaremos para entender mejor cómo quieres tu tarta."}
         </p>
         <ReferenceImagePicker value={referenceImage} onChange={setReferenceImage} />
+        {!isQuote && referenceImage && (
+          <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
+            Las imágenes sirven como <strong>referencia</strong>. El precio mostrado
+            corresponde a nuestro acabado clásico: si el diseño requiere una decoración
+            especial, Dulce Flor te confirmará disponibilidad y precio por WhatsApp.
+          </p>
+        )}
       </div>
 
       {/* Texto libre */}
       <div className="space-y-1.5">
         <Label htmlFor="notas">
-          {isQuote ? "Observaciones" : "¿Alguna personalización especial?"}
+          {isQuote ? "Observaciones" : "¿Quieres algún cambio especial?"}
         </Label>
         <Textarea
           id="notas"
@@ -436,13 +477,15 @@ export function ProductConfigurator({
           placeholder={
             isQuote
               ? "Alergias, fecha flexible, dudas…"
-              : "Cuéntanos cómo la imaginas: colores, decoración, temática…"
+              : "Por ejemplo: dos sabores de bizcocho en la misma tarta, sin frutos secos…"
           }
           maxLength={500}
         />
         {!isQuote && (
           <p className="text-xs text-muted-foreground">
-            Opcional. Este campo complementa las opciones anteriores, no las sustituye.
+            Opcional. Escribe aquí cualquier cambio que no esté entre las opciones. Las
+            modificaciones fuera de lo estándar <strong>pueden variar el precio</strong>:
+            Dulce Flor lo revisará y te confirmará el importe final por WhatsApp.
           </p>
         )}
       </div>
@@ -458,7 +501,7 @@ export function ProductConfigurator({
           </p>
           {isQuote ? (
             <p className="font-display text-xl font-bold text-primary">
-              Precio personalizado
+              Precio a consultar
             </p>
           ) : breakdown ? (
             <AnimatedPrice cents={breakdown.unitTotalCents * quantity} className="text-2xl" />
@@ -488,6 +531,16 @@ export function ProductConfigurator({
           )}
         </div>
       )}
+
+      {/* Aviso de que el importe mostrado aún puede cambiar */}
+      {!isQuote &&
+        breakdown &&
+        (customToppingText.trim() || notes.trim() || referenceImage) && (
+          <p className="rounded-lg bg-warning/10 px-4 py-2 text-sm text-warning">
+            Precio actual: {formatEuros(breakdown.unitTotalCents * quantity)} +
+            modificaciones pendientes de confirmar por Dulce Flor.
+          </p>
+        )}
 
       {error && (
         <p role="alert" className="rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">

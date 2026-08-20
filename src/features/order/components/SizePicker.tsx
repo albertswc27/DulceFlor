@@ -74,7 +74,11 @@ function SizeCard({
           <Check className="h-4 w-4" strokeWidth={3} />
         </span>
       )}
-      <span className="w-24 sm:w-28">{illustration}</span>
+      {/* Altura fija con alineación inferior: las tartas de más discos se ven
+          más altas sin descolocar las tarjetas de la fila. */}
+      <span className="flex h-24 w-full items-end justify-center sm:h-28">
+        {illustration}
+      </span>
       <span className="mt-2 font-display text-base font-semibold leading-tight text-primary">
         {title}
       </span>
@@ -140,7 +144,11 @@ export function SizePicker({
                   }
                 }}
                 illustration={
-                  <CakeIllustration tiers={1} scale={index as 0 | 1 | 2 | 3} />
+                  <CakeIllustration
+                    tiers={1}
+                    scale={index as 0 | 1 | 2 | 3}
+                    className="h-full w-auto"
+                  />
                 }
                 title={tier.label}
               />
@@ -177,8 +185,9 @@ export function SizePicker({
                   }}
                   illustration={
                     <CakeIllustration
-                      tiers={disc.discs as 1 | 2 | 3}
+                      tiers={disc.discs}
                       scale={(tierId ? tierIndex : 1) as 0 | 1 | 2 | 3}
+                      className="h-full w-auto"
                     />
                   }
                   title={`${disc.discs} ${disc.discs === 1 ? "disco" : "discos"}`}
@@ -227,7 +236,11 @@ export function SizePicker({
               selected={selectedSizeId === size.id}
               onSelect={() => onSelect(size.id)}
               illustration={
-                <CakeIllustration tiers={isQuote ? 2 : 1} scale={scale} />
+                <CakeIllustration
+                  tiers={isQuote ? 2 : 1}
+                  scale={scale}
+                  className="h-full w-auto"
+                />
               }
               title={size.servings}
               subtitle={isQuote ? "tamaño aproximado" : undefined}
