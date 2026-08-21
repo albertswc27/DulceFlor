@@ -36,6 +36,11 @@ import { formatEuros } from "@/domain/money";
 import { getImage } from "@/services/imageStore";
 import { buildOrderWhatsAppMessage } from "@/domain/whatsapp";
 import {
+  getProduct,
+  resolveQuantityTier,
+  type CatalogProduct,
+} from "@/domain/catalog";
+import {
   CUSTOMER_TYPE_LABELS,
   FULFILLMENT_LABELS,
   ORDER_STATUS_LABELS,
@@ -114,17 +119,178 @@ function ReferenceImageThumb({
   );
 }
 
-function OrderItemCard({ item }: { item: OrderItem }) {
+/** Etiquetas de los regalos a medida (cajas de desayuno y copas). */
+const GIFT_TYPE_LABELS: Record<NonNullable<CatalogProduct["giftType"]>, string> = {
+  desayuno: "Caja de desayuno",
+  copa: "Copa personalizada",
+};
+
+/** Línea "Etiqueta: valor" de la ficha de un artículo. */
+function ItemLine({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <li className={className}>
+      <span className="text-foreground">{label}:</span> {children}
+    </li>
+  );
+}
+
+/** Notas libres e imagen de referencia: comunes a todos los tipos de artículo. */
+function ItemNotesLines({ item }: { item: OrderItem }) {
   const c = item.customization;
   return (
+    <>
+      {c.notes && (
+        <li className="italic">
+          <span className="not-italic text-foreground">Notas:</span> “{c.notes}”
+        </li>
+      )}
+      {c.referenceImageId && (
+        <ReferenceImageThumb
+          imageId={c.referenceImageId}
+          productName={item.productName}
+        />
+      )}
+    </>
+  );
+}
+
+/**
+ * Aperitivo salado: la cantidad son unidades y el precio unitario sale del
+ * tramo de volumen. No tiene tamaño, así que no se muestra.
+ */
+function SavouryItemDetails({
+  item,
+  product,
+}: {
+  item: OrderItem;
+  product: CatalogProduct;
+}) {
+  const tier = resolveQuantityTier(product, item.quantity);
+  return (
+    <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+      <ItemLine label="Cantidad">{item.quantity} unidades</ItemLine>
+      <ItemLine label="Precio por unidad">
+        {formatEuros(item.unitPriceCents)}
+        {tier && (
+          <span className="text-xs">
+            {" "}
+            (tarifa de {tier.minQuantity}
+            {tier.open ? "+" : ""} uds)
+          </span>
+        )}
+      </ItemLine>
+      <ItemLine label="Subtotal">{formatEuros(item.totalCents)}</ItemLine>
+      <ItemNotesLines item={item} />
+    </ul>
+  );
+}
+
+/**
+ * Regalo a medida (caja de desayuno o copa): sin precio automático. La
+ * dedicatoria se destaca porque es el corazón del encargo.
+ */
+function GiftItemDetails({ item }: { item: OrderItem }) {
+  const c = item.customization;
+  return (
+    <>
+      {c.dedicationText && (
+        <div className="mt-3 rounded-lg border border-secondary/50 bg-secondary/15 px-3 py-2.5">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+            Dedicatoria
+          </p>
+          <p className="mt-0.5 font-display text-base font-semibold leading-snug text-primary">
+            “{c.dedicationText}”
+          </p>
+        </div>
+      )}
+      <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+        {c.occasion && <ItemLine label="Ocasión">{c.occasion}</ItemLine>}
+        {c.designDescription && (
+          <ItemLine label="Qué quiere incluir">{c.designDescription}</ItemLine>
+        )}
+        <ItemNotesLines item={item} />
+        <ItemLine label="Precio" className="text-destructive">
+          pendiente de presupuesto
+        </ItemLine>
+      </ul>
+    </>
+  );
+}
+
+/** Tarta (clásica, personalizada o de fondant): ficha completa de siempre. */
+function CakeItemDetails({ item }: { item: OrderItem }) {
+  const c = item.customization;
+  return (
+    <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+      <ItemLine label="Tamaño">{c.size.label}</ItemLine>
+      {c.flavor && <ItemLine label="Sabor">{c.flavor.label}</ItemLine>}
+      {c.filling && (
+        <ItemLine label="Relleno">
+          {c.filling.label} <span className="text-xs">(incluido)</span>
+        </ItemLine>
+      )}
+      {c.toppings.length > 0 && (
+        <ItemLine label="Toppings">
+          {c.toppings.map((t) => t.label).join(", ")}
+        </ItemLine>
+      )}
+      {c.customToppingRequest && (
+        <ItemLine label="Topping solicitado">
+          {c.customToppingRequest}{" "}
+          <span className="text-xs">(precio pendiente de confirmación)</span>
+        </ItemLine>
+      )}
+      {c.designDescription && (
+        <ItemLine label="Diseño">{c.designDescription}</ItemLine>
+      )}
+      {c.extras.map((extra) => (
+        <ItemLine key={extra.id} label="Extra">
+          {extra.label} (+{formatEuros(extra.priceCents)})
+        </ItemLine>
+      ))}
+      {c.dedicationText && (
+        <ItemLine label="Dedicatoria">“{c.dedicationText}”</ItemLine>
+      )}
+      <ItemNotesLines item={item} />
+    </ul>
+  );
+}
+
+function OrderItemCard({ item }: { item: OrderItem }) {
+  const product = getProduct(item.productId);
+  // Tres fichas distintas: aperitivo por volumen, regalo a medida y tarta.
+  const isSavoury = Boolean(product?.quantityTiers?.length);
+  const giftType = product?.giftType;
+  const kindLabel = isSavoury
+    ? "Aperitivo salado"
+    : giftType
+      ? GIFT_TYPE_LABELS[giftType]
+      : null;
+
+  return (
     <div className="rounded-xl border border-border bg-background-soft/40 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <p className="font-display font-semibold text-primary">
-          {item.productName}
-          {item.quantity > 1 && (
-            <span className="text-muted-foreground"> × {item.quantity}</span>
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+        <div className="min-w-0">
+          {kindLabel && (
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
+              {kindLabel}
+            </p>
           )}
-        </p>
+          <p className="font-display font-semibold text-primary">
+            {item.productName}
+            {!isSavoury && item.quantity > 1 && (
+              <span className="text-muted-foreground"> × {item.quantity}</span>
+            )}
+          </p>
+        </div>
         <div className="shrink-0 text-right">
           {item.requiresQuote ? (
             <p className="font-display text-lg font-bold text-primary">A consultar</p>
@@ -135,69 +301,22 @@ function OrderItemCard({ item }: { item: OrderItem }) {
               </p>
               {item.quantity > 1 && (
                 <p className="text-xs text-muted-foreground">
-                  {item.quantity} × {formatEuros(item.unitPriceCents)}
+                  {isSavoury
+                    ? `${item.quantity} uds × ${formatEuros(item.unitPriceCents)}/ud`
+                    : `${item.quantity} × ${formatEuros(item.unitPriceCents)}`}
                 </p>
               )}
             </>
           )}
         </div>
       </div>
-      <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-        <li>
-          <span className="text-foreground">Tamaño:</span> {c.size.label}
-        </li>
-        {c.flavor && (
-          <li>
-            <span className="text-foreground">Sabor:</span> {c.flavor.label}
-          </li>
-        )}
-        {c.filling && (
-          <li>
-            <span className="text-foreground">Relleno:</span> {c.filling.label}{" "}
-            <span className="text-xs">(incluido)</span>
-          </li>
-        )}
-        {c.toppings.length > 0 && (
-          <li>
-            <span className="text-foreground">Toppings:</span>{" "}
-            {c.toppings.map((t) => t.label).join(", ")}
-          </li>
-        )}
-        {c.customToppingRequest && (
-          <li>
-            <span className="text-foreground">Topping solicitado:</span>{" "}
-            {c.customToppingRequest}{" "}
-            <span className="text-xs">(precio pendiente de confirmación)</span>
-          </li>
-        )}
-        {c.designDescription && (
-          <li>
-            <span className="text-foreground">Diseño:</span> {c.designDescription}
-          </li>
-        )}
-        {c.extras.map((extra) => (
-          <li key={extra.id}>
-            <span className="text-foreground">Extra:</span> {extra.label} (+
-            {formatEuros(extra.priceCents)})
-          </li>
-        ))}
-        {c.dedicationText && (
-          <li>
-            <span className="text-foreground">Dedicatoria:</span> “{c.dedicationText}”
-          </li>
-        )}
-        {c.notes && (
-          <li className="italic">
-            <span className="not-italic text-foreground">Notas:</span> “{c.notes}”
-          </li>
-        )}
-        {c.referenceImageId && (
-          <ReferenceImageThumb
-            imageId={c.referenceImageId}
-            productName={item.productName}
-          />
-        )}
-      </ul>
+      {isSavoury && product ? (
+        <SavouryItemDetails item={item} product={product} />
+      ) : giftType ? (
+        <GiftItemDetails item={item} />
+      ) : (
+        <CakeItemDetails item={item} />
+      )}
     </div>
   );
 }
@@ -278,8 +397,9 @@ export default function AdminOrderDetailPage() {
   const hasQuoteItems = quoteItem !== undefined;
   const isQuoted =
     hasQuoteItems && !pricing.pendingQuote && pricing.quotedPriceCents !== undefined;
-  // Nombre real del artículo a presupuestar (tarta personalizada, de fondant…).
-  const quoteItemName = quoteItem?.productName ?? "tarta a medida";
+  // Nombre real del artículo a presupuestar: tarta personalizada o de fondant,
+  // caja de desayuno, copa… Nunca se habla solo de tartas.
+  const quoteItemName = quoteItem?.productName ?? "solicitud a medida";
   // Modificaciones sobre una tarta CON precio: el total mostrado es "actual".
   const hasPendingExtras = Boolean(pricing.hasPendingExtras) && !pricing.pendingQuote;
 
@@ -424,7 +544,7 @@ export default function AdminOrderDetailPage() {
             >
               <Badge variant="destructive">REQUIERE PRESUPUESTO MANUAL</Badge>
               <p className="mt-2 text-sm text-foreground">
-                El pedido incluye una tarta a medida sin precio automático (
+                El pedido incluye una solicitud a medida sin precio automático (
                 {quoteItemName}): hay que preparar el presupuesto y enviárselo al
                 cliente por WhatsApp. Hasta entonces no hay total definitivo ni
                 señal.
@@ -460,7 +580,7 @@ export default function AdminOrderDetailPage() {
                   pricing.subtotalCents > 0 && (
                     <div className="flex items-center justify-between">
                       <dt className="text-muted-foreground">
-                        Subtotal (sin la tarta a medida)
+                        Subtotal (sin lo pendiente de presupuesto)
                       </dt>
                       <dd className="font-medium">
                         {formatEuros(pricing.subtotalCents)}
@@ -476,7 +596,7 @@ export default function AdminOrderDetailPage() {
                 {isQuoted && (
                   <div className="flex items-center justify-between">
                     <dt className="text-muted-foreground">
-                      Presupuesto tarta a medida
+                      Presupuesto a medida
                     </dt>
                     <dd className="font-medium">
                       {formatEuros(pricing.quotedPriceCents ?? 0)}
@@ -564,7 +684,7 @@ export default function AdminOrderDetailPage() {
                 <form onSubmit={handleQuoteSubmit} className="space-y-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="presupuesto-a-medida">
-                      Presupuesto de la tarta a medida (euros)
+                      Presupuesto de «{quoteItemName}» (euros)
                     </Label>
                     <Input
                       id="presupuesto-a-medida"

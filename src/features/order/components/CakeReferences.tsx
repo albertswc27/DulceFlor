@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { CLASSIC_CAKE_PHOTOS, type CakePhoto } from "@/assets/cakePhotos";
+import { CLASSIC_CAKE_PHOTOS, type Photo as CakePhoto } from "@/assets/photos";
 import { cn } from "@/lib/utils";
 
 interface CakeReferencesProps {

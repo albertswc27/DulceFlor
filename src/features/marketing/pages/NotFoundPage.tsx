@@ -30,7 +30,8 @@ export default function NotFoundPage() {
         </h1>
         <p className="mx-auto mt-3 max-w-md text-base text-muted-foreground">
           Puede que el enlace haya cambiado o que la página ya no exista. Lo
-          importante sigue en su sitio: nuestras tartas caseras.
+          importante sigue en su sitio: nuestras tartas, aperitivos y regalos
+          caseros.
         </p>
 
         <div className="mt-8 flex w-full max-w-sm flex-col gap-3 sm:w-auto sm:flex-row">

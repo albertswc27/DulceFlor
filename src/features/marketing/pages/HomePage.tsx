@@ -23,9 +23,12 @@ import {
 import { formatEuros } from "@/domain/money";
 import {
   CAKE_FILLINGS,
+  CATEGORY_FAMILY,
   CHEESECAKE_FLAVORS,
+  FAMILY_LABELS,
   SPONGE_FLAVORS,
   getProductsFor,
+  type FamilyId,
 } from "@/domain/catalog";
 import {
   DELIVERY_ZONES,
@@ -35,39 +38,74 @@ import {
   TOPPING_PRICE_CENTS,
 } from "@/config/business";
 import { CakeReferences } from "@/features/order/components/CakeReferences";
-import { CLASSIC_CAKE_PHOTOS } from "@/assets/cakePhotos";
-import { getMinPriceCents, getScheduleRows } from "../lib/catalogView";
+import {
+  CLASSIC_CAKE_PHOTOS,
+  GLASS_PHOTOS,
+  SAVOURY_HERO_PHOTOS,
+  type Photo,
+} from "@/assets/photos";
+import {
+  getMinPriceCents,
+  getScheduleRows,
+  getSnackMinQuantity,
+} from "../lib/catalogView";
 import { Reveal } from "../components/Reveal";
 import { SectionHeading } from "../components/SectionHeading";
 import logo from "@/assets/logo-dulce-flor.jpeg";
 
-/* Datos derivados del catálogo — sin precios ni cifras escritos a mano. */
-const PRODUCT_CARDS = [
+/** Pedido mínimo de aperitivos: sale de los tramos del catálogo, no a mano. */
+const SNACK_MIN_QUANTITY = getSnackMinQuantity("individual");
+
+/** Precio más bajo de la tarta clásica, para el «desde» de la home. */
+const CLASSIC_CAKE_FROM_CENTS = getMinPriceCents("pastel-clasico", "individual");
+
+interface FamilyCard {
+  id: FamilyId;
+  photo: Photo;
+  description: string;
+  badge: string | null;
+  badgeVariant: "accent" | "secondary" | "outline";
+  cta: string;
+}
+
+/*
+ * «¿Qué estás buscando?»: una tarjeta por familia de producto, con foto real y
+ * un único CTA al configurador. El detalle de cada familia vive en la carta y
+ * en el propio pedido, no en la home.
+ * Datos derivados del catálogo — sin precios ni cifras escritos a mano.
+ */
+const FAMILY_CARDS: FamilyCard[] = [
   {
-    id: "pasteles",
-    title: "Tartas clásicas",
+    id: "tartas",
+    // Foto distinta de las 4 que muestra la galería de abajo, para no repetir.
+    photo: CLASSIC_CAKE_PHOTOS[4],
     description:
-      "Clásicas o con buttercream: elige tamaño, bizcocho y relleno, y remátala con toppings y dedicatoria. Precio cerrado al momento.",
-    fromCents: getMinPriceCents("pastel-clasico", "individual"),
-    detail: `${SPONGE_FLAVORS.length} bizcochos · ${CAKE_FILLINGS.length} rellenos incluidos`,
+      "Configúrala y conoce el precio al momento, o pídenos un diseño a medida.",
+    badge:
+      CLASSIC_CAKE_FROM_CENTS === null
+        ? null
+        : `desde ${formatEuros(CLASSIC_CAKE_FROM_CENTS)}`,
+    badgeVariant: "accent",
+    cta: "Configurar mi tarta",
   },
   {
-    id: "cheesecakes",
-    title: "Cheesecakes",
+    id: "aperitivos",
+    photo: SAVOURY_HERO_PHOTOS[0],
     description:
-      "Cremosos y de receta casera. El precio depende del sabor y del tamaño que elijas.",
-    fromCents: getMinPriceCents("cheesecake", "individual"),
-    detail: `${CHEESECAKE_FLAVORS.length} sabores para elegir`,
+      "Mini sándwiches, mini panes y bocaditos salados para eventos, con precio por cantidad.",
+    badge: SNACK_MIN_QUANTITY === null ? null : `desde ${SNACK_MIN_QUANTITY} uds`,
+    badgeVariant: "outline",
+    cta: "Elegir aperitivos",
   },
   {
-    id: "tres-leches",
-    title: "Tarta Tres Leches",
-    description:
-      "Un clásico que nunca falla: bizcocho bañado en tres leches, en varios tamaños para compartir.",
-    fromCents: getMinPriceCents("tres-leches", "individual"),
-    detail: "Varios tamaños disponibles",
+    id: "regalos",
+    photo: GLASS_PHOTOS[0],
+    description: "Cajas de desayuno y copas personalizadas con dedicatoria.",
+    badge: "A consultar",
+    badgeVariant: "secondary",
+    cta: "Pedir presupuesto",
   },
-] as const;
+];
 
 const CATALOG_STATS = [
   { value: CHEESECAKE_FLAVORS.length, label: "sabores de cheesecake" },
@@ -78,8 +116,8 @@ const CATALOG_STATS = [
 const STEPS = [
   {
     icon: CakeSlice,
-    title: "Elige tu dulce",
-    text: "Tartas clásicas, cheesecakes o tres leches, para particulares y empresas.",
+    title: "Elige tu antojo",
+    text: "Tartas, aperitivos salados o un regalo personalizado, para particulares y empresas.",
   },
   {
     icon: Sparkles,
@@ -153,8 +191,9 @@ function Hero() {
             Hechos con pasión para endulzar tus mejores momentos
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
-            Tartas de celebración, cheesecakes y tres leches en Santa Coloma de
-            Gramenet. Hechos con amor para compartir momentos inolvidables.
+            Tartas de celebración, aperitivos para eventos y regalos
+            personalizados en Santa Coloma de Gramenet. Hechos con amor para
+            compartir momentos inolvidables.
           </p>
         </div>
 
@@ -188,37 +227,44 @@ function ProductsSection() {
       <Reveal>
         <SectionHeading
           eyebrow="Sabores que enamoran"
-          title="Nuestros dulces"
-          subtitle="Todo se hornea por encargo, con receta casera y mucho amor."
+          title="¿Qué estás buscando?"
+          subtitle="Todo se prepara por encargo, con receta casera y mucho amor. Elige por dónde empezar."
         />
       </Reveal>
 
       <div className="mt-10 grid gap-5 md:grid-cols-3">
-        {PRODUCT_CARDS.map((product, index) => (
-          <Reveal key={product.id} delay={index * 0.08} className="h-full">
+        {FAMILY_CARDS.map((family, index) => (
+          <Reveal key={family.id} delay={index * 0.08} className="h-full">
             <Link
               to="/pedido"
               className="group block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              aria-label={`${product.title}: hacer pedido`}
+              aria-label={`${FAMILY_LABELS[family.id]}: ${family.cta}`}
             >
-              <Card className="flex h-full flex-col transition-shadow duration-200 group-hover:shadow-lifted">
+              <Card className="flex h-full flex-col overflow-hidden transition-shadow duration-200 group-hover:shadow-lifted">
+                <img
+                  src={family.photo.src}
+                  alt={family.photo.alt}
+                  loading="lazy"
+                  width={1200}
+                  height={900}
+                  className="aspect-[4/3] w-full object-cover"
+                />
                 <CardHeader>
                   <div className="flex items-start justify-between gap-3">
                     <CardTitle className="text-xl leading-snug">
-                      {product.title}
+                      {FAMILY_LABELS[family.id]}
                     </CardTitle>
-                    {product.fromCents !== null && (
-                      <Badge variant="accent" className="shrink-0">
-                        desde {formatEuros(product.fromCents)}
+                    {family.badge && (
+                      <Badge variant={family.badgeVariant} className="shrink-0">
+                        {family.badge}
                       </Badge>
                     )}
                   </div>
-                  <CardDescription>{product.description}</CardDescription>
+                  <CardDescription>{family.description}</CardDescription>
                 </CardHeader>
                 <CardContent className="mt-auto">
-                  <p className="text-sm font-medium text-accent">{product.detail}</p>
-                  <p className="mt-3 text-sm font-semibold text-primary underline-offset-4 group-hover:underline">
-                    Hacer pedido →
+                  <p className="text-sm font-semibold text-primary underline-offset-4 group-hover:underline">
+                    {family.cta} →
                   </p>
                 </CardContent>
               </Card>
@@ -227,7 +273,14 @@ function ProductsSection() {
         ))}
       </div>
 
-      {/* Galería de trabajos reales del obrador (fotos del cliente). */}
+      {/*
+        Galería de tartas reales del obrador. No se convierte en una galería
+        general «Nuestros trabajos»: las tarjetas de familia de arriba ya enseñan
+        una foto real de cada línea (y son las mismas de FEATURED_WORK_PHOTOS),
+        así que repetirlas alargaría la home sin aportar nada. Esta galería sigue
+        cumpliendo una función concreta: enseñar qué acabado incluye el precio
+        cerrado de la tarta clásica, el mismo mensaje que ve en el configurador.
+      */}
       <Reveal className="mt-10">
         <CakeReferences
           photos={CLASSIC_CAKE_PHOTOS}
@@ -268,7 +321,7 @@ function HowItWorksSection() {
         <Reveal>
           <SectionHeading
             eyebrow="Así de fácil"
-            title="Tu tarta, a tu manera"
+            title="Tu pedido, a tu manera"
             subtitle="Configura tu pedido en unos minutos y confírmalo por WhatsApp."
           />
         </Reveal>
@@ -303,9 +356,19 @@ function HowItWorksSection() {
 }
 
 function AudiencesSection() {
-  const businessProductNames = getProductsFor("business")
+  /*
+   * La carta de empresa incluye ahora 11 aperitivos salados: listarlos uno a uno
+   * daría un párrafo interminable. Se nombran las tartas y especialidades y los
+   * aperitivos se resumen con su número, todo derivado del catálogo.
+   */
+  const businessProducts = getProductsFor("business");
+  const businessCakeNames = businessProducts
+    .filter((product) => CATEGORY_FAMILY[product.category] === "tartas")
     .map((product) => product.name)
     .join(" · ");
+  const businessSnackCount = businessProducts.filter(
+    (product) => CATEGORY_FAMILY[product.category] === "aperitivos"
+  ).length;
 
   return (
     <section className="container py-16 sm:py-20">
@@ -328,7 +391,8 @@ function AudiencesSection() {
               <CardDescription>
                 Tartas para cumpleaños, aniversarios y toda clase de celebraciones:
                 elige tamaño, bizcocho, relleno, toppings y dedicatoria, y recógela o
-                recíbela el día señalado.
+                recíbela el día señalado. También preparamos aperitivos salados para
+                tus eventos y regalos personalizados.
               </CardDescription>
             </CardHeader>
             <CardContent className="mt-auto space-y-4">
@@ -365,7 +429,14 @@ function AudiencesSection() {
               <CardTitle className="pt-2 text-xl">Para empresas</CardTitle>
               <CardDescription>
                 Precios pensados para empresas y restaurantes, con cartas específicas:{" "}
-                {businessProductNames}.
+                {businessCakeNames}.
+                {businessSnackCount > 0 && (
+                  <>
+                    {" "}
+                    Y {businessSnackCount} aperitivos salados con precio por
+                    cantidad para tus eventos.
+                  </>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent className="mt-auto space-y-4">
@@ -422,8 +493,8 @@ function AboutSection() {
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
             Dulce Flor es un obrador de repostería casera en Santa Coloma de Gramenet.
-            Preparamos cada pastel, cheesecake y tres leches por encargo, con sabor
-            casero que encanta y el cariño de lo hecho a mano.
+            Preparamos cada tarta, cada bandeja de aperitivos y cada regalo por
+            encargo, con sabor casero que encanta y el cariño de lo hecho a mano.
           </p>
           <p className="mx-auto mt-3 max-w-2xl text-base text-muted-foreground sm:text-lg">
             Grandes momentos, grandes sabores: cuéntanos qué celebras y lo endulzamos
@@ -559,7 +630,7 @@ function FinalCtaSection() {
           Sabores que enamoran
         </p>
         <h2 className="mt-2 font-display text-3xl font-bold sm:text-4xl">
-          ¿Preparamos tu próxima tarta?
+          ¿Preparamos tu próxima celebración?
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-cocoa-foreground/70">
           Configura tu pedido en unos minutos y confírmalo por WhatsApp. Hechos con

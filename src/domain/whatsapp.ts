@@ -4,6 +4,7 @@
  * preparado y es la persona usuaria quien lo envía.
  */
 import { DEPOSIT_PERCENTAGE, WHATSAPP_PHONE } from "@/config/business";
+import { getProduct } from "./catalog";
 import { formatEuros } from "./money";
 import {
   CUSTOMER_TYPE_LABELS,
@@ -27,14 +28,22 @@ export function buildOrderWhatsAppMessage(order: Order): string {
   const hasQuoteItems = order.items.some((item) => item.requiresQuote);
   const onlyQuoteItems = hasQuoteItems && order.items.every((item) => item.requiresQuote);
   const quoteItem = order.items.find((item) => item.requiresQuote);
+  const quoteProduct = quoteItem ? getProduct(quoteItem.productId) : undefined;
+  const isGiftRequest = Boolean(quoteProduct?.giftType);
   lines.push(
     onlyQuoteItems
-      ? `SOLICITUD DE PRESUPUESTO — ${
-          quoteItem?.productName.toUpperCase() ?? "TARTA A MEDIDA"
-        }`
+      ? isGiftRequest
+        ? "SOLICITUD DE REGALO PERSONALIZADO"
+        : `SOLICITUD DE PRESUPUESTO — ${
+            quoteItem?.productName.toUpperCase() ?? "TARTA A MEDIDA"
+          }`
       : "NUEVO PEDIDO DULCE FLOR"
   );
   lines.push("");
+  if (onlyQuoteItems && isGiftRequest) {
+    lines.push(`Tipo: ${quoteItem!.productName}`);
+    lines.push("");
+  }
   lines.push(`Pedido: ${order.publicId}`);
   lines.push("");
   lines.push(`Cliente: ${order.customer.name}`);
@@ -46,8 +55,22 @@ export function buildOrderWhatsAppMessage(order: Order): string {
 
   for (const item of order.items) {
     const c = item.customization;
-    lines.push(`Pedido: ${item.productName}${item.quantity > 1 ? ` x${item.quantity}` : ""}`);
-    lines.push(`Tamaño: ${c.size.label}`);
+    const product = getProduct(item.productId);
+    const isTiered = Boolean(product?.quantityTiers);
+    const isGift = Boolean(product?.giftType);
+
+    if (isTiered) {
+      lines.push(`Producto: ${item.productName}`);
+      lines.push(`Cantidad: ${item.quantity} uds · ${formatEuros(item.unitPriceCents)}/ud`);
+    } else if (isGift) {
+      lines.push(`Producto: ${item.productName}`);
+      if (c.occasion) lines.push(`Ocasión: ${c.occasion}`);
+    } else {
+      lines.push(
+        `Pedido: ${item.productName}${item.quantity > 1 ? ` x${item.quantity}` : ""}`
+      );
+      lines.push(`Tamaño: ${c.size.label}`);
+    }
     if (c.flavor) lines.push(`Sabor: ${c.flavor.label}`);
     if (c.filling) lines.push(`Relleno: ${c.filling.label}`);
     if (c.toppings.length > 0) {

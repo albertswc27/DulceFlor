@@ -58,6 +58,18 @@ export const customToppingSchema = z
   .min(2, "Escribe el topping que buscas")
   .max(80, "Máximo 80 caracteres");
 
+export const occasionSchema = z
+  .string()
+  .trim()
+  .min(3, "Cuéntanos la ocasión (cumpleaños, aniversario…)")
+  .max(80, "Máximo 80 caracteres");
+
+/** Dedicatoria de regalos: más larga que la de una tarta, es el mensaje. */
+export const giftDedicationSchema = z
+  .string()
+  .trim()
+  .max(300, "Máximo 300 caracteres");
+
 export const designDescriptionSchema = z
   .string()
   .trim()

@@ -4,14 +4,52 @@
  * @/domain/catalog y @/config/business (única fuente de verdad).
  */
 import {
+  CATEGORY_FAMILY,
   CHEESECAKE_PRICES,
+  getMinimumQuantity,
   getProduct,
+  getProductsFor,
   getSizesFor,
   getUnitBasePriceCents,
   type CatalogProduct,
+  type FamilyId,
 } from "@/domain/catalog";
 import { BUSINESS_HOURS } from "@/config/business";
 import type { CustomerType } from "@/domain/types";
+
+/** Productos de una familia (tartas / aperitivos / regalos) para un cliente. */
+export function getFamilyProducts(
+  family: FamilyId,
+  customerType: CustomerType
+): CatalogProduct[] {
+  return getProductsFor(customerType).filter(
+    (product) => CATEGORY_FAMILY[product.category] === family
+  );
+}
+
+/**
+ * Aperitivos salados con tarifa por volumen confirmada. Los demás salados
+ * (empanadas, tequeños, hamburguesas) no están en el catálogo justamente
+ * porque no tienen tarifa: se muestran solo como muestra de trabajo.
+ */
+export function getSnackProducts(customerType: CustomerType): CatalogProduct[] {
+  return getProductsFor(customerType).filter(
+    (product) =>
+      product.category === "aperitivos-salados" &&
+      (product.quantityTiers?.length ?? 0) > 0
+  );
+}
+
+/** Pedido mínimo de los aperitivos, derivado de los tramos del catálogo. */
+export function getSnackMinQuantity(customerType: CustomerType): number | null {
+  const quantities = getSnackProducts(customerType).map(getMinimumQuantity);
+  return quantities.length > 0 ? Math.min(...quantities) : null;
+}
+
+/** Regalos personalizados sin precio automático (cajas de desayuno y copas). */
+export function getGiftProducts(customerType: CustomerType): CatalogProduct[] {
+  return getFamilyProducts("regalos", customerType);
+}
 
 /** Precio mínimo real de un producto para un tipo de cliente ("desde X"). */
 export function getMinPriceCents(

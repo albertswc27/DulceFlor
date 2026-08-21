@@ -24,6 +24,7 @@ function DraftItemRow({ item }: { item: DraftItem }) {
           </p>
           <ul className="mt-1 space-y-0.5 text-sm text-muted-foreground">
             <li>{c.size.label}</li>
+            {c.occasion && <li>Ocasión: {c.occasion}</li>}
             {c.flavor && <li>Sabor: {c.flavor.label}</li>}
             {c.filling && <li>Relleno: {c.filling.label}</li>}
             {c.toppings.length > 0 && (
@@ -40,7 +41,9 @@ function DraftItemRow({ item }: { item: DraftItem }) {
             {c.extras.length > 0 && (
               <li>Extras: {c.extras.map((e) => e.label).join(", ")}</li>
             )}
-            {c.dedicationText && <li>Dedicatoria: “{c.dedicationText}”</li>}
+            {c.dedicationText && (
+              <li className="text-foreground">Dedicatoria: “{c.dedicationText}”</li>
+            )}
             {c.designDescription && <li>Diseño: “{c.designDescription}”</li>}
             {c.notes && (
               <li className="italic">

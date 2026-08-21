@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Link } from "react-router-dom";
+import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { formatEuros } from "@/domain/money";
 import {
   CAKE_FILLINGS,
+  CATEGORY_LABELS,
   CHEESECAKE_FLAVORS,
   CHEESECAKE_SIZES_BUSINESS,
   CHEESECAKE_SIZES_INDIVIDUAL,
@@ -22,20 +24,43 @@ import {
   getProductsFor,
   getSizesFor,
   getUnitBasePriceCents,
+  type CatalogProduct,
+  type QuantityTier,
 } from "@/domain/catalog";
 import {
   DEPOSIT_PERCENTAGE,
   DEPOSIT_THRESHOLD_CENTS,
   MIN_ORDER_LEAD_TIME_HOURS,
   TOPPING_PRICE_CENTS,
+  WHATSAPP_PHONE,
 } from "@/config/business";
 import type { CustomerType } from "@/domain/types";
-import { buildCakeMatrix } from "../lib/catalogView";
+import {
+  BREAKFAST_PHOTOS,
+  GLASS_PHOTOS,
+  OTHER_SAVOURY_PHOTOS,
+  SAVOURY_HERO_PHOTOS,
+  SAVOURY_PRODUCT_PHOTOS,
+  SWEET_SNACK_PHOTOS,
+  type Photo,
+} from "@/assets/photos";
+import {
+  buildCakeMatrix,
+  getGiftProducts,
+  getSnackMinQuantity,
+  getSnackProducts,
+} from "../lib/catalogView";
 import { Reveal } from "../components/Reveal";
 import { SectionHeading } from "../components/SectionHeading";
+import { PhotoGrid } from "../components/PhotoGrid";
 
 function priceOrDash(cents: number | null): string {
   return cents === null ? "—" : formatEuros(cents);
+}
+
+/** Enlace a WhatsApp con el texto ya preparado (la persona decide si lo envía). */
+function whatsAppUrl(text: string): string {
+  return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(text)}`;
 }
 
 /** Conmutador Particulares / Empresas accesible. */
@@ -258,6 +283,285 @@ function ToppingOverrideNotes({
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Aperitivos                                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Muestra variada de lo que también sale del obrador. Son 7 fotos: se enseñan
+ * 4, una de cada tipo, para no convertir el bloque en un muro de imágenes.
+ */
+const OTHER_SAVOURY_SAMPLE: Photo[] = [
+  OTHER_SAVOURY_PHOTOS[0], // mini empanadas de carne
+  OTHER_SAVOURY_PHOTOS[2], // mini empanadas de atún
+  OTHER_SAVOURY_PHOTOS[3], // tequeños de jamón y queso
+  OTHER_SAVOURY_PHOTOS[5], // mini hamburguesa de vacuno
+];
+
+/**
+ * Tramos de precio por volumen tal y como los ve el cliente en el pedido
+ * ("15 uds", "25 uds", "50+ uds"). Los importes salen de `quantityTiers`.
+ */
+function SnackTierList({ tiers }: { tiers: QuantityTier[] }) {
+  if (tiers.length === 0) return null;
+  return (
+    <ul className="divide-y divide-border text-sm">
+      {tiers.map((tier) => (
+        <li key={tier.id} className="flex items-center justify-between gap-3 py-2">
+          <span className="text-foreground/90">
+            {tier.open ? `${tier.minQuantity}+ uds` : `${tier.minQuantity} uds`}
+          </span>
+          <span className="font-medium tabular-nums text-primary">
+            {formatEuros(tier.unitPriceCents)}/ud
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Ficha compacta de un aperitivo salado con tarifa (móvil primero). */
+function SnackCard({ product }: { product: CatalogProduct }) {
+  const photo = SAVOURY_PRODUCT_PHOTOS[product.id];
+
+  return (
+    <Card className="flex h-full flex-col overflow-hidden">
+      {photo && (
+        <img
+          src={photo.src}
+          alt={photo.alt}
+          loading="lazy"
+          width={1200}
+          height={900}
+          className="aspect-[4/3] w-full object-cover"
+        />
+      )}
+      <CardHeader className="p-4 pb-2">
+        <CardTitle className="text-base leading-snug">{product.name}</CardTitle>
+        <CardDescription>{product.description}</CardDescription>
+      </CardHeader>
+      <CardContent className="mt-auto p-4 pt-2">
+        <SnackTierList tiers={product.quantityTiers ?? []} />
+      </CardContent>
+    </Card>
+  );
+}
+
+type SnackTab = "salados" | "dulces";
+
+/** Conmutador Salados / Dulces, con el mismo patrón que el de tipo de cliente. */
+function SnackTabs({
+  tab,
+  onChange,
+}: {
+  tab: SnackTab;
+  onChange: (tab: SnackTab) => void;
+}) {
+  const options: Array<{ value: SnackTab; label: string }> = [
+    { value: "salados", label: CATEGORY_LABELS["aperitivos-salados"] },
+    { value: "dulces", label: CATEGORY_LABELS["aperitivos-dulces"] },
+  ];
+
+  return (
+    <div
+      role="group"
+      aria-label="Tipo de aperitivo"
+      className="flex w-full max-w-xs rounded-xl border border-border bg-card p-1 shadow-soft"
+    >
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          aria-pressed={tab === option.value}
+          onClick={() => onChange(option.value)}
+          className={cn(
+            "h-11 flex-1 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            tab === option.value
+              ? "bg-primary text-primary-foreground shadow-soft"
+              : "text-foreground/70 hover:bg-primary/5 hover:text-primary"
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SavourySnacksPanel({ customerType }: { customerType: CustomerType }) {
+  const products = getSnackProducts(customerType);
+  const minQuantity = getSnackMinQuantity(customerType);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl bg-background-soft/70 px-4 py-3">
+        {minQuantity !== null && (
+          <Badge variant="secondary">Pedido mínimo {minQuantity} uds</Badge>
+        )}
+        <p className="text-sm text-muted-foreground">
+          El precio por unidad baja según la cantidad que pidas de cada variedad.
+        </p>
+      </div>
+
+      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {products.map((product) => (
+          <li key={product.id}>
+            <SnackCard product={product} />
+          </li>
+        ))}
+      </ul>
+
+      {/* Sin tarifa confirmada: muestra de trabajo, nunca precio ni compra directa. */}
+      <div className="rounded-2xl border border-secondary/40 bg-background-soft/50 p-4 sm:p-5">
+        <h3 className="font-display text-base font-semibold text-primary">
+          También preparamos
+        </h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Mini empanadas, tequeños y mini hamburguesas hechos en el obrador.
+          Todavía no están en carta con precio: consúltanos por WhatsApp y te
+          pasamos presupuesto según la cantidad.
+        </p>
+        <PhotoGrid photos={OTHER_SAVOURY_SAMPLE} columns={4} className="mt-3" />
+        <Button asChild variant="outline" size="lg" className="mt-4 w-full sm:w-auto">
+          <a
+            href={whatsAppUrl(
+              "Hola Dulce Flor, quería consultar precio de empanadas, tequeños o mini hamburguesas."
+            )}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <MessageCircle aria-hidden="true" />
+            Consultar por WhatsApp
+          </a>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function SweetSnacksPanel() {
+  return (
+    <div className="space-y-4">
+      <PhotoGrid photos={SWEET_SNACK_PHOTOS} columns={2} />
+      <div className="rounded-2xl border border-secondary/40 bg-background-soft/50 p-4 sm:p-5">
+        <p className="text-sm text-foreground/90">
+          Preparamos también bocaditos dulces: vasitos individuales, cupcakes
+          personalizados… Todavía no tenemos cerrada su carta, así que no
+          aparecen aquí con precio.
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Cuéntanos qué necesitas y para cuánta gente, y te pasamos propuesta y
+          precio.
+        </p>
+        <Button asChild variant="outline" size="lg" className="mt-4 w-full sm:w-auto">
+          <a
+            href={whatsAppUrl(
+              "Hola Dulce Flor, quería consultar por los bocaditos dulces (vasitos, cupcakes…)."
+            )}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <MessageCircle aria-hidden="true" />
+            Consúltanos por WhatsApp
+          </a>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** Aperitivos: salados con tarifa por volumen y dulces a consultar. */
+function AperitivosSection({ customerType }: { customerType: CustomerType }) {
+  const [tab, setTab] = React.useState<SnackTab>("salados");
+  const hasSavoury = getSnackProducts(customerType).length > 0;
+  if (!hasSavoury) return null;
+
+  return (
+    <section className="space-y-6">
+      <SectionHeading
+        align="left"
+        eyebrow="Para tus eventos"
+        title="Aperitivos"
+        subtitle="Bocaditos salados con precio por cantidad y bocaditos dulces para rematar la mesa."
+      />
+
+      <PhotoGrid photos={SAVOURY_HERO_PHOTOS} columns={2} />
+
+      <SnackTabs tab={tab} onChange={setTab} />
+
+      <div key={tab} className="animate-fade-in">
+        {tab === "salados" ? (
+          <SavourySnacksPanel customerType={customerType} />
+        ) : (
+          <SweetSnacksPanel />
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Desayunos y regalos personalizados                                  */
+/* ------------------------------------------------------------------ */
+
+/** Fotos reales por tipo de regalo (el catálogo pone nombre y descripción). */
+const GIFT_PHOTOS: Record<NonNullable<CatalogProduct["giftType"]>, Photo[]> = {
+  desayuno: BREAKFAST_PHOTOS,
+  copa: GLASS_PHOTOS,
+};
+
+function GiftsSection({ customerType }: { customerType: CustomerType }) {
+  const gifts = getGiftProducts(customerType);
+  if (gifts.length === 0) return null;
+
+  return (
+    <section className="space-y-6">
+      <SectionHeading
+        align="left"
+        eyebrow="Para regalar"
+        title="Desayunos y regalos personalizados"
+        subtitle="Cajas de desayuno y copas preparadas a medida, con la dedicatoria que nos digas."
+      />
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {gifts.map((product) => {
+          const photos = product.giftType ? GIFT_PHOTOS[product.giftType] : [];
+          const isGlass = product.giftType === "copa";
+          return (
+            <Card key={product.id} className="flex h-full flex-col">
+              <CardHeader>
+                <div className="flex items-start justify-between gap-3">
+                  <CardTitle className="text-lg">{product.name}</CardTitle>
+                  <Badge variant="secondary" className="shrink-0">
+                    A consultar
+                  </Badge>
+                </div>
+                <CardDescription>{product.description}</CardDescription>
+              </CardHeader>
+              <CardContent className="mt-auto space-y-4">
+                <PhotoGrid
+                  photos={photos}
+                  columns={isGlass ? 3 : 2}
+                  limit={isGlass ? 3 : 2}
+                />
+                <Button asChild size="lg" className="w-full sm:w-auto">
+                  <Link to="/pedido">Solicitar presupuesto</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <p className="text-sm text-muted-foreground">
+        Estos regalos no tienen precio en carta: cuéntanos la ocasión y la
+        dedicatoria al solicitarlos y te confirmamos las opciones y el precio por
+        WhatsApp.
+      </p>
+    </section>
+  );
+}
+
 function IndividualMenu() {
   const classicCake = getProduct("pastel-clasico");
   const tresLeches = getProduct("tres-leches");
@@ -433,6 +737,11 @@ function IndividualMenu() {
           </Card>
         </div>
       </section>
+
+      {/* Aperitivos y regalos van tras el bloque de tartas, sin tocarlo. */}
+      <AperitivosSection customerType="individual" />
+
+      <GiftsSection customerType="individual" />
     </div>
   );
 }
@@ -498,12 +807,16 @@ function BusinessMenu() {
           ))}
         </div>
       </section>
+
+      {/* Los aperitivos salados están disponibles también para empresas. */}
+      <AperitivosSection customerType="business" />
     </div>
   );
 }
 
 export default function MenusPage() {
   const [mode, setMode] = React.useState<CustomerType>("individual");
+  const snackMinQuantity = getSnackMinQuantity(mode);
 
   return (
     <>
@@ -514,8 +827,8 @@ export default function MenusPage() {
             Sabores y precios
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-base text-muted-foreground sm:text-lg">
-            Todos los precios provienen de nuestras cartas oficiales. Elige la carta
-            que te corresponde:
+            Tartas, aperitivos y regalos personalizados. Todos los precios provienen
+            de nuestras cartas oficiales. Elige la carta que te corresponde:
           </p>
           <div className="mt-8">
             <CustomerTypeSwitch mode={mode} onChange={setMode} />
@@ -547,6 +860,17 @@ export default function MenusPage() {
               <li>
                 Recogida gratis en tienda; entrega a domicilio según zona (ver
                 condiciones al hacer el pedido).
+              </li>
+              {snackMinQuantity !== null && (
+                <li>
+                  Los aperitivos salados se piden desde {snackMinQuantity} unidades
+                  por variedad, y el precio por unidad baja al aumentar la cantidad.
+                </li>
+              )}
+              <li>
+                Las tartas personalizadas y de fondant, las cajas de desayuno y las
+                copas no tienen precio en carta: se presupuestan a medida y se
+                confirman por WhatsApp.
               </li>
             </ul>
           </CardContent>

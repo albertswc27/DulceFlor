@@ -30,8 +30,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { DELIVERY_ZONES } from "@/config/business";
-import { CATEGORY_LABELS, getProductsFor, type CatalogProduct } from "@/domain/catalog";
+import { DELIVERY_ZONES, WHATSAPP_PHONE } from "@/config/business";
+import { SWEET_SNACK_PHOTOS } from "@/assets/photos";
+import { CakeReferences } from "@/features/order/components/CakeReferences";
+import {
+  CATEGORY_FAMILY,
+  CATEGORY_LABELS,
+  FAMILY_LABELS,
+  getProductsFor,
+  type CatalogProduct,
+  type FamilyId,
+} from "@/domain/catalog";
+import { cn } from "@/lib/utils";
 import { resolveDeliveryZone } from "@/domain/delivery";
 import { isRequestedSlotValid } from "@/domain/schedule";
 import { formatEuros } from "@/domain/money";
@@ -95,9 +105,29 @@ export default function OrderWizardPage() {
   const [postalCode, setPostalCode] = React.useState(state.address?.postalCode ?? "");
   const [details, setDetails] = React.useState(state.address?.details ?? "");
 
-  const products = state.customerType ? getProductsFor(state.customerType) : [];
-  /** Solicitudes a medida (personalizada/fondant): sin precio automático. */
-  const quoteProducts = products.filter((p) => p.pricingType === "quote");
+  const products = React.useMemo(
+    () => (state.customerType ? getProductsFor(state.customerType) : []),
+    [state.customerType]
+  );
+
+  /** Familias disponibles según el catálogo del tipo de cliente. */
+  const availableFamilies = React.useMemo(() => {
+    const order: FamilyId[] = ["tartas", "aperitivos", "regalos"];
+    const present = new Set(products.map((p) => CATEGORY_FAMILY[p.category]));
+    return order.filter((f) => present.has(f));
+  }, [products]);
+  const [family, setFamily] = React.useState<FamilyId>("tartas");
+
+  React.useEffect(() => {
+    if (availableFamilies.length > 0 && !availableFamilies.includes(family)) {
+      setFamily(availableFamilies[0]);
+    }
+  }, [availableFamilies, family]);
+
+  /** Solicitudes a medida de la familia visible: sin precio automático. */
+  const quoteProducts = products.filter(
+    (p) => p.pricingType === "quote" && CATEGORY_FAMILY[p.category] === family
+  );
   const headingRef = React.useRef<HTMLHeadingElement>(null);
 
   function openConfigurator(product: CatalogProduct) {
@@ -368,9 +398,49 @@ export default function OrderWizardPage() {
                       </h2>
                     </>
                   )}
+                  {/* Familias: evita una lista interminable de productos */}
+                  {availableFamilies.length > 1 && (
+                    <div
+                      role="group"
+                      aria-label="Tipo de producto"
+                      className="flex flex-wrap gap-2"
+                    >
+                      {availableFamilies.map((f) => {
+                        const active = f === family;
+                        return (
+                          <button
+                            key={f}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() => setFamily(f)}
+                            className={cn(
+                              "min-h-[44px] rounded-xl border px-4 font-display text-base font-semibold transition-all",
+                              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                              active
+                                ? "border-primary bg-primary text-primary-foreground shadow-soft"
+                                : "border-border bg-card text-primary hover:border-secondary"
+                            )}
+                          >
+                            {FAMILY_LABELS[f]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   {/* Productos con precio automático, por categoría */}
-                  {(["pasteles", "cheesecake", "tres-leches", "especialidades"] as const).map(
+                  {(
+                    [
+                      "pasteles",
+                      "cheesecake",
+                      "tres-leches",
+                      "especialidades",
+                      "aperitivos-salados",
+                      "aperitivos-dulces",
+                    ] as const
+                  ).map(
                     (category) => {
+                      if (CATEGORY_FAMILY[category] !== family) return null;
                       const catProducts = products.filter(
                         (p) => p.category === category && p.pricingType !== "quote"
                       );
@@ -395,8 +465,16 @@ export default function OrderWizardPage() {
                                   {product.description}
                                 </span>
                                 <span className="mt-3 flex items-center gap-2 text-sm font-medium text-accent">
-                                  Personalizar →
-                                  <Badge variant="success">Precio al momento</Badge>
+                                  {product.quantityTiers ? "Elegir cantidad →" : "Personalizar →"}
+                                  <Badge variant="success">
+                                    {product.quantityTiers
+                                      ? `Desde ${formatEuros(
+                                          Math.min(
+                                            ...product.quantityTiers.map((t) => t.unitPriceCents)
+                                          )
+                                        )}/ud`
+                                      : "Precio al momento"}
+                                  </Badge>
                                 </span>
                               </button>
                             ))}
@@ -406,16 +484,48 @@ export default function OrderWizardPage() {
                     }
                   )}
 
+                  {/* Aperitivos dulces: fotos reales, catálogo aún sin confirmar */}
+                  {family === "aperitivos" && (
+                    <div className="rounded-2xl border border-secondary/50 bg-background-soft/60 p-4 sm:p-5">
+                      <h2 className="font-display text-lg font-semibold text-primary">
+                        ¿Buscas bocaditos dulces?
+                      </h2>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        También preparamos vasitos individuales, cupcakes personalizados y
+                        otros bocaditos dulces. Todavía no tenemos su carta publicada:
+                        escríbenos por WhatsApp y te contamos opciones y precios.
+                      </p>
+                      <CakeReferences
+                        photos={SWEET_SNACK_PHOTOS}
+                        title="Algunos de nuestros dulces"
+                        description="Fotografías reales del obrador."
+                        limit={2}
+                        className="mt-3 border-0 bg-transparent p-0"
+                      />
+                      <Button asChild variant="outline" size="lg" className="mt-3">
+                        <a
+                          href={`https://wa.me/${WHATSAPP_PHONE}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Consultar por WhatsApp
+                        </a>
+                      </Button>
+                    </div>
+                  )}
+
                   {/* Solicitudes a medida (sin precio automático) */}
                   {quoteProducts.length > 0 && (
                     <div className="rounded-2xl border border-secondary/50 bg-background-soft/60 p-4 sm:p-5">
                       <h2 className="font-display text-lg font-semibold text-primary">
-                        ¿Buscas un diseño especial?
+                        {family === "regalos"
+                          ? "Desayunos y regalos personalizados"
+                          : "¿Buscas un diseño especial?"}
                       </h2>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Dibujos, personajes, figuras o una tarta que hayas visto en una
-                        foto: eso va más allá de nuestro acabado clásico, así que lo
-                        valoramos a mano y te pasamos presupuesto por WhatsApp.
+                        {family === "regalos"
+                          ? "Preparamos cada regalo a medida: cuéntanos la ocasión y qué te gustaría, y te confirmamos las opciones y el precio por WhatsApp."
+                          : "Dibujos, personajes, figuras o una tarta que hayas visto en una foto: eso va más allá de nuestro acabado clásico, así que lo valoramos a mano y te pasamos presupuesto por WhatsApp."}
                       </p>
                       <div className="mt-3 grid gap-3 sm:grid-cols-2">
                         {quoteProducts.map((product) => (

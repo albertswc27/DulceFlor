@@ -53,6 +53,47 @@ Fuente de verdad de catálogo y precios: [`src/domain/catalog.ts`](../src/domain
 La zona se determina por **código postal con prioridad estricta**: si el CP es válido (5 dígitos) y no pertenece a ninguna zona, la dirección queda «a consultar» aunque el municipio tecleado coincida con una zona (un CP fuera de rango es evidencia más fiable que un municipio escrito a mano). Solo sin CP válido se usa el nombre de municipio normalizado (sin acentos/mayúsculas). Sin APIs externas de geocoding.
 
 
+
+## Nuevas líneas de producto (21/08/2026)
+
+### Aperitivos salados — tarifas CONFIRMADAS (WhatsApp 21/08/2026)
+
+Precio **por unidad** según el tramo de cantidad. **Los tramos NO son iguales en todos los productos**: mini sándwiches y mini panes escalan en 15/25/50, los tequeños en 15/30/50 y las empanadas en 20/35/50. Definidos producto a producto en `SAVOURY_SNACKS` (`src/domain/catalog.ts`) y verificados por test uno a uno.
+
+| Producto | Tramo 1 | Tramo 2 | Tramo 3 |
+| --- | --- | --- | --- |
+| Mini sándwich de cerdo caramelizado | 15 u · 1,45 € | 25 u · 1,25 € | 50+ u · 1,00 € |
+| Mini sándwich Royal de pollo | 15 u · 1,30 € | 25 u · 1,15 € | 50+ u · 0,99 € |
+| Mini sándwich de jamón dulce con tomate y queso | 15 u · 1,25 € | 25 u · 1,10 € | 50+ u · 0,90 € |
+| Mini sándwich de huevo | 15 u · 1,20 € | 25 u · 1,10 € | 50+ u · 0,90 € |
+| Mini sándwich de tocino crujiente (con queso y tomate) | 15 u · 1,45 € | 25 u · 1,25 € | 50+ u · 1,00 € |
+| Mini sándwich de pollo, melocotón y jamón dulce | 15 u · 1,45 € | 25 u · 1,25 € | 50+ u · 1,05 € |
+| Mini pan de bacon con espinaca | 15 u · 1,35 € | 25 u · 1,20 € | 50+ u · 1,00 € |
+| Mini pan mixto de pollo y melocotón | 15 u · 1,35 € | 25 u · 1,20 € | 50+ u · 1,00 € |
+| Mini pan de jamón dulce y queso | 15 u · 1,25 € | 25 u · 1,15 € | 50+ u · 0,99 € |
+| Mini pan de jamón serrano | 15 u · 1,35 € | 25 u · 1,20 € | 50+ u · 1,00 € |
+| Mini pan de pollo con mayonesa de la casa | 15 u · 1,25 € | 25 u · 1,15 € | 50+ u · 0,99 € |
+| Mini pan de fuet | 15 u · 1,15 € | 25 u · 1,00 € | 50+ u · 0,90 € |
+| Mini pan de cerdo y boniato | 15 u · 1,45 € | 25 u · 1,25 € | 50+ u · 1,00 € |
+| Mini pan de cerdo caramelizado | 15 u · 1,35 € | 25 u · 1,20 € | 50+ u · 1,00 € |
+| Mini tequeños de jamón y queso | 15 u · 1,20 € | 30 u · 1,00 € | 50+ u · 0,95 € |
+| Mini tequeños de queso | 15 u · 1,10 € | 30 u · 0,99 € | 50+ u · 0,90 € |
+| Mini empanadas de carne | 20 u · 1,35 € | 35 u · 1,15 € | 50+ u · 1,00 € |
+| Mini empanadas de pollo | 20 u · 1,25 € | 35 u · 1,05 € | 50+ u · 0,95 € |
+| Mini empanadas de atún | 20 u · 1,20 € | 35 u · 1,05 € | 50+ u · 0,95 € |
+
+Las cantidades intermedias aplican el tramo inferior (18 uds → tarifa de 15; 34 uds de empanadas → tarifa de 20) y por encima del último tramo se aplica siempre ese precio. **Por debajo del primer tramo no hay tarifa: el sistema devuelve «sin precio» en vez de inventar uno.** Disponibles para particulares y empresas (decisión a confirmar).
+
+**Sin tarifa todavía:** mini hamburguesas de pollo y de vacuno. Se muestran en «También preparamos», sin precio ni pedido automático.
+
+### Aperitivos dulces — PENDIENTE
+
+Hay fotografías reales (vasitos individuales y cupcakes personalizados) pero **el catálogo y las tarifas están pendientes de confirmación**. En la web se muestran como muestra de trabajo con invitación a consultar por WhatsApp; no son pedibles con precio automático.
+
+### Desayunos y regalos personalizados
+
+Cajas de desayuno y copas personalizadas: **sin precio automático** (`pricingType: "quote"`, `giftType`). La solicitud recoge ocasión, descripción, **dedicatoria**, notas e imagen opcional, y genera una solicitud de presupuesto (estado «Pendiente de presupuesto») que Dulce Flor responde por WhatsApp. Solo particulares (a confirmar).
+
 ## Catálogo y precios (resumen)
 
 - **Pasteles clásicos** (particulares): matriz 4 rangos de personas × 1/2/3 discos, 20–78 €.

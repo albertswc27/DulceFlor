@@ -33,12 +33,16 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { formatEuros } from "@/domain/money";
 import {
+  CATEGORY_FAMILY,
   CATEGORY_LABELS,
+  FAMILY_LABELS,
+  getMinimumQuantity,
   getProductsFor,
   getSizesFor,
   getUnitBasePriceCents,
   type CatalogProduct,
   type CategoryId,
+  type FamilyId,
 } from "@/domain/catalog";
 import {
   CUSTOMER_TYPE_LABELS,
@@ -57,19 +61,40 @@ import { submitOrder, type SubmitResult } from "@/features/order/services/submit
 import { formatRequestedDay } from "@/features/admin/lib/adminUi";
 import logo from "@/assets/logo-dulce-flor.jpeg";
 
-const ALL_CATEGORIES: CategoryId[] = [
+/**
+ * Orden de la carta dentro del kiosk. Las categorías que no aparezcan aquí se
+ * muestran igualmente al final: así un producto nuevo del catálogo nunca queda
+ * oculto por un descuido.
+ */
+const CATEGORY_ORDER: CategoryId[] = [
   "pasteles",
   "cheesecake",
   "tres-leches",
   "especialidades",
+  "aperitivos-salados",
+  "aperitivos-dulces",
+  "desayunos",
+  "copas",
 ];
 
-/** Precio "desde" de un producto, calculado siempre desde el catálogo. */
+const FAMILY_ORDER: FamilyId[] = ["tartas", "aperitivos", "regalos"];
+
+/**
+ * Precio "desde" de un producto, calculado siempre desde el catálogo.
+ * En los aperitivos el precio no depende del tamaño sino del tramo de
+ * cantidad: el más barato es el del tramo con más unidades (POR UNIDAD).
+ */
 function minPriceCents(
   product: CatalogProduct,
   customerType: CustomerType
 ): number | null {
   let min: number | null = null;
+  if (product.quantityTiers?.length) {
+    for (const tier of product.quantityTiers) {
+      if (min === null || tier.unitPriceCents < min) min = tier.unitPriceCents;
+    }
+    return min;
+  }
   for (const size of getSizesFor(product, customerType)) {
     if (product.id === "cheesecake" && product.flavors) {
       for (const flavor of product.flavors) {
@@ -148,12 +173,20 @@ export default function KioskPage() {
   const [details, setDetails] = React.useState(state.address?.details ?? "");
 
   const products = state.customerType ? getProductsFor(state.customerType) : [];
-  // Todos los productos del tipo de cliente en una sola parrilla (ordenados
-  // por categoría): con un catálogo corto aprovecha mejor la pantalla que
-  // unas pestañas con una o dos tarjetas.
-  const orderedProducts = ALL_CATEGORIES.flatMap((c) =>
-    products.filter((p) => p.category === c)
+  // Parrilla de tarjetas agrupada por familia (tartas, aperitivos, regalos):
+  // con la carta salada el catálogo ya no es corto y las cabeceras evitan
+  // tener que recorrer veinte tarjetas seguidas para encontrar una.
+  const rank = (category: CategoryId) => {
+    const index = CATEGORY_ORDER.indexOf(category);
+    return index === -1 ? CATEGORY_ORDER.length : index;
+  };
+  const orderedProducts = [...products].sort(
+    (a, b) => rank(a.category) - rank(b.category)
   );
+  const productGroups = FAMILY_ORDER.map((family) => ({
+    family,
+    products: orderedProducts.filter((p) => CATEGORY_FAMILY[p.category] === family),
+  })).filter((group) => group.products.length > 0);
 
   // Recogida en tienda por defecto en el kiosk.
   React.useEffect(() => {
@@ -240,6 +273,96 @@ export default function KioskPage() {
     setSuccess(null);
     setChoosingType(false);
     setConfiguring(null);
+  }
+
+  /**
+   * Tarjeta de producto de la parrilla. Se invoca como función —no como
+   * componente— para no remontar las tarjetas en cada render.
+   */
+  function renderProductCard(product: CatalogProduct) {
+    // Productos "quote" (tarta personalizada o de fondant, caja de desayuno,
+    // copa): sin precio automático — el mínimo del catálogo sería 0 € y no
+    // debe mostrarse nunca. En el kiosk siguen disponibles: el equipo puede
+    // registrar la solicitud a medida en tienda.
+    const isQuoteProduct = product.pricingType === "quote";
+    // Aperitivos: tarifa por volumen, el "desde" es un precio POR UNIDAD.
+    const isPerUnit = Boolean(product.quantityTiers?.length);
+    const from =
+      !isQuoteProduct &&
+      state.customerType &&
+      minPriceCents(product, state.customerType);
+    const sizesCount = state.customerType
+      ? getSizesFor(product, state.customerType).length
+      : 0;
+    const facts: string[] = [];
+    if (product.flavors?.length) {
+      facts.push(
+        `${product.flavors.length} ${
+          product.id === "cheesecake" ? "sabores" : "bizcochos"
+        }`
+      );
+    }
+    if (product.fillings?.length) {
+      facts.push(`${product.fillings.length} rellenos`);
+    }
+    if (sizesCount > 1) facts.push(`${sizesCount} tamaños`);
+    if (isPerUnit) facts.push(`mínimo ${getMinimumQuantity(product)} uds`);
+    if (product.allowsToppings) facts.push("admite toppings");
+    return (
+      <button
+        key={product.id}
+        type="button"
+        onClick={() => setConfiguring(product)}
+        className="group flex min-h-[15rem] flex-col rounded-2xl border border-border bg-card p-6 text-left shadow-card transition-all hover:border-secondary hover:shadow-lifted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:p-7"
+      >
+        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
+          {CATEGORY_LABELS[product.category]}
+        </span>
+        <span className="mt-1.5 font-display text-2xl font-bold leading-tight text-primary">
+          {product.name}
+        </span>
+        <span className="mt-2 flex-1 text-base leading-snug text-muted-foreground">
+          {product.description}
+        </span>
+        {facts.length > 0 && (
+          <span className="mt-4 flex flex-wrap gap-1.5">
+            {facts.map((fact) => (
+              <span
+                key={fact}
+                className="rounded-full bg-secondary/15 px-3 py-1 text-sm font-medium text-primary"
+              >
+                {fact}
+              </span>
+            ))}
+          </span>
+        )}
+        <span className="mt-5 flex items-center justify-between gap-3">
+          <span className="min-w-0">
+            <span className="block font-display text-2xl font-bold text-primary">
+              {isQuoteProduct
+                ? "Precio a consultar"
+                : typeof from === "number"
+                  ? `Desde ${formatEuros(from)}${isPerUnit ? "/ud" : ""}`
+                  : ""}
+            </span>
+            {isQuoteProduct && (
+              <span className="mt-0.5 block text-sm leading-snug text-muted-foreground">
+                Abre una solicitud de presupuesto: sin importe hasta confirmarlo
+                con el cliente.
+              </span>
+            )}
+            {isPerUnit && typeof from === "number" && (
+              <span className="mt-0.5 block text-sm leading-snug text-muted-foreground">
+                El precio por unidad baja según la cantidad.
+              </span>
+            )}
+          </span>
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary/20 text-primary transition-transform group-hover:scale-110">
+            <Plus className="h-6 w-6" />
+          </span>
+        </span>
+      </button>
+    );
   }
 
   /**
@@ -404,7 +527,12 @@ export default function KioskPage() {
           disabled={submitting || state.items.length === 0}
           onClick={handleSubmit}
         >
-          Registrar pedido · {formatEuros(derived.pricing.totalCents)}
+          {/* Con artículos a medida (tarta personalizada, caja de desayuno,
+              copa) el total del dominio es parcial: nunca se muestra 0 €. */}
+          Registrar pedido ·{" "}
+          {derived.pricing.pendingQuote
+            ? "a presupuestar"
+            : formatEuros(derived.pricing.totalCents)}
         </Button>
       </div>
     );
@@ -492,7 +620,7 @@ export default function KioskPage() {
         </p>
         {success.pricing.pendingQuote ? (
           <p className="mt-3 max-w-sm rounded-lg bg-secondary/15 px-4 py-2.5 text-sm text-foreground">
-            Solicitud de tarta a medida: enviaremos el presupuesto por WhatsApp.
+            Solicitud a medida: enviaremos el presupuesto por WhatsApp.
           </p>
         ) : (
           success.pricing.depositRequired && (
@@ -673,86 +801,21 @@ export default function KioskPage() {
                 Toca un producto para personalizarlo.
               </p>
 
-              {/* Parrilla única de productos, con tarjetas grandes que
-                  aprovechan la pantalla (el catálogo es corto). */}
-              <div className="mt-6 grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
-                {orderedProducts.map((product) => {
-                  // Productos "quote" (tarta personalizada / de fondant): sin
-                  // precio automático — el mínimo del catálogo sería 0 € y no
-                  // debe mostrarse nunca. En el kiosk siguen disponibles: el
-                  // equipo puede registrar la solicitud a medida en tienda.
-                  const isQuoteProduct = product.pricingType === "quote";
-                  const from =
-                    !isQuoteProduct &&
-                    state.customerType &&
-                    minPriceCents(product, state.customerType);
-                  const sizesCount = state.customerType
-                    ? getSizesFor(product, state.customerType).length
-                    : 0;
-                  const facts: string[] = [];
-                  if (product.flavors?.length) {
-                    facts.push(
-                      `${product.flavors.length} ${
-                        product.id === "cheesecake" ? "sabores" : "bizcochos"
-                      }`
-                    );
-                  }
-                  if (product.fillings?.length) {
-                    facts.push(`${product.fillings.length} rellenos`);
-                  }
-                  if (sizesCount > 1) facts.push(`${sizesCount} tamaños`);
-                  if (product.allowsToppings) facts.push("admite toppings");
-                  return (
-                    <button
-                      key={product.id}
-                      type="button"
-                      onClick={() => setConfiguring(product)}
-                      className="group flex min-h-[15rem] flex-col rounded-2xl border border-border bg-card p-6 text-left shadow-card transition-all hover:border-secondary hover:shadow-lifted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:p-7"
-                    >
-                      <span className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
-                        {CATEGORY_LABELS[product.category]}
-                      </span>
-                      <span className="mt-1.5 font-display text-2xl font-bold leading-tight text-primary">
-                        {product.name}
-                      </span>
-                      <span className="mt-2 flex-1 text-base leading-snug text-muted-foreground">
-                        {product.description}
-                      </span>
-                      {facts.length > 0 && (
-                        <span className="mt-4 flex flex-wrap gap-1.5">
-                          {facts.map((fact) => (
-                            <span
-                              key={fact}
-                              className="rounded-full bg-secondary/15 px-3 py-1 text-sm font-medium text-primary"
-                            >
-                              {fact}
-                            </span>
-                          ))}
-                        </span>
-                      )}
-                      <span className="mt-5 flex items-center justify-between gap-3">
-                        <span className="min-w-0">
-                          <span className="block font-display text-2xl font-bold text-primary">
-                            {isQuoteProduct
-                              ? "Precio a consultar"
-                              : typeof from === "number"
-                                ? `Desde ${formatEuros(from)}`
-                                : ""}
-                          </span>
-                          {isQuoteProduct && (
-                            <span className="mt-0.5 block text-sm leading-snug text-muted-foreground">
-                              Abre una solicitud de presupuesto: sin importe hasta
-                              confirmarlo con el cliente.
-                            </span>
-                          )}
-                        </span>
-                        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary/20 text-primary transition-transform group-hover:scale-110">
-                          <Plus className="h-6 w-6" />
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })}
+              {/* Parrilla de productos por familia, con tarjetas grandes que
+                  aprovechan la pantalla táctil. */}
+              <div className="mt-6 space-y-8">
+                {productGroups.map((group) => (
+                  <section key={group.family}>
+                    {productGroups.length > 1 && (
+                      <h2 className="mb-3 font-display text-xl font-bold text-primary">
+                        {FAMILY_LABELS[group.family]}
+                      </h2>
+                    )}
+                    <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
+                      {group.products.map((product) => renderProductCard(product))}
+                    </div>
+                  </section>
+                ))}
               </div>
             </div>
           )}
@@ -786,7 +849,9 @@ export default function KioskPage() {
                 {state.items.length === 1 ? "producto" : "productos"}
               </p>
               <p className="font-display text-2xl font-bold leading-tight text-primary">
-                {formatEuros(derived.pricing.totalCents)}
+                {derived.pricing.pendingQuote
+                  ? "A presupuestar"
+                  : formatEuros(derived.pricing.totalCents)}
               </p>
             </div>
             <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>

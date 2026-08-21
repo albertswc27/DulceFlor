@@ -6,12 +6,57 @@
 import type { CustomerType } from "./types";
 import { EXTRAS } from "@/config/business";
 
-export type CategoryId = "pasteles" | "cheesecake" | "tres-leches" | "especialidades";
+export type CategoryId =
+  | "pasteles"
+  | "cheesecake"
+  | "tres-leches"
+  | "especialidades"
+  | "aperitivos-salados"
+  | "aperitivos-dulces"
+  | "desayunos"
+  | "copas";
+
+/**
+ * Familias de producto: agrupan categorías para la navegación principal
+ * («¿Qué estás buscando?»), sin multiplicar secciones en la home.
+ */
+export type FamilyId = "tartas" | "aperitivos" | "regalos";
+
+export const FAMILY_LABELS: Record<FamilyId, string> = {
+  tartas: "Tartas",
+  aperitivos: "Aperitivos",
+  regalos: "Desayunos y regalos",
+};
+
+export const CATEGORY_FAMILY: Record<CategoryId, FamilyId> = {
+  pasteles: "tartas",
+  cheesecake: "tartas",
+  "tres-leches": "tartas",
+  especialidades: "tartas",
+  "aperitivos-salados": "aperitivos",
+  "aperitivos-dulces": "aperitivos",
+  desayunos: "regalos",
+  copas: "regalos",
+};
 
 export interface CatalogOption {
   id: string;
   label: string;
   description?: string;
+}
+
+/**
+ * Tramo de precio por volumen (aperitivos): el precio por unidad baja al
+ * subir la cantidad. Fuente: tarifas facilitadas por Dulce Flor (21/08/2026).
+ */
+export interface QuantityTier {
+  id: string;
+  /** Cantidad mínima del tramo. */
+  minQuantity: number;
+  /** Precio POR UNIDAD dentro del tramo. */
+  unitPriceCents: number;
+  /** true en el último tramo, abierto hacia arriba ("50+"). */
+  open?: boolean;
 }
 
 export interface SizeOption {
@@ -47,6 +92,16 @@ export interface CatalogProduct {
   customCakeType?: "custom" | "fondant";
   /** Las solicitudes de presupuesto exigen fotografía de referencia. */
   requiresReferenceImage?: boolean;
+  /**
+   * Subtipo de los regalos sin precio automático (caja de desayuno / copa).
+   * Comparten flujo y modelo con las tartas a medida.
+   */
+  giftType?: "desayuno" | "copa";
+  /**
+   * Precio por volumen: el importe unitario depende de la cantidad pedida
+   * (aperitivos). Excluyente con `sizes`; la cantidad ES el nº de unidades.
+   */
+  quantityTiers?: QuantityTier[];
   /** Tamaños (con precio base) por tipo de cliente. */
   sizes: Partial<Record<CustomerType, SizeOption[]>>;
   /**
@@ -236,6 +291,206 @@ export const CHEESECAKE_FLAVORS: CatalogOption[] = Object.entries(CHEESECAKE_PRI
 /* Productos                                                           */
 /* ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ */
+/* Aperitivos salados — tarifas confirmadas por Dulce Flor (21/08/2026) */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Construye los tramos de precio por volumen. Cada tramo es
+ * [cantidad, precio unitario en céntimos]; el último queda abierto ("50+").
+ * Los tramos NO son iguales en todos los productos (las empanadas empiezan
+ * en 20 uds y los tequeños escalan en 30), así que se definen uno a uno.
+ */
+function buildTiers(...steps: Array<[number, number]>): QuantityTier[] {
+  return steps.map(([quantity, unitPriceCents], index) => ({
+    id: String(quantity),
+    minQuantity: quantity,
+    unitPriceCents,
+    open: index === steps.length - 1,
+  }));
+}
+
+interface SavourySpec {
+  id: string;
+  name: string;
+  description: string;
+  /** [cantidad, precio unitario] por tramo, tal como los facilitó Dulce Flor. */
+  tiers: Array<[number, number]>;
+}
+
+/**
+ * Catálogo salado tal cual lo facilitó Dulce Flor por WhatsApp (21/08/2026).
+ * NO alterar las tarifas ni los tramos: cada producto tiene los suyos.
+ */
+const SAVOURY_SNACKS: SavourySpec[] = [
+  /* --- Mini sándwiches (pan de molde) --- */
+  {
+    id: "mini-sandwich-cerdo-caramelizado",
+    name: "Mini sándwich de cerdo caramelizado",
+    description: "Pan de molde con cerdo caramelizado.",
+    tiers: [[15, 145], [25, 125], [50, 100]],
+  },
+  {
+    id: "mini-sandwich-royal-pollo",
+    name: "Mini sándwich Royal de pollo",
+    description: "Nuestro clásico Royal de pollo en pan de molde.",
+    tiers: [[15, 130], [25, 115], [50, 99]],
+  },
+  {
+    id: "mini-sandwich-jamon-tomate-queso",
+    name: "Mini sándwich de jamón dulce con tomate y queso",
+    description: "Jamón dulce, tomate y queso en pan de molde.",
+    tiers: [[15, 125], [25, 110], [50, 90]],
+  },
+  {
+    id: "mini-sandwich-huevo",
+    name: "Mini sándwich de huevo",
+    description: "Relleno cremoso de huevo en pan de molde.",
+    tiers: [[15, 120], [25, 110], [50, 90]],
+  },
+  {
+    id: "mini-sandwich-tocino-crujiente",
+    name: "Mini sándwich de tocino crujiente",
+    description: "Tocino crujiente con queso en lonchas y tomate, en pan de molde.",
+    tiers: [[15, 145], [25, 125], [50, 100]],
+  },
+  {
+    id: "mini-sandwich-pollo-melocoton-jamon",
+    name: "Mini sándwich de pollo, melocotón y jamón dulce",
+    description: "Pollo, melocotón y jamón dulce en pan de molde.",
+    tiers: [[15, 145], [25, 125], [50, 105]],
+  },
+
+  /* --- Mini panes (panecillo) --- */
+  {
+    id: "mini-pan-bacon-espinaca",
+    name: "Mini pan de bacon con espinaca",
+    description: "Panecillo relleno de bacon y espinaca.",
+    tiers: [[15, 135], [25, 120], [50, 100]],
+  },
+  {
+    id: "mini-pan-pollo-melocoton",
+    name: "Mini pan mixto de pollo y melocotón",
+    description: "Panecillo mixto de pollo con melocotón.",
+    tiers: [[15, 135], [25, 120], [50, 100]],
+  },
+  {
+    id: "mini-pan-jamon-queso",
+    name: "Mini pan de jamón dulce y queso",
+    description: "Panecillo de jamón dulce y queso.",
+    tiers: [[15, 125], [25, 115], [50, 99]],
+  },
+  {
+    id: "mini-pan-jamon-serrano",
+    name: "Mini pan de jamón serrano",
+    description: "Panecillo de jamón serrano.",
+    tiers: [[15, 135], [25, 120], [50, 100]],
+  },
+  {
+    id: "mini-pan-pollo-mayonesa",
+    name: "Mini pan de pollo con mayonesa de la casa",
+    description: "Panecillo de pollo con nuestra mayonesa casera.",
+    tiers: [[15, 125], [25, 115], [50, 99]],
+  },
+  {
+    id: "mini-pan-fuet",
+    name: "Mini pan de fuet",
+    description: "Panecillo de fuet.",
+    tiers: [[15, 115], [25, 100], [50, 90]],
+  },
+  {
+    id: "mini-pan-cerdo-boniato",
+    name: "Mini pan de cerdo y boniato",
+    description: "Panecillo de cerdo con boniato.",
+    tiers: [[15, 145], [25, 125], [50, 100]],
+  },
+  {
+    id: "mini-pan-cerdo-caramelizado",
+    name: "Mini pan de cerdo caramelizado",
+    description: "Panecillo de cerdo caramelizado.",
+    tiers: [[15, 135], [25, 120], [50, 100]],
+  },
+
+  /* --- Tequeños (tramos 15 / 30 / 50) --- */
+  {
+    id: "mini-tequenos-jamon-queso",
+    name: "Mini tequeños de jamón y queso",
+    description: "Rollitos crujientes rellenos de jamón y queso fundido.",
+    tiers: [[15, 120], [30, 100], [50, 95]],
+  },
+  {
+    id: "mini-tequenos-queso",
+    name: "Mini tequeños de queso",
+    description: "Rollitos crujientes rellenos de queso fundido.",
+    tiers: [[15, 110], [30, 99], [50, 90]],
+  },
+
+  /* --- Empanadas (tramos 20 / 35 / 50) --- */
+  {
+    id: "mini-empanadas-carne",
+    name: "Mini empanadas de carne",
+    description: "Empanadas individuales de carne picada, al horno.",
+    tiers: [[20, 135], [35, 115], [50, 100]],
+  },
+  {
+    id: "mini-empanadas-pollo",
+    name: "Mini empanadas de pollo",
+    description: "Empanadas individuales de pollo desmenuzado, al horno.",
+    tiers: [[20, 125], [35, 105], [50, 95]],
+  },
+  {
+    id: "mini-empanadas-atun",
+    name: "Mini empanadas de atún",
+    description: "Empanadas individuales de atún, al horno.",
+    tiers: [[20, 120], [35, 105], [50, 95]],
+  },
+];
+
+const SAVOURY_PRODUCTS: CatalogProduct[] = SAVOURY_SNACKS.map((snack) => ({
+  id: snack.id,
+  name: snack.name,
+  category: "aperitivos-salados" as CategoryId,
+  description: snack.description,
+  availableFor: ["individual", "business"] as CustomerType[],
+  quantityTiers: buildTiers(...snack.tiers),
+  sizes: {},
+  allowsToppings: false,
+  extras: [],
+}));
+
+/* ------------------------------------------------------------------ */
+/* Desayunos y regalos personalizados — sin precio automático          */
+/* ------------------------------------------------------------------ */
+
+const GIFT_PRODUCTS: CatalogProduct[] = [
+  {
+    id: "caja-desayuno",
+    name: "Caja de desayuno personalizada",
+    category: "desayunos",
+    description:
+      "Convierte un desayuno en un regalo especial. Cuéntanos la ocasión y qué te gustaría incluir, y te confirmamos las opciones y el precio.",
+    availableFor: ["individual"],
+    pricingType: "quote",
+    giftType: "desayuno",
+    sizes: {},
+    allowsToppings: false,
+    extras: [],
+  },
+  {
+    id: "copa-personalizada",
+    name: "Copa personalizada",
+    category: "copas",
+    description:
+      "Un detalle personalizado para regalar, celebrar o sorprender. Cuéntanos qué tienes en mente y prepararemos una propuesta para ti.",
+    availableFor: ["individual"],
+    pricingType: "quote",
+    giftType: "copa",
+    sizes: {},
+    allowsToppings: false,
+    extras: [],
+  },
+];
+
 export const PRODUCTS: CatalogProduct[] = [
   {
     id: "pastel-clasico",
@@ -407,13 +662,52 @@ export const PRODUCTS: CatalogProduct[] = [
     extras: [DEDICATION_EXTRA],
     menuImage: "carta-tres-leches-y-tortas-precios-empresas",
   },
+  ...SAVOURY_PRODUCTS,
+  ...GIFT_PRODUCTS,
 ];
+
+/* ------------------------------------------------------------------ */
+/* Precio por volumen (aperitivos)                                     */
+/* ------------------------------------------------------------------ */
+
+/** Cantidades sugeridas en la UI (packs definidos por Dulce Flor). */
+export function getTierQuantities(product: CatalogProduct): number[] {
+  return (product.quantityTiers ?? []).map((t) => t.minQuantity);
+}
+
+/**
+ * Tramo aplicable a una cantidad: el de mayor `minQuantity` que no la supere.
+ * Por debajo del primer tramo no hay tarifa confirmada → null (nunca se
+ * inventa un precio).
+ */
+export function resolveQuantityTier(
+  product: CatalogProduct,
+  quantity: number
+): QuantityTier | null {
+  const tiers = product.quantityTiers;
+  if (!tiers || tiers.length === 0) return null;
+  let match: QuantityTier | null = null;
+  for (const tier of tiers) {
+    if (quantity >= tier.minQuantity) match = tier;
+  }
+  return match;
+}
+
+/** Cantidad mínima que se puede pedir de un producto por tramos. */
+export function getMinimumQuantity(product: CatalogProduct): number {
+  const tiers = product.quantityTiers ?? [];
+  return tiers.length > 0 ? tiers[0].minQuantity : 1;
+}
 
 export const CATEGORY_LABELS: Record<CategoryId, string> = {
   pasteles: "Pasteles",
   cheesecake: "Cheesecakes",
   "tres-leches": "Tres Leches",
   especialidades: "Especialidades",
+  "aperitivos-salados": "Salados",
+  "aperitivos-dulces": "Dulces",
+  desayunos: "Cajas de desayuno",
+  copas: "Copas personalizadas",
 };
 
 /* ------------------------------------------------------------------ */

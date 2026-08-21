@@ -58,8 +58,10 @@ export interface ItemCustomization {
   extras: SelectedExtra[];
   /** Texto de la dedicatoria si se ha elegido el extra correspondiente. */
   dedicationText?: string;
-  /** Descripción del diseño (obligatoria en tartas de fondant). */
+  /** Descripción del diseño (obligatoria en tartas y regalos a medida). */
   designDescription?: string;
+  /** Ocasión del regalo (cajas de desayuno y copas personalizadas). */
+  occasion?: string;
   /** Personalización especial en texto libre. */
   notes?: string;
   /** Imagen de referencia adjuntada por el cliente (id en el almacén de imágenes). */

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatEuros } from "@/domain/money";
+import { CATEGORY_FAMILY, getProduct, type FamilyId } from "@/domain/catalog";
 import {
   CUSTOMER_TYPE_LABELS,
   FULFILLMENT_LABELS,
@@ -31,6 +32,33 @@ import {
 type StatusFilter = OrderStatus | "all";
 type TypeFilter = CustomerType | "all";
 type FulfillmentFilter = FulfillmentType | "all";
+
+/**
+ * Etiquetas de familia abreviadas para el listado: "Desayunos y regalos"
+ * (FAMILY_LABELS) no cabe en una celda de tabla ni en la cabecera de una
+ * tarjeta. Solo es una abreviatura de presentación.
+ */
+const FAMILY_SHORT_LABELS: Record<FamilyId, string> = {
+  tartas: "Tartas",
+  aperitivos: "Aperitivos",
+  regalos: "Regalos",
+};
+
+/**
+ * Familia del pedido, para saber de un vistazo de qué va: la del catálogo si
+ * todos los artículos pertenecen a la misma, "Mixto" si combina varias.
+ */
+function familyLabel(order: Order): string | null {
+  const families = new Set<FamilyId>();
+  for (const item of order.items) {
+    const product = getProduct(item.productId);
+    if (product) families.add(CATEGORY_FAMILY[product.category]);
+  }
+  if (families.size === 0) return null;
+  if (families.size > 1) return "Mixto";
+  const [family] = [...families];
+  return FAMILY_SHORT_LABELS[family];
+}
 
 function depositLabel(order: Order): string {
   if (order.pricing.pendingQuote) return "—";
@@ -239,107 +267,123 @@ export default function AdminOrdersPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((order) => (
-                  <tr
-                    key={order.id}
-                    onClick={() => navigate(`/admin/pedidos/${order.id}`)}
-                    className="cursor-pointer border-b border-border/60 transition-colors last:border-0 hover:bg-background-soft/50"
-                  >
-                    <td className="px-4 py-3">
-                      <Link
-                        to={`/admin/pedidos/${order.id}`}
-                        className="font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {order.publicId}
-                      </Link>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
-                      {formatCreatedAt(order.createdAt)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="block max-w-[14rem] truncate font-medium text-foreground">
-                        {order.customer.name}
-                      </span>
-                      {order.customer.companyName && (
-                        <span className="block max-w-[14rem] truncate text-xs text-muted-foreground">
-                          {order.customer.companyName}
+                {filtered.map((order) => {
+                  const family = familyLabel(order);
+                  return (
+                    <tr
+                      key={order.id}
+                      onClick={() => navigate(`/admin/pedidos/${order.id}`)}
+                      className="cursor-pointer border-b border-border/60 transition-colors last:border-0 hover:bg-background-soft/50"
+                    >
+                      <td className="px-4 py-3">
+                        <Link
+                          to={`/admin/pedidos/${order.id}`}
+                          className="font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {order.publicId}
+                        </Link>
+                        {family && (
+                          <Badge variant="outline" className="mt-1 flex w-fit">
+                            {family}
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
+                        {formatCreatedAt(order.createdAt)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="block max-w-[14rem] truncate font-medium text-foreground">
+                          {order.customer.name}
                         </span>
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
-                      {order.customer.phone}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3">
-                      {CUSTOMER_TYPE_LABELS[order.customerType]}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3">
-                      {formatRequestedDayShort(order.requestedDate)} · {order.requestedTime}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
-                      {FULFILLMENT_LABELS[order.fulfillmentType]}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right font-display font-semibold text-primary">
-                      <TotalLabel order={order} />
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right text-muted-foreground">
-                      {depositLabel(order)}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <Badge variant={STATUS_BADGE_VARIANT[order.status]}>
-                        {ORDER_STATUS_LABELS[order.status]}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
+                        {order.customer.companyName && (
+                          <span className="block max-w-[14rem] truncate text-xs text-muted-foreground">
+                            {order.customer.companyName}
+                          </span>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
+                        {order.customer.phone}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        {CUSTOMER_TYPE_LABELS[order.customerType]}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        {formatRequestedDayShort(order.requestedDate)} · {order.requestedTime}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
+                        {FULFILLMENT_LABELS[order.fulfillmentType]}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-right font-display font-semibold text-primary">
+                        <TotalLabel order={order} />
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-right text-muted-foreground">
+                        {depositLabel(order)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <Badge variant={STATUS_BADGE_VARIANT[order.status]}>
+                          {ORDER_STATUS_LABELS[order.status]}
+                        </Badge>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           {/* Tarjetas en móvil */}
           <div className="space-y-3 md:hidden">
-            {filtered.map((order) => (
-              <Link
-                key={order.id}
-                to={`/admin/pedidos/${order.id}`}
-                className="block rounded-xl border border-border bg-card p-4 shadow-card transition-all hover:border-secondary hover:shadow-lifted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-display font-bold text-primary">{order.publicId}</p>
-                    <p className="truncate text-sm text-foreground">
-                      {order.customer.name}
-                      {order.customer.companyName && (
-                        <span className="text-muted-foreground">
-                          {" "}
-                          · {order.customer.companyName}
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{order.customer.phone}</p>
+            {filtered.map((order) => {
+              const family = familyLabel(order);
+              return (
+                <Link
+                  key={order.id}
+                  to={`/admin/pedidos/${order.id}`}
+                  className="block rounded-xl border border-border bg-card p-4 shadow-card transition-all hover:border-secondary hover:shadow-lifted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-display font-bold text-primary">
+                          {order.publicId}
+                        </p>
+                        {family && <Badge variant="outline">{family}</Badge>}
+                      </div>
+                      <p className="truncate text-sm text-foreground">
+                        {order.customer.name}
+                        {order.customer.companyName && (
+                          <span className="text-muted-foreground">
+                            {" "}
+                            · {order.customer.companyName}
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{order.customer.phone}</p>
+                    </div>
+                    <Badge variant={STATUS_BADGE_VARIANT[order.status]}>
+                      {ORDER_STATUS_LABELS[order.status]}
+                    </Badge>
                   </div>
-                  <Badge variant={STATUS_BADGE_VARIANT[order.status]}>
-                    {ORDER_STATUS_LABELS[order.status]}
-                  </Badge>
-                </div>
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
-                  <span className="text-muted-foreground">
-                    {formatRequestedDayShort(order.requestedDate)} · {order.requestedTime} ·{" "}
-                    {FULFILLMENT_LABELS[order.fulfillmentType]}
-                  </span>
-                  <span className="font-display text-lg font-bold text-primary">
-                    <TotalLabel order={order} />
-                  </span>
-                </div>
-                <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>
-                    {CUSTOMER_TYPE_LABELS[order.customerType]} · creado{" "}
-                    {formatCreatedAt(order.createdAt)}
-                  </span>
-                  <span>Señal: {depositLabel(order)}</span>
-                </div>
-              </Link>
-            ))}
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <span className="text-muted-foreground">
+                      {formatRequestedDayShort(order.requestedDate)} · {order.requestedTime} ·{" "}
+                      {FULFILLMENT_LABELS[order.fulfillmentType]}
+                    </span>
+                    <span className="font-display text-lg font-bold text-primary">
+                      <TotalLabel order={order} />
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>
+                      {CUSTOMER_TYPE_LABELS[order.customerType]} · creado{" "}
+                      {formatCreatedAt(order.createdAt)}
+                    </span>
+                    <span>Señal: {depositLabel(order)}</span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </>
       )}

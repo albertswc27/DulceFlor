@@ -8,7 +8,12 @@ import {
   DEPOSIT_THRESHOLD_CENTS,
   TOPPING_PRICE_CENTS,
 } from "@/config/business";
-import { getProduct, getUnitBasePriceCents, TOPPINGS } from "./catalog";
+import {
+  getProduct,
+  getUnitBasePriceCents,
+  resolveQuantityTier,
+  TOPPINGS,
+} from "./catalog";
 import { percentOf } from "./money";
 import type { CustomerType, ItemCustomization, OrderItem, OrderPricing } from "./types";
 
@@ -52,6 +57,11 @@ export interface ItemSelection {
   flavorId?: string;
   toppingIds: string[];
   extraIds: string[];
+  /**
+   * Solo productos con precio por volumen (aperitivos): número de unidades
+   * pedidas, del que depende el precio unitario del tramo.
+   */
+  quantity?: number;
 }
 
 /**
@@ -61,6 +71,12 @@ export interface ItemSelection {
 export function computeUnitPriceCents(selection: ItemSelection): number | null {
   const product = getProduct(selection.productId);
   if (!product) return null;
+
+  // Precio por volumen (aperitivos): el unitario sale del tramo de cantidad.
+  if (product.quantityTiers) {
+    const tier = resolveQuantityTier(product, selection.quantity ?? 0);
+    return tier ? tier.unitPriceCents : null;
+  }
 
   const base = getUnitBasePriceCents(
     selection.productId,
@@ -96,6 +112,11 @@ export function computeUnitPriceBreakdown(
 ): UnitPriceBreakdown | null {
   const product = getProduct(selection.productId);
   if (!product) return null;
+  if (product.quantityTiers) {
+    const unit = computeUnitPriceCents(selection);
+    if (unit === null) return null;
+    return { baseCents: unit, toppingsCents: 0, extrasCents: 0, unitTotalCents: unit };
+  }
   const base = getUnitBasePriceCents(
     selection.productId,
     selection.customerType,
@@ -210,7 +231,12 @@ export function buildOrderItem(params: {
     };
   }
 
-  const unitPriceCents = computeUnitPriceCents(params.selection);
+  // En productos por volumen la cantidad determina el precio unitario, así
+  // que la selección debe llevarla siempre sincronizada.
+  const selection = product.quantityTiers
+    ? { ...params.selection, quantity }
+    : params.selection;
+  const unitPriceCents = computeUnitPriceCents(selection);
   if (unitPriceCents === null) return null;
   return {
     id: params.id,

@@ -155,8 +155,8 @@ function Footer() {
             </div>
           </div>
           <p className="mt-4 max-w-xs text-sm text-cocoa-foreground/70">
-            Tartas, cheesecakes y tres leches hechos con amor para compartir momentos
-            inolvidables.
+            Tartas, aperitivos para eventos y regalos personalizados, hechos con amor
+            para compartir momentos inolvidables.
           </p>
         </div>
 

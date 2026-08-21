@@ -30,13 +30,15 @@ import {
 } from "@/domain/validation";
 import type { CustomerType, ItemCustomization } from "@/domain/types";
 import { saveImage, IMAGE_ERROR_MESSAGES } from "@/services/imageStore";
-import { CUSTOM_CAKE_PHOTOS } from "@/assets/cakePhotos";
+import { CUSTOM_CAKE_PHOTOS } from "@/assets/photos";
 import { OptionCard } from "./OptionCard";
 import { QuantityStepper } from "./QuantityStepper";
 import { AnimatedPrice } from "./AnimatedPrice";
 import { SizePicker } from "./SizePicker";
 import { ReferenceImagePicker } from "./ReferenceImagePicker";
 import { CakeReferences } from "./CakeReferences";
+import { SnackConfigurator } from "./SnackConfigurator";
+import { GiftRequestConfigurator } from "./GiftRequestConfigurator";
 
 export interface ConfiguratorResult {
   selection: ItemSelection;
@@ -63,7 +65,37 @@ interface ProductConfiguratorProps {
   }>;
 }
 
-export function ProductConfigurator({
+/**
+ * Punto de entrada único del configurador (wizard público y kiosk).
+ * Según el tipo de producto delega en el flujo correspondiente:
+ * aperitivos por volumen, regalos a medida o tartas.
+ */
+export function ProductConfigurator(props: ProductConfiguratorProps) {
+  if (props.product.quantityTiers) {
+    return (
+      <SnackConfigurator
+        product={props.product}
+        customerType={props.customerType}
+        onConfirm={props.onConfirm}
+        confirmLabel={props.confirmLabel}
+        compact={props.compact}
+      />
+    );
+  }
+  if (props.product.giftType) {
+    return (
+      <GiftRequestConfigurator
+        product={props.product}
+        customerType={props.customerType}
+        onConfirm={props.onConfirm}
+        compact={props.compact}
+      />
+    );
+  }
+  return <CakeConfigurator {...props} />;
+}
+
+function CakeConfigurator({
   product,
   customerType,
   onConfirm,
