@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+# La zona privada no debe indexarse
+Disallow: /admin
+
+Sitemap: https://dulceflor.es/sitemap.xml

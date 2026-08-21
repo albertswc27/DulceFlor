@@ -102,6 +102,8 @@ export interface CatalogProduct {
    * (aperitivos). Excluyente con `sizes`; la cantidad ES el nº de unidades.
    */
   quantityTiers?: QuantityTier[];
+  /** Subgrupo dentro de la categoría, para agrupar listas largas. */
+  group?: string;
   /** Tamaños (con precio base) por tipo de cliente. */
   sizes: Partial<Record<CustomerType, SizeOption[]>>;
   /**
@@ -314,6 +316,8 @@ interface SavourySpec {
   id: string;
   name: string;
   description: string;
+  /** Subgrupo visible en la carta y el configurador. */
+  group: string;
   /** [cantidad, precio unitario] por tramo, tal como los facilitó Dulce Flor. */
   tiers: Array<[number, number]>;
 }
@@ -325,37 +329,37 @@ interface SavourySpec {
 const SAVOURY_SNACKS: SavourySpec[] = [
   /* --- Mini sándwiches (pan de molde) --- */
   {
-    id: "mini-sandwich-cerdo-caramelizado",
+    group: "Mini sándwiches", id: "mini-sandwich-cerdo-caramelizado",
     name: "Mini sándwich de cerdo caramelizado",
     description: "Pan de molde con cerdo caramelizado.",
     tiers: [[15, 145], [25, 125], [50, 100]],
   },
   {
-    id: "mini-sandwich-royal-pollo",
+    group: "Mini sándwiches", id: "mini-sandwich-royal-pollo",
     name: "Mini sándwich Royal de pollo",
     description: "Nuestro clásico Royal de pollo en pan de molde.",
     tiers: [[15, 130], [25, 115], [50, 99]],
   },
   {
-    id: "mini-sandwich-jamon-tomate-queso",
+    group: "Mini sándwiches", id: "mini-sandwich-jamon-tomate-queso",
     name: "Mini sándwich de jamón dulce con tomate y queso",
     description: "Jamón dulce, tomate y queso en pan de molde.",
     tiers: [[15, 125], [25, 110], [50, 90]],
   },
   {
-    id: "mini-sandwich-huevo",
+    group: "Mini sándwiches", id: "mini-sandwich-huevo",
     name: "Mini sándwich de huevo",
     description: "Relleno cremoso de huevo en pan de molde.",
     tiers: [[15, 120], [25, 110], [50, 90]],
   },
   {
-    id: "mini-sandwich-tocino-crujiente",
+    group: "Mini sándwiches", id: "mini-sandwich-tocino-crujiente",
     name: "Mini sándwich de tocino crujiente",
     description: "Tocino crujiente con queso en lonchas y tomate, en pan de molde.",
     tiers: [[15, 145], [25, 125], [50, 100]],
   },
   {
-    id: "mini-sandwich-pollo-melocoton-jamon",
+    group: "Mini sándwiches", id: "mini-sandwich-pollo-melocoton-jamon",
     name: "Mini sándwich de pollo, melocotón y jamón dulce",
     description: "Pollo, melocotón y jamón dulce en pan de molde.",
     tiers: [[15, 145], [25, 125], [50, 105]],
@@ -363,49 +367,49 @@ const SAVOURY_SNACKS: SavourySpec[] = [
 
   /* --- Mini panes (panecillo) --- */
   {
-    id: "mini-pan-bacon-espinaca",
+    group: "Mini panes", id: "mini-pan-bacon-espinaca",
     name: "Mini pan de bacon con espinaca",
     description: "Panecillo relleno de bacon y espinaca.",
     tiers: [[15, 135], [25, 120], [50, 100]],
   },
   {
-    id: "mini-pan-pollo-melocoton",
+    group: "Mini panes", id: "mini-pan-pollo-melocoton",
     name: "Mini pan mixto de pollo y melocotón",
     description: "Panecillo mixto de pollo con melocotón.",
     tiers: [[15, 135], [25, 120], [50, 100]],
   },
   {
-    id: "mini-pan-jamon-queso",
+    group: "Mini panes", id: "mini-pan-jamon-queso",
     name: "Mini pan de jamón dulce y queso",
     description: "Panecillo de jamón dulce y queso.",
     tiers: [[15, 125], [25, 115], [50, 99]],
   },
   {
-    id: "mini-pan-jamon-serrano",
+    group: "Mini panes", id: "mini-pan-jamon-serrano",
     name: "Mini pan de jamón serrano",
     description: "Panecillo de jamón serrano.",
     tiers: [[15, 135], [25, 120], [50, 100]],
   },
   {
-    id: "mini-pan-pollo-mayonesa",
+    group: "Mini panes", id: "mini-pan-pollo-mayonesa",
     name: "Mini pan de pollo con mayonesa de la casa",
     description: "Panecillo de pollo con nuestra mayonesa casera.",
     tiers: [[15, 125], [25, 115], [50, 99]],
   },
   {
-    id: "mini-pan-fuet",
+    group: "Mini panes", id: "mini-pan-fuet",
     name: "Mini pan de fuet",
     description: "Panecillo de fuet.",
     tiers: [[15, 115], [25, 100], [50, 90]],
   },
   {
-    id: "mini-pan-cerdo-boniato",
+    group: "Mini panes", id: "mini-pan-cerdo-boniato",
     name: "Mini pan de cerdo y boniato",
     description: "Panecillo de cerdo con boniato.",
     tiers: [[15, 145], [25, 125], [50, 100]],
   },
   {
-    id: "mini-pan-cerdo-caramelizado",
+    group: "Mini panes", id: "mini-pan-cerdo-caramelizado",
     name: "Mini pan de cerdo caramelizado",
     description: "Panecillo de cerdo caramelizado.",
     tiers: [[15, 135], [25, 120], [50, 100]],
@@ -413,13 +417,13 @@ const SAVOURY_SNACKS: SavourySpec[] = [
 
   /* --- Tequeños (tramos 15 / 30 / 50) --- */
   {
-    id: "mini-tequenos-jamon-queso",
+    group: "Tequeños", id: "mini-tequenos-jamon-queso",
     name: "Mini tequeños de jamón y queso",
     description: "Rollitos crujientes rellenos de jamón y queso fundido.",
     tiers: [[15, 120], [30, 100], [50, 95]],
   },
   {
-    id: "mini-tequenos-queso",
+    group: "Tequeños", id: "mini-tequenos-queso",
     name: "Mini tequeños de queso",
     description: "Rollitos crujientes rellenos de queso fundido.",
     tiers: [[15, 110], [30, 99], [50, 90]],
@@ -427,19 +431,19 @@ const SAVOURY_SNACKS: SavourySpec[] = [
 
   /* --- Empanadas (tramos 20 / 35 / 50) --- */
   {
-    id: "mini-empanadas-carne",
+    group: "Empanadas", id: "mini-empanadas-carne",
     name: "Mini empanadas de carne",
     description: "Empanadas individuales de carne picada, al horno.",
     tiers: [[20, 135], [35, 115], [50, 100]],
   },
   {
-    id: "mini-empanadas-pollo",
+    group: "Empanadas", id: "mini-empanadas-pollo",
     name: "Mini empanadas de pollo",
     description: "Empanadas individuales de pollo desmenuzado, al horno.",
     tiers: [[20, 125], [35, 105], [50, 95]],
   },
   {
-    id: "mini-empanadas-atun",
+    group: "Empanadas", id: "mini-empanadas-atun",
     name: "Mini empanadas de atún",
     description: "Empanadas individuales de atún, al horno.",
     tiers: [[20, 120], [35, 105], [50, 95]],
@@ -453,6 +457,7 @@ const SAVOURY_PRODUCTS: CatalogProduct[] = SAVOURY_SNACKS.map((snack) => ({
   description: snack.description,
   availableFor: ["individual", "business"] as CustomerType[],
   quantityTiers: buildTiers(...snack.tiers),
+  group: snack.group,
   sizes: {},
   allowsToppings: false,
   extras: [],

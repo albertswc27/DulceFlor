@@ -175,8 +175,10 @@ export const SAVOURY_PRODUCT_PHOTOS: Record<string, Photo> = {
     caption: "Mini pan de pollo con mayonesa",
   },
   "mini-pan-fuet": {
+    // La foto muestra embutido curado en lonchas anchas con rúcula y tomate:
+    // el alt describe lo que se ve, sin prometer un montaje distinto.
     src: miniPanFuet,
-    alt: "Mini pan relleno de fuet",
+    alt: "Mini pan relleno de embutido curado en lonchas, con rúcula y tomate",
     caption: "Mini pan de fuet",
   },
   "mini-pan-cerdo-boniato": {
@@ -332,3 +334,38 @@ export const FEATURED_WORK_PHOTOS: Photo[] = [
   GLASS_PHOTOS[0],
   BREAKFAST_PHOTOS[0],
 ];
+
+/**
+ * Foto representativa de un producto para las tarjetas del catálogo.
+ * Devuelve null cuando NO tenemos una fotografía real de ese producto
+ * (cheesecakes, tres leches y especialidades): en ese caso la interfaz
+ * dibuja la ilustración de marca en lugar de enseñar una foto que no
+ * corresponde. Nunca se reutiliza la foto de otro producto.
+ */
+export function getProductPhoto(productId: string): Photo | null {
+  const savoury = SAVOURY_PRODUCT_PHOTOS[productId];
+  if (savoury) return savoury;
+
+  switch (productId) {
+    case "pastel-clasico":
+      return CLASSIC_CAKE_PHOTOS[0];
+    case "pastel-buttercream":
+      return CLASSIC_CAKE_PHOTOS[2];
+    case "pastel-personalizado":
+    case "pastel-fondant":
+      return CUSTOM_CAKE_PHOTOS[0];
+    case "caja-desayuno":
+      return BREAKFAST_PHOTOS[0];
+    case "copa-personalizada":
+      return GLASS_PHOTOS[0];
+    default:
+      return null;
+  }
+}
+
+/** Foto de portada de cada familia, para encabezar su listado. */
+export const FAMILY_COVER_PHOTOS: Record<string, Photo> = {
+  tartas: CLASSIC_CAKE_PHOTOS[1],
+  aperitivos: SAVOURY_HERO_PHOTOS[0],
+  regalos: GLASS_PHOTOS[0],
+};

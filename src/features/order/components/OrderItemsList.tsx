@@ -6,6 +6,7 @@ import { useOrderDraft, type DraftItem } from "@/features/order/state/OrderDraft
 import { getProduct } from "@/domain/catalog";
 import { getImage } from "@/services/imageStore";
 import { QuantityStepper } from "./QuantityStepper";
+import { ProductThumb } from "./ProductThumb";
 
 function DraftItemRow({ item }: { item: DraftItem }) {
   const { removeItem, setQuantity } = useOrderDraft();
@@ -18,7 +19,12 @@ function DraftItemRow({ item }: { item: DraftItem }) {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="flex min-w-0 gap-3">
+          <ProductThumb
+            productId={item.selection.productId}
+            className="h-14 w-14 sm:h-16 sm:w-16"
+          />
+          <div className="min-w-0">
           <p className="font-display font-semibold text-primary">
             {product?.name ?? item.selection.productId}
           </p>
@@ -63,6 +69,7 @@ function DraftItemRow({ item }: { item: DraftItem }) {
               className="mt-2 h-16 w-16 rounded-lg border border-border object-cover"
             />
           )}
+          </div>
         </div>
         <div className="text-right">
           {isQuote ? (

@@ -53,6 +53,7 @@ import { useAdminAuth } from "@/features/admin/state/AdminAuthContext";
 import { lockKiosk, unlockKiosk, verifyPassword } from "@/services/auth";
 import { useOrderDraft } from "@/features/order/state/OrderDraftContext";
 import { OptionCard } from "@/features/order/components/OptionCard";
+import { ProductThumb } from "@/features/order/components/ProductThumb";
 import { ProductConfigurator } from "@/features/order/components/ProductConfigurator";
 import { OrderItemsList } from "@/features/order/components/OrderItemsList";
 import { OrderSummary } from "@/features/order/components/OrderSummary";
@@ -315,11 +316,16 @@ export default function KioskPage() {
         onClick={() => setConfiguring(product)}
         className="group flex min-h-[15rem] flex-col rounded-2xl border border-border bg-card p-6 text-left shadow-card transition-all hover:border-secondary hover:shadow-lifted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:p-7"
       >
-        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
-          {CATEGORY_LABELS[product.category]}
-        </span>
-        <span className="mt-1.5 font-display text-2xl font-bold leading-tight text-primary">
-          {product.name}
+        <span className="flex items-start gap-4">
+          <ProductThumb productId={product.id} size="md" />
+          <span className="flex min-w-0 flex-col">
+            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
+              {CATEGORY_LABELS[product.category]}
+            </span>
+            <span className="mt-1.5 font-display text-2xl font-bold leading-tight text-primary">
+              {product.name}
+            </span>
+          </span>
         </span>
         <span className="mt-2 flex-1 text-base leading-snug text-muted-foreground">
           {product.description}

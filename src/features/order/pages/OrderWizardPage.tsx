@@ -31,8 +31,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { DELIVERY_ZONES, WHATSAPP_PHONE } from "@/config/business";
-import { SWEET_SNACK_PHOTOS } from "@/assets/photos";
+import { FAMILY_COVER_PHOTOS, SWEET_SNACK_PHOTOS } from "@/assets/photos";
 import { CakeReferences } from "@/features/order/components/CakeReferences";
+import { ProductThumb } from "@/features/order/components/ProductThumb";
 import {
   CATEGORY_FAMILY,
   CATEGORY_LABELS,
@@ -64,6 +65,48 @@ type StepId =
   | "slot"
   | "contact"
   | "review";
+
+/** Tarjeta de producto del catálogo, con miniatura real y precio orientativo. */
+function ProductCard({
+  product,
+  onSelect,
+}: {
+  product: CatalogProduct;
+  onSelect: (product: CatalogProduct) => void;
+}) {
+  const fromUnitPrice = product.quantityTiers
+    ? Math.min(...product.quantityTiers.map((t) => t.unitPriceCents))
+    : null;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(product)}
+      className="group flex gap-4 rounded-2xl border border-border bg-card p-4 text-left shadow-card transition-all hover:border-secondary hover:shadow-lifted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:p-5"
+    >
+      <ProductThumb
+        productId={product.id}
+        className="transition-transform duration-300 group-hover:scale-[1.04]"
+      />
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="font-display text-lg font-bold leading-tight text-primary">
+          {product.name}
+        </span>
+        <span className="mt-1 flex-1 text-sm text-muted-foreground">
+          {product.description}
+        </span>
+        <span className="mt-3 flex flex-wrap items-center gap-2 text-sm font-medium text-accent">
+          {fromUnitPrice !== null ? "Elegir cantidad →" : "Personalizar →"}
+          <Badge variant="success">
+            {fromUnitPrice !== null
+              ? `Desde ${formatEuros(fromUnitPrice)}/ud`
+              : "Precio al momento"}
+          </Badge>
+        </span>
+      </span>
+    </button>
+  );
+}
 
 const STEP_TITLES: Record<StepId, string> = {
   "customer-type": "¿Para quién es el pedido?",
@@ -428,6 +471,18 @@ export default function OrderWizardPage() {
                     </div>
                   )}
 
+                  {/* Portada de la familia: sitúa al cliente antes de elegir */}
+                  {FAMILY_COVER_PHOTOS[family] && (
+                    <img
+                      src={FAMILY_COVER_PHOTOS[family].src}
+                      alt={FAMILY_COVER_PHOTOS[family].alt}
+                      loading="lazy"
+                      width={1000}
+                      height={420}
+                      className="h-32 w-full rounded-2xl border border-border object-cover shadow-card sm:h-40"
+                    />
+                  )}
+
                   {/* Productos con precio automático, por categoría */}
                   {(
                     [
@@ -438,51 +493,55 @@ export default function OrderWizardPage() {
                       "aperitivos-salados",
                       "aperitivos-dulces",
                     ] as const
-                  ).map(
-                    (category) => {
-                      if (CATEGORY_FAMILY[category] !== family) return null;
-                      const catProducts = products.filter(
-                        (p) => p.category === category && p.pricingType !== "quote"
-                      );
-                      if (catProducts.length === 0) return null;
-                      return (
-                        <div key={category}>
-                          <h2 className="mb-3 font-display text-lg font-semibold text-primary">
-                            {CATEGORY_LABELS[category]}
-                          </h2>
+                  ).map((category) => {
+                    if (CATEGORY_FAMILY[category] !== family) return null;
+                    const catProducts = products.filter(
+                      (p) => p.category === category && p.pricingType !== "quote"
+                    );
+                    if (catProducts.length === 0) return null;
+                    // Las listas largas (19 aperitivos) se agrupan por tipo
+                    // para poder recorrerlas de un vistazo.
+                    const groups = Array.from(
+                      new Set(catProducts.map((p) => p.group ?? ""))
+                    ).filter(Boolean);
+                    return (
+                      <div key={category}>
+                        <h2 className="mb-3 font-display text-lg font-semibold text-primary">
+                          {CATEGORY_LABELS[category]}
+                        </h2>
+                        {groups.length > 1 ? (
+                          groups.map((groupName) => (
+                            <div key={groupName} className="mb-5 last:mb-0">
+                              <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-accent">
+                                {groupName}
+                              </h3>
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                {catProducts
+                                  .filter((p) => p.group === groupName)
+                                  .map((product) => (
+                                    <ProductCard
+                                      key={product.id}
+                                      product={product}
+                                      onSelect={openConfigurator}
+                                    />
+                                  ))}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
                           <div className="grid gap-3 sm:grid-cols-2">
                             {catProducts.map((product) => (
-                              <button
+                              <ProductCard
                                 key={product.id}
-                                type="button"
-                                onClick={() => openConfigurator(product)}
-                                className="group flex flex-col rounded-2xl border border-border bg-card p-5 text-left shadow-card transition-all hover:border-secondary hover:shadow-lifted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                              >
-                                <span className="font-display text-lg font-bold text-primary group-hover:text-primary/90">
-                                  {product.name}
-                                </span>
-                                <span className="mt-1 flex-1 text-sm text-muted-foreground">
-                                  {product.description}
-                                </span>
-                                <span className="mt-3 flex items-center gap-2 text-sm font-medium text-accent">
-                                  {product.quantityTiers ? "Elegir cantidad →" : "Personalizar →"}
-                                  <Badge variant="success">
-                                    {product.quantityTiers
-                                      ? `Desde ${formatEuros(
-                                          Math.min(
-                                            ...product.quantityTiers.map((t) => t.unitPriceCents)
-                                          )
-                                        )}/ud`
-                                      : "Precio al momento"}
-                                  </Badge>
-                                </span>
-                              </button>
+                                product={product}
+                                onSelect={openConfigurator}
+                              />
                             ))}
                           </div>
-                        </div>
-                      );
-                    }
-                  )}
+                        )}
+                      </div>
+                    );
+                  })}
 
                   {/* Aperitivos dulces: fotos reales, catálogo aún sin confirmar */}
                   {family === "aperitivos" && (
@@ -533,20 +592,26 @@ export default function OrderWizardPage() {
                             key={product.id}
                             type="button"
                             onClick={() => openConfigurator(product)}
-                            className="group flex flex-col rounded-2xl border border-border bg-card p-5 text-left shadow-card transition-all hover:border-secondary hover:shadow-lifted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            className="group flex gap-4 rounded-2xl border border-border bg-card p-4 text-left shadow-card transition-all hover:border-secondary hover:shadow-lifted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:p-5"
                           >
-                            <span className="flex items-center gap-2">
-                              <Sparkles className="h-4 w-4 text-accent" aria-hidden="true" />
-                              <span className="font-display text-lg font-bold text-primary">
-                                {product.name}
+                            <ProductThumb
+                              productId={product.id}
+                              className="transition-transform duration-300 group-hover:scale-[1.04]"
+                            />
+                            <span className="flex min-w-0 flex-1 flex-col">
+                              <span className="flex items-center gap-2">
+                                <Sparkles className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+                                <span className="font-display text-lg font-bold leading-tight text-primary">
+                                  {product.name}
+                                </span>
                               </span>
-                            </span>
-                            <span className="mt-1 flex-1 text-sm text-muted-foreground">
-                              {product.description}
-                            </span>
-                            <span className="mt-3 flex items-center gap-2 text-sm font-medium text-accent">
-                              Solicitar presupuesto →
-                              <Badge variant="warning">Precio a consultar</Badge>
+                              <span className="mt-1 flex-1 text-sm text-muted-foreground">
+                                {product.description}
+                              </span>
+                              <span className="mt-3 flex flex-wrap items-center gap-2 text-sm font-medium text-accent">
+                                Solicitar presupuesto →
+                                <Badge variant="warning">Precio a consultar</Badge>
+                              </span>
                             </span>
                           </button>
                         ))}
