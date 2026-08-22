@@ -200,9 +200,9 @@ export const CAKE_TIERS = [
 
 /** Alturas de las cartas: nº de discos y altura en cm. */
 export const CAKE_DISCS = [
-  { id: "1d", discs: 1, heightCm: 8, label: "1 disco (8 cm)" },
-  { id: "2d", discs: 2, heightCm: 13, label: "2 discos (13 cm)" },
-  { id: "3d", discs: 3, heightCm: 20, label: "3 discos (20 cm)" },
+  { id: "1d", discs: 1, heightCm: 8, label: "1 disco (8 cm)" },
+  { id: "2d", discs: 2, heightCm: 13, label: "2 discos (13 cm)" },
+  { id: "3d", discs: 3, heightCm: 20, label: "3 discos (20 cm)" },
 ] as const;
 
 /** Compone/descompone el id de tamaño de pastel (`<tier>-<disc>`). */

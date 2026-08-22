@@ -13,7 +13,8 @@ Elegido por coherencia con el resto de proyectos de AstroLanding (plantilla `vit
 
 ```text
 src/
-  assets/            Imágenes renombradas (cartas + logo). Fuente de verdad visual.
+  assets/            logo, cartas fotografiadas (documentación interna) y
+                     fotos/<categoria>/*.webp indexadas en photos.ts
   config/business.ts Configuración central de reglas cambiantes (única fuente).
   domain/            Lógica de negocio PURA, sin dependencia de UI:
     types.ts         Modelo (Order, OrderItem, estados, labels)
@@ -32,7 +33,7 @@ src/
     ui/              Primitivas (button, card, input, dialog…)
     layout/          PublicLayout (navbar + footer)
   features/
-    marketing/       Home, carta, 404
+    marketing/       Home, carta, aviso legal, 404
     order/           Estado del borrador, configurador, wizard, confirmación
     admin/           Auth context, panel, pedidos, detalle, kiosk
 ```
@@ -72,7 +73,20 @@ creó el pedido.
 - Inputs validados con zod (longitudes máximas, formatos tel/CP/email); React escapa el contenido por defecto (sin `dangerouslySetInnerHTML`).
 - El precio final siempre se recalcula desde catálogo/config al registrar (`submitOrder`), nunca se confía en el importe que muestra la UI.
 - Datos personales mínimos (nombre, teléfono, email opcional, dirección solo si hay entrega). Sin trackers.
-- Pendiente para producción: textos legales (privacidad, cookies, aviso legal) — no se han inventado.
+- Aviso legal y privacidad publicados en `/aviso-legal`, con contenido acorde al funcionamiento real. Los datos fiscales del titular se inyectan por variables de entorno (ver `docs/legal.md`).
+
+## QA visual automatizado
+
+`scripts/screenshots.cjs` levanta la web en un navegador real (Edge vía
+Playwright) y captura las páginas públicas y el recorrido de pedido a 390 px y
+1440 px. Antes de cada captura recorre la página para disparar las apariciones
+y la carga diferida, y **avisa por consola si detecta scroll horizontal o
+imágenes rotas**, que son los fallos que no se ven leyendo el código.
+
+Regla aprendida en la revisión final: **ningún contenido puede depender de una
+animación para ser visible**. `Reveal` anima al entrar en el viewport, pero
+tiene una red de seguridad que muestra el contenido pase lo que pase; si el
+observador no llega a dispararse, la página se ve igualmente.
 
 ## Decisiones destacadas
 

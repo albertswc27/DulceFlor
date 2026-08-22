@@ -3,3 +3,6 @@ dist
 *.local
 .env
 .env.*
+
+# Capturas de QA visual
+.screenshots

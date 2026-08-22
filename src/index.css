@@ -62,8 +62,17 @@
     @apply font-display;
   }
 
-  :focus-visible {
+  /* Anillo de foco visible en todo lo que se navega con teclado. Se excluyen
+     los elementos que solo reciben foco por programa (tabindex="-1", como el
+     título de cada paso del pedido): ahí el anillo no aporta y además pisaba
+     el rótulo superior. */
+  :focus-visible:not([tabindex="-1"]) {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  [tabindex="-1"]:focus,
+  [tabindex="-1"]:focus-visible {
+    @apply outline-none ring-0;
   }
 
   @media (prefers-reduced-motion: reduce) {

@@ -96,7 +96,9 @@ function ProductCard({
           {product.description}
         </span>
         <span className="mt-3 flex flex-wrap items-center gap-2 text-sm font-medium text-accent">
-          {fromUnitPrice !== null ? "Elegir cantidad →" : "Personalizar →"}
+          <span className="whitespace-nowrap">
+            {fromUnitPrice !== null ? "Elegir cantidad →" : "Personalizar →"}
+          </span>
           <Badge variant="success">
             {fromUnitPrice !== null
               ? `Desde ${formatEuros(fromUnitPrice)}/ud`
@@ -340,7 +342,10 @@ export default function OrderWizardPage() {
           <h1
             ref={headingRef}
             tabIndex={-1}
-            className="font-display text-2xl font-bold text-primary outline-none sm:text-3xl"
+            /* Recibe el foco al cambiar de paso para que los lectores de
+               pantalla lo anuncien, pero sin dibujar un anillo que pise el
+               rótulo "Paso X de Y". */
+            className="font-display text-2xl font-bold text-primary outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 sm:text-3xl"
           >
             {STEP_TITLES[step]}
           </h1>
@@ -364,7 +369,14 @@ export default function OrderWizardPage() {
         />
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
+      {/* Con el pedido vacío no se reserva la columna del resumen: evitamos
+          un tercio de pantalla en blanco en escritorio. */}
+      <div
+        className={cn(
+          "grid gap-8",
+          state.items.length > 0 && "lg:grid-cols-[1fr_340px]"
+        )}
+      >
         <div className="min-w-0">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
@@ -609,7 +621,9 @@ export default function OrderWizardPage() {
                                 {product.description}
                               </span>
                               <span className="mt-3 flex flex-wrap items-center gap-2 text-sm font-medium text-accent">
-                                Solicitar presupuesto →
+                                <span className="whitespace-nowrap">
+                                  Solicitar presupuesto →
+                                </span>
                                 <Badge variant="warning">Precio a consultar</Badge>
                               </span>
                             </span>
@@ -951,7 +965,7 @@ export default function OrderWizardPage() {
         </div>
 
         {/* Resumen fijo en desktop */}
-        <aside className="hidden lg:block">
+        <aside className={cn("hidden", state.items.length > 0 && "lg:block")}>
           <div className="sticky top-24 space-y-4">
             <Card>
               <CardHeader>

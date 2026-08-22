@@ -53,7 +53,7 @@ export function PhotoGrid({
             loading="lazy"
             width={1000}
             height={1000}
-            className="aspect-square w-full object-cover"
+            className="aspect-square w-full bg-blush/30 object-cover"
           />
           <p className="px-2.5 py-2 text-xs leading-snug text-muted-foreground">
             {photo.caption}

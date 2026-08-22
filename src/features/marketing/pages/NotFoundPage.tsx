@@ -20,7 +20,7 @@ export default function NotFoundPage() {
 
         <p className="eyebrow mt-6">¡Vaya!</p>
         <p
-          className="font-display text-7xl font-bold leading-none text-primary/20 sm:text-8xl"
+          className="font-display text-7xl font-bold leading-none text-primary/45 sm:text-8xl"
           aria-hidden="true"
         >
           404

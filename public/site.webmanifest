@@ -1,0 +1,15 @@
+{
+  "name": "Dulce Flor Repostería Casera",
+  "short_name": "Dulce Flor",
+  "description": "Tartas personalizadas, aperitivos para eventos y regalos con dedicatoria en Santa Coloma de Gramenet.",
+  "lang": "es",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FDF7F0",
+  "theme_color": "#7C2E43",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

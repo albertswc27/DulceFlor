@@ -16,12 +16,20 @@ npm run lint       # ESLint
 npm test           # tests de lógica de negocio (vitest)
 ```
 
+## Utilidades
+
+```bash
+node scripts/generate-icons.cjs     # regenera favicon, apple-touch-icon e iconos PWA desde el logo
+node scripts/screenshots.cjs <dir>  # capturas de QA visual (requiere el dev server en el puerto 5300)
+```
+
 ## Rutas
 
 | Ruta | Contenido |
 | --- | --- |
 | `/` | Home pública |
 | `/carta` | Carta con precios (particulares/empresas) |
+| `/aviso-legal` | Aviso legal y política de privacidad |
 | `/pedido` | Configurador y wizard de pedido |
 | `/pedido/confirmacion/:id` | Confirmación + WhatsApp |
 | `/admin` | Login administración |

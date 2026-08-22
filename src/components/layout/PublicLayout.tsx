@@ -216,10 +216,18 @@ function Footer() {
         </div>
       </div>
       <div className="border-t border-cocoa-foreground/10 py-4">
-        <p className="container text-center text-xs text-cocoa-foreground/50">
-          © {new Date().getFullYear()} Dulce Flor Repostería Casera · Hechos con amor para
-          compartir momentos inolvidables
-        </p>
+        <div className="container flex flex-col items-center gap-2 text-center text-xs text-cocoa-foreground/50 sm:flex-row sm:justify-between sm:text-left">
+          <p>
+            © {new Date().getFullYear()} Dulce Flor Repostería Casera · Hechos con amor
+            para compartir momentos inolvidables
+          </p>
+          <Link
+            to="/aviso-legal"
+            className="rounded underline-offset-4 hover:text-cocoa-foreground/80 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary"
+          >
+            Aviso legal y privacidad
+          </Link>
+        </div>
       </div>
     </footer>
   );

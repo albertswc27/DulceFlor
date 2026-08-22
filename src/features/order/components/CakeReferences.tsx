@@ -69,7 +69,7 @@ export function CakeReferences({
                     loading="lazy"
                     width={1000}
                     height={1400}
-                    className="aspect-[3/4] w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                    className="aspect-[3/4] w-full bg-blush/30 object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                   />
                   <span className="block px-2 py-1.5 text-xs leading-snug text-muted-foreground">
                     {photo.caption}

@@ -352,8 +352,12 @@ export function getProductPhoto(productId: string): Photo | null {
     case "pastel-buttercream":
       return CLASSIC_CAKE_PHOTOS[2];
     case "pastel-personalizado":
-    case "pastel-fondant":
       return CUSTOM_CAKE_PHOTOS[0];
+    // Fondant: sin fotografía propia todavía. Se deja sin foto (la interfaz
+    // dibuja la ilustración) en lugar de repetir la de tarta personalizada,
+    // que haría parecer que son el mismo producto.
+    case "pastel-fondant":
+      return null;
     case "caja-desayuno":
       return BREAKFAST_PHOTOS[0];
     case "copa-personalizada":

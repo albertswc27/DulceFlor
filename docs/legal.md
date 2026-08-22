@@ -1,7 +1,21 @@
-# Aviso legal y privacidad — pendiente de publicar
+# Aviso legal y privacidad
 
-La web todavía **no** publica aviso legal, política de privacidad ni de cookies.
-Este documento describe qué hace falta para hacerlo, sin inventar nada.
+La web **ya publica** la página `/aviso-legal`, enlazada desde el pie en todas
+las páginas públicas. Su contenido describe el funcionamiento real del sitio
+(qué datos se piden, para qué, dónde se guardan y que no hay cookies de
+seguimiento), sin cláusulas genéricas.
+
+**Falta un único dato para darla por definitiva:** la identificación fiscal del
+titular. Se rellena sin tocar código, con dos variables de entorno en el
+despliegue:
+
+```bash
+VITE_LEGAL_HOLDER="Nombre y apellidos del titular"
+VITE_LEGAL_TAX_ID="00000000X"
+```
+
+Mientras estén vacías, la página muestra «pendiente de confirmación» y un aviso
+visible, en lugar de inventar el dato. Ver `src/config/legal.ts`.
 
 ## Datos del titular
 

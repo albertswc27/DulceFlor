@@ -9,6 +9,7 @@ import OrderWizardPage from "@/features/order/pages/OrderWizardPage";
 import OrderConfirmationPage from "@/features/order/pages/OrderConfirmationPage";
 import { AdminAuthProvider } from "@/features/admin/state/AdminAuthContext";
 import RequireAdmin from "@/features/admin/components/RequireAdmin";
+import LegalPage from "@/features/marketing/pages/LegalPage";
 import NotFoundPage from "@/features/marketing/pages/NotFoundPage";
 
 // La zona de administración se carga bajo demanda: los visitantes de la web
@@ -38,6 +39,7 @@ export default function App() {
             <Route element={<PublicLayout />}>
               <Route path="/" element={<HomePage />} />
               <Route path="/carta" element={<MenusPage />} />
+              <Route path="/aviso-legal" element={<LegalPage />} />
               <Route path="/pedido" element={<OrderWizardPage />} />
               <Route
                 path="/pedido/confirmacion/:orderId"

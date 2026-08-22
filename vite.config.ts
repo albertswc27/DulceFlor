@@ -10,6 +10,21 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        /**
+         * Separa las librerías del código propio: el navegador puede cachear
+         * React y las animaciones entre despliegues y la primera carga baja.
+         */
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          "vendor-motion": ["framer-motion"],
+          "vendor-forms": ["zod", "date-fns", "sonner"],
+        },
+      },
+    },
+  },
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],

@@ -97,7 +97,7 @@ export function SnackConfigurator({
           loading="lazy"
           width={1000}
           height={1000}
-          className="aspect-[4/3] w-full rounded-2xl border border-border object-cover shadow-card"
+          className="aspect-[4/3] w-full rounded-2xl border border-border bg-blush/30 object-cover shadow-card"
         />
       )}
 
@@ -150,11 +150,11 @@ export function SnackConfigurator({
                 <span className="mt-0.5 text-sm text-muted-foreground">
                   {formatEuros(tier.unitPriceCents)}/ud
                 </span>
-                {!tier.open && (
-                  <span className="mt-1 text-sm font-medium text-foreground">
-                    {formatEuros(tierTotal)}
-                  </span>
-                )}
+                {/* Las tres tarjetas mantienen la misma estructura: en el
+                    tramo abierto el importe se indica como "desde". */}
+                <span className="mt-1 text-sm font-medium text-foreground">
+                  {tier.open ? `desde ${formatEuros(tierTotal)}` : formatEuros(tierTotal)}
+                </span>
               </motion.button>
             );
           })}

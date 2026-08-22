@@ -23,6 +23,15 @@ export function ProductThumb({ productId, size = "sm", className }: ProductThumb
   const box = size === "sm" ? "h-20 w-20" : "h-28 w-28";
 
   if (!photo) {
+    // Sin foto real: ilustración de marca. Se varía la forma según el producto
+    // para que dos tarjetas contiguas no muestren exactamente el mismo dibujo.
+    const shape: Record<string, { tiers: number; scale: 0 | 1 | 2 | 3 }> = {
+      cheesecake: { tiers: 1, scale: 3 },
+      "tres-leches": { tiers: 2, scale: 2 },
+      especialidades: { tiers: 3, scale: 1 },
+      pasteles: { tiers: 3, scale: 2 },
+    };
+    const { tiers, scale } = shape[product?.category ?? ""] ?? { tiers: 2, scale: 1 };
     return (
       <span
         aria-hidden="true"
@@ -32,11 +41,7 @@ export function ProductThumb({ productId, size = "sm", className }: ProductThumb
           className
         )}
       >
-        <CakeIllustration
-          tiers={product?.category === "tres-leches" ? 1 : 2}
-          scale={1}
-          className="h-full w-auto"
-        />
+        <CakeIllustration tiers={tiers} scale={scale} className="h-full w-auto" />
       </span>
     );
   }
@@ -49,7 +54,7 @@ export function ProductThumb({ productId, size = "sm", className }: ProductThumb
       width={320}
       height={320}
       className={cn(
-        "shrink-0 rounded-xl border border-border object-cover shadow-card",
+        "shrink-0 rounded-xl border border-border bg-blush/30 object-cover shadow-card",
         box,
         className
       )}

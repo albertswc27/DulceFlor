@@ -538,7 +538,11 @@ function CakeConfigurator({
           ) : breakdown ? (
             <AnimatedPrice cents={breakdown.unitTotalCents * quantity} className="text-2xl" />
           ) : (
-            <p className="font-display text-lg text-muted-foreground">—</p>
+            <p className="max-w-[13rem] text-sm text-muted-foreground">
+              {isCheesecake && !flavorId
+                ? "Elige sabor y tamaño para ver el precio"
+                : "Elige el tamaño para ver el precio"}
+            </p>
           )}
         </div>
       </div>
@@ -580,7 +584,15 @@ function CakeConfigurator({
         </p>
       )}
 
-      <Button type="button" size="xl" className="w-full" onClick={handleConfirm}>
+      {/* Deshabilitado mientras falten las opciones obligatorias: así el botón
+          no promete algo que aún no se puede añadir. */}
+      <Button
+        type="button"
+        size="xl"
+        className="w-full"
+        disabled={!isQuote && !breakdown}
+        onClick={handleConfirm}
+      >
         {isQuote ? "Solicitar presupuesto" : confirmLabel}
         {!isQuote && breakdown && ` · ${formatEuros(breakdown.unitTotalCents * quantity)}`}
       </Button>

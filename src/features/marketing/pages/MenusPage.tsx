@@ -109,13 +109,13 @@ function CakePriceCard({ productId }: { productId: string }) {
   const matrix = buildCakeMatrix(product, "individual");
 
   return (
-    <Card className="h-full">
+    <Card className="h-full min-w-0">
       <CardHeader>
         <CardTitle className="text-xl">{product.name}</CardTitle>
         <CardDescription>{product.description}</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto rounded-lg border border-border">
+        <div className="w-full min-w-0 overflow-x-auto rounded-lg border border-border">
           <table className="w-full min-w-[430px] text-sm">
             <caption className="sr-only">
               Precios de {product.name} según número de personas y de discos
@@ -158,6 +158,9 @@ function CakePriceCard({ productId }: { productId: string }) {
             </tbody>
           </table>
         </div>
+        <p className="mt-2 text-xs text-muted-foreground sm:hidden">
+          Desliza la tabla para ver todos los tamaños.
+        </p>
       </CardContent>
     </Card>
   );
@@ -171,7 +174,8 @@ function CheesecakeTable({ customerType }: { customerType: CustomerType }) {
       : CHEESECAKE_SIZES_INDIVIDUAL;
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-card">
+    <div className="w-full min-w-0">
+      <div className="w-full min-w-0 overflow-x-auto rounded-xl border border-border bg-card shadow-card">
       <table className="w-full min-w-[480px] text-sm">
         <caption className="sr-only">
           Precios de cheesecakes por sabor y tamaño (
@@ -215,7 +219,11 @@ function CheesecakeTable({ customerType }: { customerType: CustomerType }) {
             </tr>
           ))}
         </tbody>
-      </table>
+        </table>
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground sm:hidden">
+        Desliza la tabla para ver todos los tamaños.
+      </p>
     </div>
   );
 }
