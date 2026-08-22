@@ -291,12 +291,7 @@ function ToppingOverrideNotes({
  * Muestra variada de lo que también sale del obrador. Son 7 fotos: se enseñan
  * 4, una de cada tipo, para no convertir el bloque en un muro de imágenes.
  */
-const OTHER_SAVOURY_SAMPLE: Photo[] = [
-  OTHER_SAVOURY_PHOTOS[0], // mini empanadas de carne
-  OTHER_SAVOURY_PHOTOS[2], // mini empanadas de atún
-  OTHER_SAVOURY_PHOTOS[3], // tequeños de jamón y queso
-  OTHER_SAVOURY_PHOTOS[5], // mini hamburguesa de vacuno
-];
+const OTHER_SAVOURY_SAMPLE: Photo[] = OTHER_SAVOURY_PHOTOS.slice(0, 4);
 
 /**
  * Tramos de precio por volumen tal y como los ve el cliente en el pedido
@@ -411,30 +406,32 @@ function SavourySnacksPanel({ customerType }: { customerType: CustomerType }) {
         ))}
       </ul>
 
-      {/* Sin tarifa confirmada: muestra de trabajo, nunca precio ni compra directa. */}
-      <div className="rounded-2xl border border-secondary/40 bg-background-soft/50 p-4 sm:p-5">
-        <h3 className="font-display text-base font-semibold text-primary">
-          También preparamos
-        </h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Mini empanadas, tequeños y mini hamburguesas hechos en el obrador.
-          Todavía no están en carta con precio: consúltanos por WhatsApp y te
-          pasamos presupuesto según la cantidad.
-        </p>
-        <PhotoGrid photos={OTHER_SAVOURY_SAMPLE} columns={4} className="mt-3" />
-        <Button asChild variant="outline" size="lg" className="mt-4 w-full sm:w-auto">
-          <a
-            href={whatsAppUrl(
-              "Hola Dulce Flor, quería consultar precio de empanadas, tequeños o mini hamburguesas."
-            )}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <MessageCircle aria-hidden="true" />
-            Consultar por WhatsApp
-          </a>
-        </Button>
-      </div>
+      {/* Solo si queda algún salado sin tarifa confirmada. */}
+      {OTHER_SAVOURY_SAMPLE.length > 0 && (
+        <div className="rounded-2xl border border-secondary/40 bg-background-soft/50 p-4 sm:p-5">
+          <h3 className="font-display text-base font-semibold text-primary">
+            También preparamos
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Mini empanadas, tequeños y mini hamburguesas hechos en el obrador.
+            Todavía no están en carta con precio: consúltanos por WhatsApp y te
+            pasamos presupuesto según la cantidad.
+          </p>
+          <PhotoGrid photos={OTHER_SAVOURY_SAMPLE} columns={4} className="mt-3" />
+          <Button asChild variant="outline" size="lg" className="mt-4 w-full sm:w-auto">
+            <a
+              href={whatsAppUrl(
+                "Hola Dulce Flor, quería consultar precio de empanadas, tequeños o mini hamburguesas."
+              )}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <MessageCircle aria-hidden="true" />
+              Consultar por WhatsApp
+            </a>
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

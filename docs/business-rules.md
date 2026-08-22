@@ -56,7 +56,7 @@ La zona se determina por **código postal con prioridad estricta**: si el CP es 
 
 ## Nuevas líneas de producto (21/08/2026)
 
-### Aperitivos salados — tarifas CONFIRMADAS (WhatsApp 21/08/2026)
+### Aperitivos salados — tarifas CONFIRMADAS (WhatsApp 21–22/08/2026)
 
 Precio **por unidad** según el tramo de cantidad. **Los tramos NO son iguales en todos los productos**: mini sándwiches y mini panes escalan en 15/25/50, los tequeños en 15/30/50 y las empanadas en 20/35/50. Definidos producto a producto en `SAVOURY_SNACKS` (`src/domain/catalog.ts`) y verificados por test uno a uno.
 
@@ -78,13 +78,15 @@ Precio **por unidad** según el tramo de cantidad. **Los tramos NO son iguales e
 | Mini pan de cerdo caramelizado | 15 u · 1,35 € | 25 u · 1,20 € | 50+ u · 1,00 € |
 | Mini tequeños de jamón y queso | 15 u · 1,20 € | 30 u · 1,00 € | 50+ u · 0,95 € |
 | Mini tequeños de queso | 15 u · 1,10 € | 30 u · 0,99 € | 50+ u · 0,90 € |
+| Mini hamburguesa de vacuno | 15 u · 1,50 € | 30 u · 1,25 € | 50+ u · 1,00 € |
+| Mini hamburguesa de pollo | 15 u · 1,35 € | 30 u · 1,20 € | 50+ u · 0,99 € |
 | Mini empanadas de carne | 20 u · 1,35 € | 35 u · 1,15 € | 50+ u · 1,00 € |
 | Mini empanadas de pollo | 20 u · 1,25 € | 35 u · 1,05 € | 50+ u · 0,95 € |
 | Mini empanadas de atún | 20 u · 1,20 € | 35 u · 1,05 € | 50+ u · 0,95 € |
 
 Las cantidades intermedias aplican el tramo inferior (18 uds → tarifa de 15; 34 uds de empanadas → tarifa de 20) y por encima del último tramo se aplica siempre ese precio. **Por debajo del primer tramo no hay tarifa: el sistema devuelve «sin precio» en vez de inventar uno.** Disponibles para particulares y empresas (decisión a confirmar).
 
-**Sin tarifa todavía:** mini hamburguesas de pollo y de vacuno. Se muestran en «También preparamos», sin precio ni pedido automático.
+Los tramos varían según el producto: mini sándwiches y mini panes 15/25/50; tequeños y mini hamburguesas 15/30/50; empanadas 20/35/50. **Ya no queda ningún salado sin tarifa** (22/08/2026): los 21 productos fotografiados tienen precio y foto propia.
 
 ### Aperitivos dulces — PENDIENTE
 

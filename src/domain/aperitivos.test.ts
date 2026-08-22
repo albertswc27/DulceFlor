@@ -7,6 +7,7 @@ import {
   type CatalogProduct,
 } from "./catalog";
 import { buildOrderItem, computeOrderPricing, computeUnitPriceCents } from "./pricing";
+import { SAVOURY_PRODUCT_PHOTOS } from "@/assets/photos";
 
 /**
  * Tarifas confirmadas por Dulce Flor (WhatsApp, 21/08/2026), transcritas una
@@ -30,6 +31,8 @@ const TARIFAS: Record<string, Array<[number, number]>> = {
   "mini-pan-cerdo-caramelizado": [[15, 135], [25, 120], [50, 100]],
   "mini-tequenos-jamon-queso": [[15, 120], [30, 100], [50, 95]],
   "mini-tequenos-queso": [[15, 110], [30, 99], [50, 90]],
+  "mini-hamburguesa-vacuno": [[15, 150], [30, 125], [50, 100]],
+  "mini-hamburguesa-pollo": [[15, 135], [30, 120], [50, 99]],
   "mini-empanadas-carne": [[20, 135], [35, 115], [50, 100]],
   "mini-empanadas-pollo": [[20, 125], [35, 105], [50, 95]],
   "mini-empanadas-atun": [[20, 120], [35, 105], [50, 95]],
@@ -67,8 +70,8 @@ function total(productId: string, quantity: number): number | null {
 }
 
 describe("aperitivos salados: tarifas por volumen", () => {
-  it("los 19 productos del catálogo tienen exactamente las tarifas confirmadas", () => {
-    expect(Object.keys(TARIFAS)).toHaveLength(19);
+  it("los 21 productos del catálogo tienen exactamente las tarifas confirmadas", () => {
+    expect(Object.keys(TARIFAS)).toHaveLength(21);
     for (const [id, tramos] of Object.entries(TARIFAS)) {
       const product = getProduct(id);
       expect(product, `falta el producto ${id}`).toBeDefined();
@@ -136,6 +139,12 @@ describe("aperitivos salados: tarifas por volumen", () => {
     const product = getProduct("mini-pan-fuet")!;
     expect(getMinimumQuantity(product)).toBe(15);
     expect(resolveQuantityTier(product, 50)?.open).toBe(true);
+  });
+
+  it("cada aperitivo con tarifa tiene su fotografía real asignada", () => {
+    for (const id of Object.keys(TARIFAS)) {
+      expect(SAVOURY_PRODUCT_PHOTOS[id], `sin foto: ${id}`).toBeDefined();
+    }
   });
 
   it("los aperitivos están disponibles para particulares y empresas", () => {

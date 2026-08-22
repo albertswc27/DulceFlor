@@ -429,6 +429,20 @@ const SAVOURY_SNACKS: SavourySpec[] = [
     tiers: [[15, 110], [30, 99], [50, 90]],
   },
 
+  /* --- Mini hamburguesas (tramos 15 / 30 / 50) --- */
+  {
+    group: "Mini hamburguesas", id: "mini-hamburguesa-vacuno",
+    name: "Mini hamburguesa de vacuno",
+    description: "Hamburguesa de ternera con lechuga y tomate en pan de bollo.",
+    tiers: [[15, 150], [30, 125], [50, 100]],
+  },
+  {
+    group: "Mini hamburguesas", id: "mini-hamburguesa-pollo",
+    name: "Mini hamburguesa de pollo",
+    description: "Pollo a la plancha con lechuga y tomate en pan de bollo.",
+    tiers: [[15, 135], [30, 120], [50, 99]],
+  },
+
   /* --- Empanadas (tramos 20 / 35 / 50) --- */
   {
     group: "Empanadas", id: "mini-empanadas-carne",

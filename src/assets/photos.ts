@@ -226,6 +226,16 @@ export const SAVOURY_PRODUCT_PHOTOS: Record<string, Photo> = {
     alt: "Mini empanadas de atún recién horneadas",
     caption: "Mini empanadas de atún",
   },
+  "mini-hamburguesa-vacuno": {
+    src: miniHamburguesaVacuno,
+    alt: "Mini hamburguesa de ternera con lechuga y tomate en pan de bollo",
+    caption: "Mini hamburguesa de vacuno",
+  },
+  "mini-hamburguesa-pollo": {
+    src: miniHamburguesaPollo,
+    alt: "Mini hamburguesa de pollo a la plancha con lechuga y tomate en pan de bollo",
+    caption: "Mini hamburguesa de pollo",
+  },
 };
 
 /** Fotos de conjunto para presentar la categoría de aperitivos. */
@@ -243,22 +253,12 @@ export const SAVOURY_HERO_PHOTOS: Photo[] = [
 ];
 
 /**
- * Aperitivos salados que Dulce Flor elabora y de los que TODAVÍA NO tenemos
- * tarifa confirmada (21/08/2026: solo quedan las mini hamburguesas): se
- * muestran como muestra de trabajo, sin precio ni pedido automático.
+ * Aperitivos salados sin tarifa confirmada. Desde el 22/08/2026 la lista está
+ * VACÍA: Dulce Flor ha facilitado el precio de todos los salados
+ * fotografiados. Se mantiene el punto de extensión por si aparecen productos
+ * nuevos antes que sus tarifas; la interfaz oculta el bloque si está vacía.
  */
-export const OTHER_SAVOURY_PHOTOS: Photo[] = [
-  {
-    src: miniHamburguesaVacuno,
-    alt: "Mini hamburguesa de ternera con pan de sésamo",
-    caption: "Mini hamburguesa de vacuno",
-  },
-  {
-    src: miniHamburguesaPollo,
-    alt: "Mini hamburguesa de pollo a la plancha con pan de sésamo",
-    caption: "Mini hamburguesa de pollo",
-  },
-];
+export const OTHER_SAVOURY_PHOTOS: Photo[] = [];
 
 /**
  * Aperitivos dulces: hay fotografías reales, pero el catálogo y las tarifas
