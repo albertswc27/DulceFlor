@@ -31,7 +31,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { DEPOSIT_PERCENTAGE } from "@/config/business";
+import { CANDLE_UNIT_PRICE_CENTS, DEPOSIT_PERCENTAGE } from "@/config/business";
 import { formatEuros } from "@/domain/money";
 import { getImage } from "@/services/imageStore";
 import { buildOrderWhatsAppMessage } from "@/domain/whatsapp";
@@ -256,6 +256,15 @@ function CakeItemDetails({ item }: { item: OrderItem }) {
           {extra.label} (+{formatEuros(extra.priceCents)})
         </ItemLine>
       ))}
+      {(c.candleQuantity ?? 0) > 0 && (
+        <ItemLine label="Velas">
+          {c.candleQuantity} uds × {formatEuros(CANDLE_UNIT_PRICE_CENTS)} ={" "}
+          <strong>{formatEuros(item.candlesCents ?? 0)}</strong>
+          {item.requiresQuote && (
+            <span className="text-xs"> (aparte del presupuesto de la tarta)</span>
+          )}
+        </ItemLine>
+      )}
       {c.dedicationText && (
         <ItemLine label="Dedicatoria">“{c.dedicationText}”</ItemLine>
       )}
@@ -402,6 +411,9 @@ export default function AdminOrderDetailPage() {
   const quoteItemName = quoteItem?.productName ?? "solicitud a medida";
   // Modificaciones sobre una tarta CON precio: el total mostrado es "actual".
   const hasPendingExtras = Boolean(pricing.hasPendingExtras) && !pricing.pendingQuote;
+  // subtotalCents ya incluye las velas: se separan para no contarlas dos veces.
+  const candlesCents = pricing.candlesCents ?? 0;
+  const productsCents = pricing.subtotalCents - candlesCents;
 
   return (
     <div className="space-y-6">
@@ -577,20 +589,24 @@ export default function AdminOrderDetailPage() {
             <CardContent className="space-y-3">
               <dl className="space-y-2 text-sm">
                 {pricing.pendingQuote ? (
-                  pricing.subtotalCents > 0 && (
+                  productsCents > 0 && (
                     <div className="flex items-center justify-between">
                       <dt className="text-muted-foreground">
                         Subtotal (sin lo pendiente de presupuesto)
                       </dt>
-                      <dd className="font-medium">
-                        {formatEuros(pricing.subtotalCents)}
-                      </dd>
+                      <dd className="font-medium">{formatEuros(productsCents)}</dd>
                     </div>
                   )
                 ) : (
                   <div className="flex items-center justify-between">
                     <dt className="text-muted-foreground">Subtotal</dt>
-                    <dd className="font-medium">{formatEuros(pricing.subtotalCents)}</dd>
+                    <dd className="font-medium">{formatEuros(productsCents)}</dd>
+                  </div>
+                )}
+                {candlesCents > 0 && (
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">Velas</dt>
+                    <dd className="font-medium">{formatEuros(candlesCents)}</dd>
                   </div>
                 )}
                 {isQuoted && (

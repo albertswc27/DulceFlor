@@ -84,10 +84,15 @@ export function buildOrderWhatsAppMessage(order: Order): string {
     for (const extra of c.extras) {
       lines.push(`Extra: ${extra.label} (${formatEuros(extra.priceCents)})`);
     }
+    if ((c.candleQuantity ?? 0) > 0) {
+      lines.push(
+        `Velas: ${c.candleQuantity} uds — ${formatEuros(item.candlesCents ?? 0)}`
+      );
+    }
     if (c.dedicationText) lines.push(`Dedicatoria: "${c.dedicationText}"`);
     if (c.designDescription) lines.push(`Diseño: ${c.designDescription}`);
     if (c.notes) lines.push(`Indicaciones: ${c.notes}`);
-    if (item.requiresQuote) lines.push("Precio: pendiente de presupuesto");
+    if (item.requiresQuote) lines.push("Precio tarta: pendiente de presupuesto");
     if (c.referenceImageId) {
       lines.push(`Imagen de referencia adjunta al pedido ${order.publicId} (visible en el panel)`);
     }
@@ -109,11 +114,15 @@ export function buildOrderWhatsAppMessage(order: Order): string {
   lines.push(`Hora: ${order.requestedTime}`);
   lines.push("");
 
+  const candlesCents = order.pricing.candlesCents ?? 0;
+  const productsCents = order.pricing.subtotalCents - candlesCents;
+
   if (order.pricing.pendingQuote) {
-    // Solicitud con fondant sin presupuestar: nunca mostrar un total inexistente.
-    if (order.pricing.subtotalCents > 0) {
-      lines.push(`Subtotal (sin el fondant): ${formatEuros(order.pricing.subtotalCents)}`);
+    // Solicitud sin presupuestar: nunca mostrar un total inexistente.
+    if (productsCents > 0) {
+      lines.push(`Subtotal de lo ya valorado: ${formatEuros(productsCents)}`);
     }
+    if (candlesCents > 0) lines.push(`Velas: ${formatEuros(candlesCents)}`);
     if (order.fulfillmentType === "delivery") {
       lines.push(
         order.pricing.deliveryFeeCents === null
@@ -121,11 +130,12 @@ export function buildOrderWhatsAppMessage(order: Order): string {
           : `Entrega: ${formatEuros(order.pricing.deliveryFeeCents)}`
       );
     }
-    lines.push("PRECIO: pendiente de presupuesto");
+    lines.push("PRECIO DE LA TARTA: pendiente de presupuesto");
   } else {
-    lines.push(`Subtotal: ${formatEuros(order.pricing.subtotalCents)}`);
+    lines.push(`Subtotal: ${formatEuros(productsCents)}`);
+    if (candlesCents > 0) lines.push(`Velas: ${formatEuros(candlesCents)}`);
     if (order.pricing.quotedPriceCents !== undefined) {
-      lines.push(`Fondant (presupuesto): ${formatEuros(order.pricing.quotedPriceCents)}`);
+      lines.push(`Presupuesto tarta a medida: ${formatEuros(order.pricing.quotedPriceCents)}`);
     }
     if (order.fulfillmentType === "delivery") {
       lines.push(

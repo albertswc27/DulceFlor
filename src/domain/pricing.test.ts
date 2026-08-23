@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
   buildOrderItem,
+  computeCandlesCents,
   computeDeposit,
   computeOrderPricing,
   computeUnitPriceCents,
   getToppingPriceCents,
 } from "./pricing";
-import { getProduct, getProductsFor, getUnitBasePriceCents } from "./catalog";
+import {
+  CAKE_FILLINGS,
+  getProduct,
+  getProductsFor,
+  getSizesFor,
+  getUnitBasePriceCents,
+} from "./catalog";
 import type { OrderItem } from "./types";
 
 function makeItem(unitPriceCents: number, quantity = 1): OrderItem {
@@ -377,5 +384,174 @@ describe("fondant (presupuesto manual)", () => {
     expect(pricing.depositRequired).toBe(true);
     expect(pricing.depositCents).toBe(3600);
     expect(pricing.remainingCents).toBe(8400);
+  });
+});
+
+describe("velas (1 € por unidad, confirmado 23/08/2026)", () => {
+  function cakeWithCandles(candleQuantity: number | undefined) {
+    return buildOrderItem({
+      id: "v",
+      selection: {
+        productId: "pastel-clasico",
+        customerType: "individual",
+        sizeId: "4-6-1d",
+        flavorId: "chocolate",
+        toppingIds: [],
+        extraIds: [],
+      },
+      customization: {
+        size: { id: "4-6-1d", label: "4–6 personas · 1 disco (8 cm)" },
+        flavor: { id: "chocolate", label: "Chocolate" },
+        toppings: [],
+        extras: [],
+        candleQuantity,
+      },
+      quantity: 1,
+    })!;
+  }
+
+  it("0 velas no suman nada", () => {
+    expect(computeCandlesCents(0)).toBe(0);
+    expect(computeCandlesCents(undefined)).toBe(0);
+    expect(cakeWithCandles(0).candlesCents).toBeUndefined();
+    expect(cakeWithCandles(0).totalCents).toBe(2000);
+  });
+
+  it("1, 3 y 10 velas cuestan 1, 3 y 10 €", () => {
+    expect(computeCandlesCents(1)).toBe(100);
+    expect(computeCandlesCents(3)).toBe(300);
+    expect(computeCandlesCents(10)).toBe(1000);
+  });
+
+  it("no acepta cantidades negativas ni decimales", () => {
+    expect(computeCandlesCents(-5)).toBe(0);
+    expect(computeCandlesCents(2.7)).toBe(200);
+  });
+
+  it("tarta + toppings + velas se suman correctamente", () => {
+    // Base 39 € (20-22 personas, 1 disco) + 2 toppings (5 €) + 3 velas (3 €).
+    const item = buildOrderItem({
+      id: "v2",
+      selection: {
+        productId: "pastel-clasico",
+        customerType: "individual",
+        sizeId: "20-22-1d",
+        flavorId: "chocolate",
+        toppingIds: ["oreo", "fresas"],
+        extraIds: [],
+      },
+      customization: {
+        size: { id: "20-22-1d", label: "20–22 personas · 1 disco" },
+        flavor: { id: "chocolate", label: "Chocolate" },
+        toppings: [
+          { id: "oreo", label: "Oreo" },
+          { id: "fresas", label: "Fresas" },
+        ],
+        extras: [],
+        candleQuantity: 3,
+      },
+      quantity: 1,
+    })!;
+    expect(item.unitPriceCents).toBe(4400); // 3900 + 500 de toppings
+    expect(item.candlesCents).toBe(300);
+    expect(item.totalCents).toBe(4700);
+    const pricing = computeOrderPricing([item], 0);
+    expect(pricing.subtotalCents).toBe(4700);
+    expect(pricing.candlesCents).toBe(300);
+  });
+
+  it("las velas pueden hacer superar el umbral de señal de 40 €", () => {
+    // 39 € de tarta: sin señal. Con 2 velas (2 €) el total llega a 41 €.
+    const sinVelas = computeOrderPricing([cakeWithCandles(0)], 0);
+    expect(sinVelas.depositRequired).toBe(false);
+    const item = buildOrderItem({
+      id: "v3",
+      selection: {
+        productId: "pastel-clasico",
+        customerType: "individual",
+        sizeId: "20-22-1d",
+        flavorId: "chocolate",
+        toppingIds: [],
+        extraIds: [],
+      },
+      customization: {
+        size: { id: "20-22-1d", label: "20–22 personas · 1 disco" },
+        toppings: [],
+        extras: [],
+        candleQuantity: 2,
+      },
+      quantity: 1,
+    })!;
+    const pricing = computeOrderPricing([item], 0);
+    expect(pricing.totalCents).toBe(4100);
+    expect(pricing.depositRequired).toBe(true);
+    expect(pricing.depositCents).toBe(1230);
+  });
+
+  it("en tartas a presupuestar las velas se cobran pero la tarta sigue pendiente", () => {
+    const item = buildOrderItem({
+      id: "v4",
+      selection: {
+        productId: "pastel-fondant",
+        customerType: "individual",
+        sizeId: "10-12-2d",
+        flavorId: "vainilla",
+        toppingIds: [],
+        extraIds: [],
+      },
+      customization: {
+        size: { id: "10-12-2d", label: "10–12 personas · 2 discos (13 cm)" },
+        toppings: [],
+        extras: [],
+        designDescription: "Tarta de dos pisos forrada en fondant azul",
+        candleQuantity: 3,
+      },
+      quantity: 1,
+    })!;
+    expect(item.requiresQuote).toBe(true);
+    expect(item.unitPriceCents).toBe(0);
+    expect(item.candlesCents).toBe(300);
+    expect(item.totalCents).toBe(300); // solo las velas
+
+    const pricing = computeOrderPricing([item], 0);
+    expect(pricing.pendingQuote).toBe(true);
+    expect(pricing.candlesCents).toBe(300);
+    expect(pricing.subtotalCents).toBe(300);
+    // No hay señal mientras la tarta esté sin presupuestar.
+    expect(pricing.depositRequired).toBe(false);
+  });
+});
+
+describe("tartas a medida: selección de discos", () => {
+  it("personalizada y fondant ofrecen la matriz de personas × discos", () => {
+    for (const id of ["pastel-personalizado", "pastel-fondant"]) {
+      const sizes = getSizesFor(getProduct(id)!, "individual");
+      // 4 rangos de personas × 3 alturas de disco.
+      expect(sizes).toHaveLength(12);
+      expect(sizes.map((s) => s.id)).toContain("10-12-2d");
+      // Sin precio automático: los importes no se usan.
+      expect(getProduct(id)!.pricingType).toBe("quote");
+    }
+  });
+
+  it("los discos reutilizan las dimensiones ya confirmadas del catálogo", () => {
+    const sizes = getSizesFor(getProduct("pastel-fondant")!, "individual");
+    const size = sizes.find((s) => s.id === "4-6-3d")!;
+    expect(size.servings).toBe("4–6 personas");
+    expect(size.label).toContain("3 discos");
+    expect(size.label).toContain("20");
+  });
+});
+
+describe("relleno Bariloche", () => {
+  it("el relleno se llama Bariloche conservando su id", () => {
+    const bariloche = CAKE_FILLINGS.find((f) => f.id === "dulce-de-leche-chocolate");
+    expect(bariloche?.label).toBe("Bariloche");
+  });
+
+  it("ningún relleno se llama ya «Dulce de leche con chocolate»", () => {
+    expect(CAKE_FILLINGS.map((f) => f.label)).not.toContain(
+      "Dulce de leche con chocolate"
+    );
   });
 });

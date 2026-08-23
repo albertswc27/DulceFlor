@@ -146,7 +146,9 @@ export const SPONGE_FLAVORS: CatalogOption[] = [
 export const CAKE_FILLINGS: CatalogOption[] = [
   { id: "dulce-de-leche", label: "Dulce de leche", description: "Clásico y cremoso, con el auténtico sabor del dulce de leche." },
   { id: "nata-con-frutas", label: "Nata con frutas", description: "Suave nata montada con trozos de frutas frescas." },
-  { id: "dulce-de-leche-chocolate", label: "Dulce de leche con chocolate", description: "Dulce de leche combinado con suave crema de chocolate." },
+  // El id se mantiene por compatibilidad con los pedidos ya guardados; solo
+  // cambia el nombre comercial (antes «Dulce de leche con chocolate»).
+  { id: "dulce-de-leche-chocolate", label: "Bariloche", description: "Dulce de leche combinado con suave crema de chocolate." },
   { id: "chocolate", label: "Chocolate", description: "Relleno cremoso de chocolate." },
   { id: "mus-oreo", label: "Mus de Oreo", description: "Mousse de queso con galletas Oreo." },
   { id: "nutella", label: "Nutella", description: "Crema de avellanas con el inconfundible sabor Nutella." },
@@ -233,6 +235,27 @@ const BUTTERCREAM_CAKE_PRICES: number[][] = [
   [3600, 5000, 7200],
   [4100, 6000, 8200],
 ];
+
+/**
+ * Misma matriz personas × discos que las tartas con precio, pero sin importes:
+ * las tartas a medida se presupuestan a mano y el número de discos solo sirve
+ * para que Dulce Flor valore la solicitud. Reutiliza CAKE_TIERS y CAKE_DISCS
+ * para no duplicar tamaños ni dimensiones.
+ */
+function buildQuoteCakeSizes(): SizeOption[] {
+  const sizes: SizeOption[] = [];
+  CAKE_TIERS.forEach((tier) => {
+    CAKE_DISCS.forEach((disc) => {
+      sizes.push({
+        id: `${tier.id}-${disc.id}`,
+        label: `${tier.label} · ${disc.label}`,
+        servings: tier.label,
+        priceCents: 0, // nunca se muestra: pricingType "quote" → "A consultar"
+      });
+    });
+  });
+  return sizes;
+}
 
 function buildCakeSizes(prices: number[][]): SizeOption[] {
   const sizes: SizeOption[] = [];
@@ -550,14 +573,7 @@ export const PRODUCTS: CatalogProduct[] = [
     pricingType: "quote",
     customCakeType: "custom",
     requiresReferenceImage: true,
-    sizes: {
-      individual: CAKE_TIERS.map((tier) => ({
-        id: tier.id,
-        label: `${tier.label} (aprox.)`,
-        servings: tier.label,
-        priceCents: 0, // nunca se muestra: pricingType "quote" → "A consultar"
-      })),
-    },
+    sizes: { individual: buildQuoteCakeSizes() },
     flavors: SPONGE_FLAVORS,
     fillings: CAKE_FILLINGS,
     allowsToppings: false,
@@ -573,14 +589,7 @@ export const PRODUCTS: CatalogProduct[] = [
     pricingType: "quote",
     customCakeType: "fondant",
     requiresReferenceImage: true,
-    sizes: {
-      individual: CAKE_TIERS.map((tier) => ({
-        id: tier.id,
-        label: `${tier.label} (aprox.)`,
-        servings: tier.label,
-        priceCents: 0,
-      })),
-    },
+    sizes: { individual: buildQuoteCakeSizes() },
     flavors: SPONGE_FLAVORS,
     fillings: CAKE_FILLINGS,
     allowsToppings: false,

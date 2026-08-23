@@ -13,6 +13,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { CLASSIC_CAKE_PHOTOS, type Photo as CakePhoto } from "@/assets/photos";
+import { Images } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface CakeReferencesProps {
@@ -21,6 +23,8 @@ interface CakeReferencesProps {
   description?: React.ReactNode;
   /** Nº de fotos visibles (el resto queda fuera para no alargar el paso). */
   limit?: number;
+  /** Texto del pie que aparece bajo la parrilla. */
+  footnote?: React.ReactNode;
   className?: string;
 }
 
@@ -29,9 +33,11 @@ export function CakeReferences({
   title = "Así es nuestra tarta clásica",
   description,
   limit = 4,
+  footnote,
   className,
 }: CakeReferencesProps) {
   const visible = photos.slice(0, limit);
+  const rest = photos.slice(limit);
   if (visible.length === 0) return null;
 
   return (
@@ -92,10 +98,53 @@ export function CakeReferences({
         ))}
       </ul>
 
-      <p className="mt-3 text-xs text-muted-foreground">
-        ¿Buscas una decoración especial (dibujos, personajes, figuras)? Eso pertenece a
-        la <strong>tarta personalizada</strong>, que presupuestamos a medida.
-      </p>
+      {rest.length > 0 && (
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button type="button" variant="outline" size="sm" className="mt-3">
+              <Images className="h-4 w-4" aria-hidden="true" />
+              Ver más ejemplos ({rest.length})
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto p-4 sm:p-6">
+            <DialogHeader>
+              <DialogTitle>{title}</DialogTitle>
+              <DialogDescription>
+                Todos son trabajos reales de Dulce Flor. Cada diseño tiene una
+                complejidad distinta y su precio se confirma personalmente.
+              </DialogDescription>
+            </DialogHeader>
+            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {photos.map((photo) => (
+                <li key={photo.src} className="overflow-hidden rounded-xl border border-border bg-card">
+                  <img
+                    src={photo.src}
+                    alt={photo.alt}
+                    loading="lazy"
+                    width={1000}
+                    height={1400}
+                    className="aspect-[3/4] w-full bg-blush/30 object-cover"
+                  />
+                  <span className="block px-2 py-1.5 text-xs leading-snug text-muted-foreground">
+                    {photo.caption}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {footnote !== undefined ? (
+        footnote && (
+          <p className="mt-3 text-xs text-muted-foreground">{footnote}</p>
+        )
+      ) : (
+        <p className="mt-3 text-xs text-muted-foreground">
+          ¿Buscas una decoración especial (dibujos, personajes, figuras)? Eso pertenece a
+          la <strong>tarta personalizada</strong>, que presupuestamos a medida.
+        </p>
+      )}
     </section>
   );
 }

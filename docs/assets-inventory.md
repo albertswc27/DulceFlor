@@ -100,6 +100,32 @@ Se eliminó **1 duplicado exacto**: `WhatsApp Image 2026-08-21 at 16.13.433.jpeg
 | `WhatsApp Image 2026-08-21 at 15.26.147.jpeg` | `fotos/copas/copas-postre-fresa-y-chocolate-horizontal.webp` | Pareja de postres en copa tipo trifle: uno de nata con fresa y bizcocho espolvoreado con canela o ga | Respaldo (no publicada) |
 | `WhatsApp Image 2026-08-21 at 15.26.146.jpeg` | `fotos/copas/copas-postre-fresa-y-chocolate-vertical.webp` | Pareja de postres en copa tipo trifle: uno de nata, bizcocho y fresa con crumble, y otro de mousse/c | Copas · referencias |
 
+
+## Tartas de fondant y personalizadas (lote 23/08/2026)
+
+Auditadas **visualmente a ciegas** antes de clasificarlas: el nombre del archivo no se ha tomado como verdad (`fondant3`/`fondant4` resultaron ser tartas de boda decoradas a manga, no fondant).
+
+| Archivo original | Destino | Contenido real | Uso |
+| --- | --- | --- | --- |
+| `fondant8.jpeg` | `fotos/tartas-fondant/tarta-fondant-cuadrada-rosas-modeladas.webp` | Tarta cuadrada forrada en fondant con rosas modeladas | Fondant · referencia principal |
+| `fondant7.jpeg` | `fotos/tartas-fondant/tarta-fondant-caja-zapatillas.webp` | Tarta esculpida como caja de zapatillas, fondant modelado | Fondant · referencia |
+| `fondant.jpeg` | `fotos/tartas-fondant/tarta-fondant-infantil-muneca-rosa.webp` | Tarta infantil rosa con muñeca modelada en fondant | Fondant · referencia |
+| `fondant2.jpeg` | `fotos/tartas-fondant/tarta-fondant-logotipo-empresa-rosas.webp` | Tarta corporativa con logotipo y rosas en fondant | Fondant · «Ver más ejemplos» |
+| `fondant5.jpeg` | `fotos/tartas-fondant/tarta-fondant-cars-dos-pisos.webp` | Tarta infantil de dos pisos con placas de fondant (híbrida: cobertura de crema + fondant) | Fondant · «Ver más ejemplos» |
+| `fondant3.jpeg` | `fotos/tartas-personalizadas/tarta-boda-tres-pisos-flores-naturales.webp` | Tarta de boda de tres pisos a manga con flores naturales — **no es fondant** pese al nombre del archivo | Personalizadas · referencia |
+| `fondant4.jpeg` | — (descartada) | Misma tarta de boda que `fondant3`, peor encuadre y fondo desordenado | Descartada: `duplicado-de-tarta-boda` |
+| `personalziado.jpeg` | `fotos/tartas-personalizadas/tarta-futbol-blanca-escudo.webp` | Tarta blanca con escudo de fútbol | Personalizadas · referencia |
+| `personalziado2.jpeg` | `fotos/tartas-personalizadas/tarta-cumpleanos-marfil-lazo-dorado.webp` | Tarta marfil con lazo dorado | Personalizadas · «Ver más» |
+| `personalziado3.jpeg` | `fotos/tartas-personalizadas/tarta-corazon-rosetones-rojos.webp` | Tarta con forma de corazón y rosetones rojos | Personalizadas · referencia |
+| `personalziado4.jpeg` | `fotos/tartas-personalizadas/tarta-buttercream-rosetones-lila.webp` | Montaje 2×1: se recorta el fotograma derecho (tarta de rosetones lila) | Personalizadas · «Ver más» |
+| `personalziado5.jpeg` | `fotos/tartas-personalizadas/tarta-infantil-conejito-primer-cumple.webp` | Tarta de primer cumpleaños con conejito | Personalizadas · «Ver más» |
+| `personalziado6.jpeg` | `fotos/tartas-personalizadas/tarta-pistacho-placa-felicidades.webp` | Tarta de pistacho con placa de felicitación | Personalizadas · «Ver más» |
+| `personalziado8.jpeg` | — (descartada) | Lleva una foto comestible con **caras de personas identificables** | Descartada: `personas-identificables` (sin permiso expreso) |
+| `perosnalziado9.jpeg` | `fotos/tartas-personalizadas/tarta-futbol-azulgrana-toppers.webp` | Tarta azulgrana con toppers de fútbol | Personalizadas · «Ver más» |
+| `personalziado10.jpeg` | `fotos/tartas-personalizadas/tarta-aniversario-oblea-impresa.webp` | Tarta de aniversario con oblea impresa | Personalizadas · «Ver más» |
+
+14 publicadas (WebP, máx. 1000 px, calidad 82: 3,7 MB → 2,4 MB) y 2 descartadas. En el configurador se muestran solo **3 referencias** por modalidad; el resto se abre en «Ver más ejemplos».
+
 ## Estructura de carpetas
 
 ```text
@@ -109,7 +135,8 @@ src/assets/
                                 precios y productos. NO se publican en la web.
   photos.ts                     Índice tipado de fotografías por categoría
   fotos/
-    tartas/  aperitivos-salados/  aperitivos-dulces/  desayunos/  copas/
+    tartas/  tartas-fondant/  tartas-personalizadas/
+    aperitivos-salados/  aperitivos-dulces/  desayunos/  copas/
 ```
 
 ## Observaciones

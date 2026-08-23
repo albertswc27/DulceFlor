@@ -15,6 +15,12 @@
 /** Precio de cada topping añadido. Actualizado por el cliente (2ª revisión): +2,50 €. */
 export const TOPPING_PRICE_CENTS = 250;
 
+/** Precio por vela (confirmado 23/08/2026): 1 € cada una. */
+export const CANDLE_UNIT_PRICE_CENTS = 100;
+
+/** Tope razonable de velas por tarta, para evitar cantidades absurdas. */
+export const MAX_CANDLES = 50;
+
 /** La paga y señal se exige cuando el total SUPERA este importe (> 40 €, no >=). */
 export const DEPOSIT_THRESHOLD_CENTS = 4000;
 

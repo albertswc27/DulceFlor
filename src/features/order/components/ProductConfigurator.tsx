@@ -18,6 +18,7 @@ import {
   type CatalogProduct,
 } from "@/domain/catalog";
 import {
+  computeCandlesCents,
   computeUnitPriceBreakdown,
   getToppingPriceCents,
   type ItemSelection,
@@ -30,13 +31,14 @@ import {
 } from "@/domain/validation";
 import type { CustomerType, ItemCustomization } from "@/domain/types";
 import { saveImage, IMAGE_ERROR_MESSAGES } from "@/services/imageStore";
-import { CUSTOM_CAKE_PHOTOS } from "@/assets/photos";
+import { CUSTOM_CAKE_PHOTOS, FONDANT_CAKE_PHOTOS } from "@/assets/photos";
 import { OptionCard } from "./OptionCard";
 import { QuantityStepper } from "./QuantityStepper";
 import { AnimatedPrice } from "./AnimatedPrice";
 import { SizePicker } from "./SizePicker";
 import { ReferenceImagePicker } from "./ReferenceImagePicker";
 import { CakeReferences } from "./CakeReferences";
+import { CandlePicker } from "./CandlePicker";
 import { SnackConfigurator } from "./SnackConfigurator";
 import { GiftRequestConfigurator } from "./GiftRequestConfigurator";
 
@@ -118,6 +120,7 @@ function CakeConfigurator({
   const [customToppingText, setCustomToppingText] = React.useState("");
   const [designDescription, setDesignDescription] = React.useState("");
   const [referenceImage, setReferenceImage] = React.useState<string | null>(null);
+  const [candleQuantity, setCandleQuantity] = React.useState(0);
   const [error, setError] = React.useState<string | null>(null);
 
   // Al cambiar de producto se reinicia la selección (salvo edición inicial).
@@ -134,6 +137,7 @@ function CakeConfigurator({
     setCustomToppingText("");
     setDesignDescription("");
     setReferenceImage(null);
+    setCandleQuantity(0);
     setError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.id, customerType]);
@@ -167,6 +171,11 @@ function CakeConfigurator({
     : null;
 
   const dedicationSelected = extraIds.includes("dedicatoria");
+
+  /** Las velas tienen precio conocido, también en las tartas a presupuestar. */
+  const candlesCents = computeCandlesCents(candleQuantity);
+  /** Importe visible de la tarta configurada (sin contar las velas). */
+  const cakeCents = breakdown ? breakdown.unitTotalCents * quantity : null;
 
   function toggleTopping(id: string) {
     setToppingIds((prev) =>
@@ -256,6 +265,7 @@ function CakeConfigurator({
       dedicationText: dedicationSelected ? dedicationText.trim() : undefined,
       designDescription: isQuote ? designDescription.trim() : undefined,
       notes: notes.trim() || undefined,
+      candleQuantity: candleQuantity > 0 ? candleQuantity : undefined,
       referenceImageId,
     };
 
@@ -283,12 +293,24 @@ function CakeConfigurator({
         </p>
       )}
 
-      {isQuote && CUSTOM_CAKE_PHOTOS.length > 0 && (
+      {/* Referencias del propio obrador: fondant y personalizadas tienen cada
+          una sus fotos. Se muestran pocas y el resto se abre en un diálogo,
+          para no convertir el configurador en una galería. */}
+      {isQuote && (
         <CakeReferences
-          photos={CUSTOM_CAKE_PHOTOS}
-          title="Ejemplos de decoración a medida"
-          description="Trabajos reales de Dulce Flor fuera del acabado clásico. Cada diseño se valora por separado."
+          photos={isFondant ? FONDANT_CAKE_PHOTOS : CUSTOM_CAKE_PHOTOS}
+          title={
+            isFondant
+              ? "Algunos trabajos en fondant"
+              : "Inspírate con nuestros trabajos"
+          }
+          description={
+            isFondant
+              ? "Ejemplos reales de tartas forradas y modeladas en fondant. Cada diseño tiene una complejidad distinta, así que el precio lo confirmamos personalmente."
+              : "Ejemplos reales de decoraciones a medida. Cada diseño tiene una complejidad distinta, así que el precio lo confirmamos personalmente."
+          }
           limit={3}
+          footnote="Son ejemplos de trabajos anteriores. Más abajo puedes adjuntar tu propia imagen de referencia con la idea que tengas en mente."
         />
       )}
 
@@ -497,6 +519,9 @@ function CakeConfigurator({
         )}
       </div>
 
+      {/* Velas: precio conocido incluso en las tartas a presupuestar */}
+      <CandlePicker quantity={candleQuantity} onChange={setCandleQuantity} />
+
       {/* Texto libre */}
       <div className="space-y-1.5">
         <Label htmlFor="notas">
@@ -532,11 +557,18 @@ function CakeConfigurator({
             {isQuote ? "Precio" : quantity > 1 ? `Precio (${quantity} uds.)` : "Precio"}
           </p>
           {isQuote ? (
-            <p className="font-display text-xl font-bold text-primary">
-              Precio a consultar
-            </p>
+            <div>
+              <p className="font-display text-xl font-bold text-primary">
+                Precio a consultar
+              </p>
+              {candlesCents > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  + {formatEuros(candlesCents)} en velas
+                </p>
+              )}
+            </div>
           ) : breakdown ? (
-            <AnimatedPrice cents={breakdown.unitTotalCents * quantity} className="text-2xl" />
+            <AnimatedPrice cents={cakeCents! + candlesCents} className="text-2xl" />
           ) : (
             <p className="max-w-[13rem] text-sm text-muted-foreground">
               {isCheesecake && !flavorId
@@ -547,7 +579,9 @@ function CakeConfigurator({
         </div>
       </div>
 
-      {!isQuote && breakdown && (breakdown.toppingsCents > 0 || breakdown.extrasCents > 0) && (
+      {!isQuote &&
+        breakdown &&
+        (breakdown.toppingsCents > 0 || breakdown.extrasCents > 0 || candlesCents > 0) && (
         <div className="rounded-lg bg-background-soft px-4 py-3 text-sm">
           <div className="flex justify-between">
             <span>Base</span>
@@ -565,6 +599,12 @@ function CakeConfigurator({
               <span>+{formatEuros(breakdown.extrasCents)}</span>
             </div>
           )}
+          {candlesCents > 0 && (
+            <div className="flex justify-between">
+              <span>Velas ({candleQuantity})</span>
+              <span>+{formatEuros(candlesCents)}</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -573,7 +613,7 @@ function CakeConfigurator({
         breakdown &&
         (customToppingText.trim() || notes.trim() || referenceImage) && (
           <p className="rounded-lg bg-warning/10 px-4 py-2 text-sm text-warning">
-            Precio actual: {formatEuros(breakdown.unitTotalCents * quantity)} +
+            Precio actual: {formatEuros(cakeCents! + candlesCents)} +
             modificaciones pendientes de confirmar por Dulce Flor.
           </p>
         )}
@@ -594,7 +634,7 @@ function CakeConfigurator({
         onClick={handleConfirm}
       >
         {isQuote ? "Solicitar presupuesto" : confirmLabel}
-        {!isQuote && breakdown && ` · ${formatEuros(breakdown.unitTotalCents * quantity)}`}
+        {!isQuote && breakdown && ` · ${formatEuros(cakeCents! + candlesCents)}`}
       </Button>
     </div>
   );

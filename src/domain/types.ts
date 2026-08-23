@@ -62,6 +62,11 @@ export interface ItemCustomization {
   designDescription?: string;
   /** Ocasión del regalo (cajas de desayuno y copas personalizadas). */
   occasion?: string;
+  /**
+   * Velas para la tarta. Solo se guarda la cantidad: el precio unitario vive
+   * en CANDLE_UNIT_PRICE_CENTS (única fuente de verdad).
+   */
+  candleQuantity?: number;
   /** Personalización especial en texto libre. */
   notes?: string;
   /** Imagen de referencia adjuntada por el cliente (id en el almacén de imágenes). */
@@ -76,6 +81,13 @@ export interface OrderItem {
   quantity: number;
   /** Precio unitario = base + toppings + extras (en céntimos). */
   unitPriceCents: number;
+  /**
+   * Importe de las velas de este artículo. Va aparte del precio unitario
+   * porque las velas también tienen precio conocido en los productos que se
+   * presupuestan a mano (fondant y personalizadas).
+   */
+  candlesCents?: number;
+  /** unitPrice × cantidad + velas. En productos «quote» solo las velas. */
   totalCents: number;
   /**
    * true en productos sin precio automático (fondant): el importe se
@@ -116,6 +128,8 @@ export interface OrderPricing {
   pendingQuote?: boolean;
   /** Presupuesto introducido por administración para los artículos a medida. */
   quotedPriceCents?: number;
+  /** Importe total de las velas del pedido (0 si no hay). */
+  candlesCents?: number;
   /**
    * true cuando hay peticiones que Dulce Flor debe revisar y que pueden
    * modificar el importe: topping fuera de catálogo, nota con un cambio

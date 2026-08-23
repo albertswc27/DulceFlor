@@ -18,6 +18,24 @@ import tartaMerengue from "./fotos/tartas/tarta-clasica-merengue-dedicatoria.web
 import tartaDulceLeche from "./fotos/tartas/tarta-clasica-chocolate-dulce-de-leche.webp";
 import tartaVintage from "./fotos/tartas/tarta-decoracion-vintage-turquesa.webp";
 
+/* ------------------------ Tartas de fondant --------------------- */
+import fondantCuadradaRosas from "./fotos/tartas-fondant/tarta-fondant-cuadrada-rosas-modeladas.webp";
+import fondantZapatillas from "./fotos/tartas-fondant/tarta-fondant-caja-zapatillas.webp";
+import fondantMuneca from "./fotos/tartas-fondant/tarta-fondant-infantil-muneca-rosa.webp";
+import fondantLogotipo from "./fotos/tartas-fondant/tarta-fondant-logotipo-empresa-rosas.webp";
+import fondantCars from "./fotos/tartas-fondant/tarta-fondant-cars-dos-pisos.webp";
+
+/* --------------------- Tartas personalizadas -------------------- */
+import personalizadaCorazon from "./fotos/tartas-personalizadas/tarta-corazon-rosetones-rojos.webp";
+import personalizadaBoda from "./fotos/tartas-personalizadas/tarta-boda-tres-pisos-flores-naturales.webp";
+import personalizadaFutbolAzulgrana from "./fotos/tartas-personalizadas/tarta-futbol-azulgrana-toppers.webp";
+import personalizadaRosetonesLila from "./fotos/tartas-personalizadas/tarta-buttercream-rosetones-lila.webp";
+import personalizadaOblea from "./fotos/tartas-personalizadas/tarta-aniversario-oblea-impresa.webp";
+import personalizadaConejito from "./fotos/tartas-personalizadas/tarta-infantil-conejito-primer-cumple.webp";
+import personalizadaFutbolBlanca from "./fotos/tartas-personalizadas/tarta-futbol-blanca-escudo.webp";
+import personalizadaLazoDorado from "./fotos/tartas-personalizadas/tarta-cumpleanos-marfil-lazo-dorado.webp";
+import personalizadaPistacho from "./fotos/tartas-personalizadas/tarta-pistacho-placa-felicidades.webp";
+
 /* ---------------------- Aperitivos salados ---------------------- */
 import surtidoSalados from "./fotos/aperitivos-salados/surtido-bocaditos-salados.webp";
 import bandejaCatering from "./fotos/aperitivos-salados/bandeja-catering-mini-sandwiches-tequenos.webp";
@@ -111,15 +129,94 @@ export const CLASSIC_CAKE_PHOTOS: Photo[] = [
 ];
 
 /**
- * Decoración elaborada fuera del acabado clásico (se presupuesta a medida).
- * PENDIENTE: Dulce Flor no ha facilitado todavía ejemplos de fondant,
- * figuras modeladas ni tartas temáticas.
+ * Trabajos de FONDANT: tartas forradas o modeladas en pasta de azúcar.
+ * Clasificadas por auditoría visual, no por el nombre del archivo (dos fotos
+ * archivadas como «fondant» resultaron ser tartas de boda a manga).
+ * Orden pensado para la galería: las dos primeras son las que mejor explican
+ * la técnica.
+ */
+export const FONDANT_CAKE_PHOTOS: Photo[] = [
+  {
+    src: fondantCuadradaRosas,
+    alt: "Tarta cuadrada forrada en fondant rosa con relieve acolchado y rosas modeladas a mano",
+    caption: "Fondant con rosas modeladas",
+  },
+  {
+    src: fondantZapatillas,
+    alt: "Tarta con forma de caja de zapatillas, modelada y forrada en fondant negro",
+    caption: "Formas a medida en fondant",
+  },
+  {
+    src: fondantMuneca,
+    alt: "Tarta infantil forrada en fondant rosa con una muñeca y botines modelados",
+    caption: "Infantil en fondant rosa",
+  },
+  {
+    src: fondantLogotipo,
+    alt: "Tarta forrada en fondant blanco con el logotipo de una empresa y rosas rojas de azúcar",
+    caption: "Logotipos y rosas de azúcar",
+  },
+  {
+    src: fondantCars,
+    alt: "Tarta de dos pisos de temática de coches con placas decorativas y topper",
+    caption: "Temática infantil de dos pisos",
+  },
+];
+
+/**
+ * Tartas PERSONALIZADAS sin fondant: decoración a medida trabajada a manga,
+ * toppers, obleas impresas o flores naturales.
  */
 export const CUSTOM_CAKE_PHOTOS: Photo[] = [
   {
+    src: personalizadaCorazon,
+    alt: "Tarta con forma de corazón decorada con rosetones rojos a manga",
+    caption: "Corazón con rosetones",
+  },
+  {
+    src: personalizadaBoda,
+    alt: "Tarta de boda de tres pisos con cenefas a manga y flores naturales blancas",
+    caption: "Boda de tres pisos",
+  },
+  {
+    src: personalizadaFutbolAzulgrana,
+    alt: "Tarta de cumpleaños de temática futbolística con toppers y cenefas de manga",
+    caption: "Temática futbolística",
+  },
+  {
+    src: personalizadaRosetonesLila,
+    alt: "Tarta con guirnalda de rosetones en lila y fucsia y topper dorado de cumpleaños",
+    caption: "Rosetones y topper dorado",
+  },
+  {
+    src: personalizadaOblea,
+    alt: "Tarta de aniversario decorada con una imagen impresa en oblea comestible",
+    caption: "Con imagen en oblea",
+  },
+  {
+    src: personalizadaConejito,
+    alt: "Tarta de primer cumpleaños con un conejito y placa con el nombre",
+    caption: "Primer cumpleaños",
+  },
+  {
+    src: personalizadaFutbolBlanca,
+    alt: "Tarta de cumpleaños con escudo de fútbol y decoración a manga",
+    caption: "Con escudo del equipo",
+  },
+  {
+    src: personalizadaLazoDorado,
+    alt: "Tarta de cumpleaños en tono marfil con lazo dorado y decoración a manga",
+    caption: "Marfil con lazo dorado",
+  },
+  {
+    src: personalizadaPistacho,
+    alt: "Tarta de pistacho con placa de felicitación y cenefa de manga",
+    caption: "Con placa de felicitación",
+  },
+  {
     src: tartaVintage,
     alt: "Tarta con decoración vintage a manga en turquesa, con guirnaldas, lazos y perlas plateadas",
-    caption: "Decoración vintage a medida",
+    caption: "Decoración vintage",
   },
 ];
 
@@ -353,11 +450,8 @@ export function getProductPhoto(productId: string): Photo | null {
       return CLASSIC_CAKE_PHOTOS[2];
     case "pastel-personalizado":
       return CUSTOM_CAKE_PHOTOS[0];
-    // Fondant: sin fotografía propia todavía. Se deja sin foto (la interfaz
-    // dibuja la ilustración) en lugar de repetir la de tarta personalizada,
-    // que haría parecer que son el mismo producto.
     case "pastel-fondant":
-      return null;
+      return FONDANT_CAKE_PHOTOS[0];
     case "caja-desayuno":
       return BREAKFAST_PHOTOS[0];
     case "copa-personalizada":

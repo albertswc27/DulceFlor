@@ -4,8 +4,10 @@
  * funciones; nunca duplicar cálculos en componentes.
  */
 import {
+  CANDLE_UNIT_PRICE_CENTS,
   DEPOSIT_PERCENTAGE,
   DEPOSIT_THRESHOLD_CENTS,
+  MAX_CANDLES,
   TOPPING_PRICE_CENTS,
 } from "@/config/business";
 import {
@@ -32,6 +34,16 @@ function countValidToppings(toppingIds: string[]): number {
 /** ¿El producto se presupuesta a mano (personalizada/fondant)? */
 export function isQuoteProduct(productId: string): boolean {
   return getProduct(productId)?.pricingType === "quote";
+}
+
+/**
+ * Importe de las velas de un artículo. Las velas se cobran por el artículo
+ * (no se multiplican por la cantidad de tartas) y tienen precio conocido
+ * incluso en los productos que se presupuestan a mano.
+ */
+export function computeCandlesCents(candleQuantity: number | undefined): number {
+  const quantity = Math.max(0, Math.floor(candleQuantity ?? 0));
+  return Math.min(quantity, MAX_CANDLES) * CANDLE_UNIT_PRICE_CENTS;
 }
 
 /**
@@ -140,12 +152,23 @@ export function computeUnitPriceBreakdown(
   };
 }
 
-/** Subtotal de los artículos con precio automático (los "quote" no suman). */
+/**
+ * Subtotal de los artículos: los productos «quote» no aportan precio de
+ * tarta, pero sus velas sí, porque tienen precio conocido.
+ */
 export function computeItemsSubtotalCents(items: OrderItem[]): number {
   return items.reduce(
-    (sum, item) => (item.requiresQuote ? sum : sum + item.unitPriceCents * item.quantity),
+    (sum, item) =>
+      sum +
+      (item.requiresQuote ? 0 : item.unitPriceCents * item.quantity) +
+      (item.candlesCents ?? 0),
     0
   );
+}
+
+/** Importe total de las velas del pedido. */
+export function computeOrderCandlesCents(items: OrderItem[]): number {
+  return items.reduce((sum, item) => sum + (item.candlesCents ?? 0), 0);
 }
 
 /**
@@ -200,6 +223,7 @@ export function computeOrderPricing(
     pendingQuote: hasQuoteItems ? pendingQuote : undefined,
     quotedPriceCents: quoted ?? undefined,
     hasPendingExtras: items.some(itemHasPendingExtras) || undefined,
+    candlesCents: computeOrderCandlesCents(items) || undefined,
   };
 }
 
@@ -216,8 +240,11 @@ export function buildOrderItem(params: {
   if (!product) return null;
   const quantity = Math.max(1, Math.floor(params.quantity));
 
-  // Fondant: sin precio automático. Los importes quedan a 0 internamente,
-  // pero requiresQuote obliga a la UI a mostrar "A consultar", nunca 0 €.
+  const candlesCents = computeCandlesCents(params.customization.candleQuantity);
+
+  // Personalizada/fondant: la tarta no tiene precio automático (los importes
+  // quedan a 0 y requiresQuote obliga a la UI a mostrar "A consultar", nunca
+  // 0 €), pero las velas sí tienen precio conocido y se contabilizan aparte.
   if (product.pricingType === "quote") {
     return {
       id: params.id,
@@ -226,7 +253,8 @@ export function buildOrderItem(params: {
       customization: params.customization,
       quantity,
       unitPriceCents: 0,
-      totalCents: 0,
+      candlesCents: candlesCents || undefined,
+      totalCents: candlesCents,
       requiresQuote: true,
     };
   }
@@ -245,6 +273,7 @@ export function buildOrderItem(params: {
     customization: params.customization,
     quantity,
     unitPriceCents,
-    totalCents: unitPriceCents * quantity,
+    candlesCents: candlesCents || undefined,
+    totalCents: unitPriceCents * quantity + candlesCents,
   };
 }

@@ -12,14 +12,24 @@ export function OrderSummary({ showDepositInfo = true }: { showDepositInfo?: boo
   const { state, derived } = useOrderDraft();
   const { pricing } = derived;
   const isDelivery = state.fulfillmentType === "delivery";
+  // subtotalCents ya incluye las velas: se restan aquí para no contarlas dos
+  // veces al pintarlas en su propia línea.
+  const candlesCents = pricing.candlesCents ?? 0;
+  const productsCents = pricing.subtotalCents - candlesCents;
 
   return (
     <div className="space-y-3">
       <dl className="space-y-2 text-sm">
         <div className="flex items-center justify-between">
           <dt className="text-muted-foreground">Subtotal</dt>
-          <dd className="font-medium">{formatEuros(pricing.subtotalCents)}</dd>
+          <dd className="font-medium">{formatEuros(productsCents)}</dd>
         </div>
+        {candlesCents > 0 && (
+          <div className="flex items-center justify-between">
+            <dt className="text-muted-foreground">Velas</dt>
+            <dd className="font-medium">{formatEuros(candlesCents)}</dd>
+          </div>
+        )}
         {isDelivery && (
           <div className="flex items-center justify-between">
             <dt className="text-muted-foreground">
@@ -67,8 +77,9 @@ export function OrderSummary({ showDepositInfo = true }: { showDepositInfo?: boo
       {pricing.pendingQuote && (
         <p className="rounded-lg bg-secondary/15 px-3 py-2 text-xs text-foreground">
           Tu pedido incluye una <strong>tarta a medida pendiente de presupuesto</strong>:
-          su precio no está incluido en el total. Te enviaremos el presupuesto
-          personalizado por WhatsApp.
+          su precio no está incluido en el total
+          {candlesCents > 0 ? ", que de momento solo recoge las velas y la entrega" : ""}
+          . Te enviaremos el presupuesto personalizado por WhatsApp.
         </p>
       )}
 

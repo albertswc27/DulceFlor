@@ -1,7 +1,8 @@
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatEuros } from "@/domain/money";
-import { computeUnitPriceCents } from "@/domain/pricing";
+import { computeCandlesCents, computeUnitPriceCents } from "@/domain/pricing";
+import { CANDLE_UNIT_PRICE_CENTS } from "@/config/business";
 import { useOrderDraft, type DraftItem } from "@/features/order/state/OrderDraftContext";
 import { getProduct } from "@/domain/catalog";
 import { getImage } from "@/services/imageStore";
@@ -46,6 +47,12 @@ function DraftItemRow({ item }: { item: DraftItem }) {
             )}
             {c.extras.length > 0 && (
               <li>Extras: {c.extras.map((e) => e.label).join(", ")}</li>
+            )}
+            {(c.candleQuantity ?? 0) > 0 && (
+              <li>
+                Velas: {c.candleQuantity} × {formatEuros(CANDLE_UNIT_PRICE_CENTS)} ={" "}
+                {formatEuros(computeCandlesCents(c.candleQuantity))}
+              </li>
             )}
             {c.dedicationText && (
               <li className="text-foreground">Dedicatoria: “{c.dedicationText}”</li>
