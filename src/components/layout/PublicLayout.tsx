@@ -10,6 +10,8 @@ import {
   INSTAGRAM_HANDLE,
   INSTAGRAM_URL,
   MIN_ORDER_LEAD_TIME_HOURS,
+  PHONE_CALLS,
+  PHONE_CALLS_DISPLAY,
   WHATSAPP_PHONE,
   WHATSAPP_PHONE_DISPLAY,
   type TimeWindow,
@@ -182,6 +184,20 @@ function Footer() {
               >
                 WhatsApp: {WHATSAPP_PHONE_DISPLAY}
               </a>
+              <span className="block text-xs text-cocoa-foreground/70">
+                Pedidos y consultas por escrito
+              </span>
+            </li>
+            <li>
+              <a
+                href={`tel:+${PHONE_CALLS}`}
+                className="underline-offset-4 hover:underline"
+              >
+                Llamadas: {PHONE_CALLS_DISPLAY}
+              </a>
+              <span className="block text-xs text-cocoa-foreground/70">
+                Si prefieres hablar por teléfono
+              </span>
             </li>
             <li>
               <a

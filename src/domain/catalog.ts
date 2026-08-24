@@ -617,7 +617,8 @@ export const PRODUCTS: CatalogProduct[] = [
     },
     flavors: CHEESECAKE_FLAVORS,
     allowsToppings: true,
-    extras: [DEDICATION_EXTRA],
+    // El papel comestible también se hace sobre cheesecake (confirmado 24/08/2026).
+    extras: [DEDICATION_EXTRA, EDIBLE_PAPER_EXTRA],
     menuImage: "carta-cheesecake-precios-particulares",
   },
   {

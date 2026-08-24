@@ -6,6 +6,7 @@
 import { DEPOSIT_PERCENTAGE, WHATSAPP_PHONE } from "@/config/business";
 import { getProduct } from "./catalog";
 import { formatEuros } from "./money";
+import { describeCandleLines } from "./pricing";
 import {
   CUSTOMER_TYPE_LABELS,
   FULFILLMENT_LABELS,
@@ -84,11 +85,7 @@ export function buildOrderWhatsAppMessage(order: Order): string {
     for (const extra of c.extras) {
       lines.push(`Extra: ${extra.label} (${formatEuros(extra.priceCents)})`);
     }
-    if ((c.candleQuantity ?? 0) > 0) {
-      lines.push(
-        `Velas: ${c.candleQuantity} uds — ${formatEuros(item.candlesCents ?? 0)}`
-      );
-    }
+    for (const line of describeCandleLines(c)) lines.push(line);
     if (c.dedicationText) lines.push(`Dedicatoria: "${c.dedicationText}"`);
     if (c.designDescription) lines.push(`Diseño: ${c.designDescription}`);
     if (c.notes) lines.push(`Indicaciones: ${c.notes}`);

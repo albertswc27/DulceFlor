@@ -11,7 +11,8 @@ Fuente de verdad de catálogo y precios: [`src/domain/catalog.ts`](../src/domain
 | Paga y señal | 30 % cuando el total **supera** 40 € (40,00 € exactos NO la requieren) | `DEPOSIT_THRESHOLD_CENTS = 4000`, `DEPOSIT_PERCENTAGE = 30` |
 | Métodos de señal | Bizum, transferencia bancaria o pago presencial. **Sin pago online** | — |
 | Pedidos ≤ 40 € | Se abonan al recoger/recibir | — |
-| WhatsApp | +34 624 21 31 13 | `WHATSAPP_PHONE = "34624213113"` |
+| WhatsApp | +34 624 21 31 13 — **pedidos y consultas por escrito** | `WHATSAPP_PHONE = "34624213113"` |
+| Teléfono de llamadas | +34 614 280 430 (confirmado 24/08/2026). Lo atiende otra persona del negocio: **las llamadas no entran por el número de WhatsApp** | `PHONE_CALLS` |
 | Estado inicial del pedido | «Pendiente de confirmación por Dulce Flor» (la web nunca afirma que la tienda ha aceptado) | `status: "pending"` |
 
 | Antelación mínima | 3 días («Mínimo 3 días», WhatsApp 17/08/2026) | `MIN_ORDER_LEAD_TIME_HOURS = 72` |
@@ -19,6 +20,7 @@ Fuente de verdad de catálogo y precios: [`src/domain/catalog.ts`](../src/domain
 | Cartas claras = empresas | Confirmado 17/08/2026 | catálogo `availableFor` |
 | Lista de toppings | Confirmada 17/08/2026 (derivada de las cartas) | `TOPPINGS` |
 | Dedicatoria +2 € y papel comestible +7 € | Aplican a todos los productos (confirmado 17/08/2026) | `EXTRAS` |
+| Papel comestible en cheesecake | Confirmado el 24/08/2026: el cheesecake **sí admite** imagen en papel comestible (antes solo ofrecía dedicatoria) | `extras` de `cheesecake` |
 | Dirección de la tienda | C. Ntra. Sra. de Montserrat, 13, bajos · 08922 Santa Coloma de Gramenet (confirmada 18/08/2026) | `BUSINESS_ADDRESS` |
 | Zonas de entrega | Confirmadas 18/08/2026 tal como estaban; fuera de estas zonas, gastos de envío **según distancia** (se confirman por WhatsApp) | `DELIVERY_ZONES` |
 | Instagram | @dulceflor.bcn | `INSTAGRAM_URL` |
@@ -27,7 +29,10 @@ Fuente de verdad de catálogo y precios: [`src/domain/catalog.ts`](../src/domain
 | Imagen de referencia | El cliente puede adjuntar una foto por tarta (comprimida, guardada aparte del pedido) | `referenceImageId` + `services/imageStore` |
 | Tarta clásica | Acabado estándar de Dulce Flor (cobertura, cenefa de manga y toppings de catálogo) con precio automático. Las decoraciones especiales NO están incluidas | `pricingType: "fixed"` |
 | Tarta personalizada y de fondant | Sin precio automático: solicitud de presupuesto con fotografía de referencia **obligatoria** (estado «Pendiente de presupuesto»); administración introduce después `quotedPriceCents` y el total/señal se recalculan. **Solo particulares** | `pricingType: "quote"`, `customCakeType`, `pending_quote` |
-| Velas | **1 € por unidad** (confirmado 23/08/2026), máximo 50 por tarta. Se suman también en tartas a presupuestar, en su propia línea, sin inventar un total de tarta | `CANDLE_UNIT_PRICE_CENTS = 100`, `MAX_CANDLES`, `candleQuantity`, `candlesCents` |
+| Velas de número | **1 € por unidad** (confirmado 23/08/2026). El cliente compone la cifra que quiere sobre la tarta pulsando dígitos y **puede repetir el mismo** (22, 33): cada dígito es una vela física. El orden importa, «25» y «52» no son el mismo pedido. Máximo 6 dígitos | `CANDLE_UNIT_PRICE_CENTS`, `MAX_CANDLE_DIGITS`, `candleDigits` |
+| Bengalas de número | **2 € por unidad** (confirmado 24/08/2026). Es la misma cifra con otro acabado: solo cambia el precio unitario | `NUMBER_SPARKLER_PRICE_CENTS`, `candleStyle` |
+| Bengalas sin número | **1,80 € por unidad** (confirmado 24/08/2026). Concepto aparte de la cifra, con su propia cantidad. Máximo 20 | `PLAIN_SPARKLER_PRICE_CENTS`, `MAX_SPARKLERS`, `sparklerQuantity` |
+| Velas y bengalas en tartas a presupuestar | Se suman igual, **en su propia línea**, sin inventar un total para la tarta | `candlesCents`, `resolveCandleSelection()` |
 | Discos en tartas a presupuestar | Personalizada y fondant usan la **misma matriz personas × discos** que la clásica (1/2/3 discos, todos del mismo diámetro), pero sin importes: cada tamaño se muestra «A consultar» | `buildQuoteCakeSizes()` |
 | Relleno «Bariloche» | Renombrado el 23/08/2026 (antes «Dulce de leche con chocolate»). El id se mantiene para no romper pedidos ya guardados | `id: "dulce-de-leche-chocolate"`, `label: "Bariloche"` |
 | Topping fuera de catálogo | NO suma importe automáticamente: «precio pendiente de confirmación» hasta que Dulce Flor lo confirme por WhatsApp | `customToppingRequest` |
@@ -43,6 +48,8 @@ Fuente de verdad de catálogo y precios: [`src/domain/catalog.ts`](../src/domain
 
 - **Nombre completo del titular (autónomo)** para el aviso legal. El NIF ya fue facilitado por WhatsApp; por privacidad no se guarda en este repositorio público.
 - Días de cierre semanales, si los hubiera (hoy: abierto todos los días, 10:00–22:00).
+- **Fotos de tres leches y de las especialidades** (pudín, torta de chocolate, torta helada): esas fichas siguen sin fotografía real y dibujan la ilustración de marca.
+- **Papel comestible en pudín casero, torta de chocolate y torta helada**: hoy solo ofrecen dedicatoria. La regla general dice «todos los productos», así que o falta el extra en esos tres o la regla tiene excepciones. Pendiente de confirmar antes de tocarlo.
 
 ### Zonas de entrega — `DELIVERY_ZONES`
 

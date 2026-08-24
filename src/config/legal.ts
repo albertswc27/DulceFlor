@@ -11,7 +11,11 @@
  * hasta que el proyecto tenga un repositorio privado o se cargue desde una
  * variable de entorno (import.meta.env.VITE_LEGAL_TAX_ID).
  */
-import { BUSINESS_ADDRESS, WHATSAPP_PHONE_DISPLAY } from "./business";
+import {
+  BUSINESS_ADDRESS,
+  PHONE_CALLS_DISPLAY,
+  WHATSAPP_PHONE_DISPLAY,
+} from "./business";
 
 export const LEGAL = {
   /** Nombre comercial con el que opera el negocio. */
@@ -22,6 +26,8 @@ export const LEGAL = {
   holderTaxId: (import.meta.env.VITE_LEGAL_TAX_ID as string | undefined) ?? "",
   address: `${BUSINESS_ADDRESS.street}, ${BUSINESS_ADDRESS.postalCode} ${BUSINESS_ADDRESS.city} (${BUSINESS_ADDRESS.province})`,
   contactPhone: WHATSAPP_PHONE_DISPLAY,
+  /** Teléfono de llamadas, distinto del de WhatsApp. */
+  contactPhoneCalls: PHONE_CALLS_DISPLAY,
   /** Última revisión de los textos legales. */
   lastUpdated: "22 de agosto de 2026",
 } as const;

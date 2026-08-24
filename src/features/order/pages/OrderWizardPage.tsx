@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { DELIVERY_ZONES, WHATSAPP_PHONE } from "@/config/business";
 import { FAMILY_COVER_PHOTOS, SWEET_SNACK_PHOTOS } from "@/assets/photos";
+import { FamilyCover } from "../components/FamilyCover";
 import { CakeReferences } from "@/features/order/components/CakeReferences";
 import { ProductThumb } from "@/features/order/components/ProductThumb";
 import {
@@ -118,6 +119,13 @@ const STEP_TITLES: Record<StepId, string> = {
   slot: "Fecha y hora",
   contact: "Tus datos",
   review: "Revisa tu pedido",
+};
+
+/** Pie del mosaico de cada familia: dice qué se está viendo, sin vender humo. */
+const FAMILY_COVER_CAPTIONS: Record<string, string> = {
+  tartas: "Algunas de las tartas que hemos preparado",
+  aperitivos: "Algunos de nuestros aperitivos",
+  regalos: "Algunos de nuestros regalos personalizados",
 };
 
 export default function OrderWizardPage() {
@@ -483,17 +491,13 @@ export default function OrderWizardPage() {
                     </div>
                   )}
 
-                  {/* Portada de la familia: sitúa al cliente antes de elegir */}
-                  {FAMILY_COVER_PHOTOS[family] && (
-                    <img
-                      src={FAMILY_COVER_PHOTOS[family].src}
-                      alt={FAMILY_COVER_PHOTOS[family].alt}
-                      loading="lazy"
-                      width={1000}
-                      height={420}
-                      className="h-32 w-full rounded-2xl border border-border object-cover shadow-card sm:h-40"
-                    />
-                  )}
+                  {/* Portada de la familia: sitúa al cliente antes de elegir.
+                      Un mosaico de piezas distintas transmite la variedad que
+                      una sola foto recortada a franja no llegaba a enseñar. */}
+                  <FamilyCover
+                    photos={FAMILY_COVER_PHOTOS[family] ?? []}
+                    caption={FAMILY_COVER_CAPTIONS[family]}
+                  />
 
                   {/* Productos con precio automático, por categoría */}
                   {(

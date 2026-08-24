@@ -11,6 +11,8 @@ import {
   BUSINESS_MAPS_URL,
   INSTAGRAM_HANDLE,
   INSTAGRAM_URL,
+  PHONE_CALLS,
+  PHONE_CALLS_DISPLAY,
   WHATSAPP_PHONE,
   WHATSAPP_PHONE_DISPLAY,
 } from "@/config/business";
@@ -79,6 +81,10 @@ export default function LegalPage() {
               className="underline underline-offset-4"
             >
               WhatsApp {WHATSAPP_PHONE_DISPLAY}
+            </a>{" "}
+            ·{" "}
+            <a href={`tel:+${PHONE_CALLS}`} className="underline underline-offset-4">
+              Teléfono {PHONE_CALLS_DISPLAY}
             </a>{" "}
             ·{" "}
             <a

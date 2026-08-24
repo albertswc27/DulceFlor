@@ -8,6 +8,10 @@ import {
   DEPOSIT_PERCENTAGE,
   DEPOSIT_THRESHOLD_CENTS,
   MAX_CANDLES,
+  MAX_CANDLE_DIGITS,
+  MAX_SPARKLERS,
+  NUMBER_SPARKLER_PRICE_CENTS,
+  PLAIN_SPARKLER_PRICE_CENTS,
   TOPPING_PRICE_CENTS,
 } from "@/config/business";
 import {
@@ -16,8 +20,14 @@ import {
   resolveQuantityTier,
   TOPPINGS,
 } from "./catalog";
-import { percentOf } from "./money";
-import type { CustomerType, ItemCustomization, OrderItem, OrderPricing } from "./types";
+import { formatEuros, percentOf } from "./money";
+import type {
+  CandleStyle,
+  CustomerType,
+  ItemCustomization,
+  OrderItem,
+  OrderPricing,
+} from "./types";
 
 /** Precio de un topping para un producto/tamaño (contempla la excepción de tres leches gigante). */
 export function getToppingPriceCents(productId: string, sizeId: string): number {
@@ -36,14 +46,142 @@ export function isQuoteProduct(productId: string): boolean {
   return getProduct(productId)?.pricingType === "quote";
 }
 
+/** Lo que el cliente puede poner sobre la tarta, con su precio ya resuelto. */
+export interface CandleSelection {
+  /** Cifra de números y su acabado. null si no ha pedido ninguna. */
+  numbers: {
+    digits: string;
+    quantity: number;
+    style: CandleStyle;
+    unitCents: number;
+    cents: number;
+  } | null;
+  /** Bengalas sueltas, sin número. null si no ha pedido ninguna. */
+  sparklers: { quantity: number; unitCents: number; cents: number } | null;
+  totalCents: number;
+}
+
 /**
- * Importe de las velas de un artículo. Las velas se cobran por el artículo
+ * Deja una cifra de velas en su forma canónica: solo dígitos, en orden y
+ * dentro del tope. Cualquier otra cosa que llegue (texto pegado, datos
+ * restaurados de storage) se descarta en lugar de propagarse.
+ */
+export function normalizeCandleDigits(digits: string | undefined): string {
+  return (digits ?? "").replace(/\D/g, "").slice(0, MAX_CANDLE_DIGITS);
+}
+
+/**
+ * Precio de una vela de número según su acabado: la bengala cuesta más que
+ * la vela normal, y es lo único que cambia entre las dos.
+ */
+export function getNumberCandleUnitCents(style: CandleStyle | undefined): number {
+  return style === "bengala" ? NUMBER_SPARKLER_PRICE_CENTS : CANDLE_UNIT_PRICE_CENTS;
+}
+
+/**
+ * Cuántas velas de número lleva un artículo. La cifra manda cuando existe
+ * (cada dígito es una vela); los pedidos guardados antes de las velas de
+ * números solo tienen la cantidad y se siguen respetando.
+ */
+export function resolveCandleQuantity(
+  customization: Pick<ItemCustomization, "candleDigits" | "candleQuantity">
+): number {
+  const digits = normalizeCandleDigits(customization.candleDigits);
+  if (digits.length > 0) return digits.length;
+  return Math.min(
+    MAX_CANDLES,
+    Math.max(0, Math.floor(customization.candleQuantity ?? 0))
+  );
+}
+
+type CandleInput = Pick<
+  ItemCustomization,
+  "candleDigits" | "candleQuantity" | "candleStyle" | "sparklerQuantity"
+>;
+
+/**
+ * Única fuente de verdad de las velas y bengalas de un artículo: qué lleva,
+ * a qué precio unitario y cuánto suma. Todo lo demás (carrito, resumen,
+ * WhatsApp, panel) deriva de aquí para no calcular importes por su cuenta.
+ */
+export function resolveCandleSelection(customization: CandleInput): CandleSelection {
+  const numberQuantity = resolveCandleQuantity(customization);
+  const style: CandleStyle = customization.candleStyle ?? "vela";
+  const numberUnitCents = getNumberCandleUnitCents(style);
+
+  const sparklerQuantity = Math.min(
+    MAX_SPARKLERS,
+    Math.max(0, Math.floor(customization.sparklerQuantity ?? 0))
+  );
+
+  const numbers =
+    numberQuantity > 0
+      ? {
+          digits: normalizeCandleDigits(customization.candleDigits),
+          quantity: numberQuantity,
+          style,
+          unitCents: numberUnitCents,
+          cents: numberQuantity * numberUnitCents,
+        }
+      : null;
+
+  const sparklers =
+    sparklerQuantity > 0
+      ? {
+          quantity: sparklerQuantity,
+          unitCents: PLAIN_SPARKLER_PRICE_CENTS,
+          cents: sparklerQuantity * PLAIN_SPARKLER_PRICE_CENTS,
+        }
+      : null;
+
+  return {
+    numbers,
+    sparklers,
+    totalCents: (numbers?.cents ?? 0) + (sparklers?.cents ?? 0),
+  };
+}
+
+/**
+ * Importe de las velas y bengalas de un artículo. Se cobran por el artículo
  * (no se multiplican por la cantidad de tartas) y tienen precio conocido
  * incluso en los productos que se presupuestan a mano.
  */
-export function computeCandlesCents(candleQuantity: number | undefined): number {
-  const quantity = Math.max(0, Math.floor(candleQuantity ?? 0));
-  return Math.min(quantity, MAX_CANDLES) * CANDLE_UNIT_PRICE_CENTS;
+export function computeCandlesCents(customization: CandleInput): number {
+  return resolveCandleSelection(customization).totalCents;
+}
+
+/**
+ * Cómo se nombran las velas y bengalas en carrito, WhatsApp y panel, para que
+ * las tres superficies digan exactamente lo mismo. Devuelve una línea por
+ * concepto, o un array vacío si el artículo no lleva nada.
+ */
+export function describeCandleLines(customization: CandleInput): string[] {
+  const { numbers, sparklers } = resolveCandleSelection(customization);
+  const lines: string[] = [];
+
+  if (numbers) {
+    const unit = numbers.quantity === 1 ? "ud" : "uds";
+    const kind =
+      numbers.style === "bengala" ? "Bengalas de número" : "Velas de número";
+    // Los pedidos anteriores a las velas de números no guardan la cifra.
+    const what = numbers.digits ? `número ${numbers.digits}` : `${numbers.quantity} ${unit}`;
+    lines.push(
+      `${kind}: ${what} — ${numbers.quantity} ${unit} × ${formatEuros(
+        numbers.unitCents
+      )} = ${formatEuros(numbers.cents)}`
+    );
+  }
+
+  if (sparklers) {
+    const unit = sparklers.quantity === 1 ? "bengala" : "bengalas";
+    lines.push(
+      `Bengalas sueltas: ${sparklers.quantity} ${unit} × ${formatEuros(
+        sparklers.unitCents
+      )} = ${formatEuros(sparklers.cents)}`
+    );
+  }
+
+  return lines;
 }
 
 /**
@@ -240,7 +378,7 @@ export function buildOrderItem(params: {
   if (!product) return null;
   const quantity = Math.max(1, Math.floor(params.quantity));
 
-  const candlesCents = computeCandlesCents(params.customization.candleQuantity);
+  const candlesCents = computeCandlesCents(params.customization);
 
   // Personalizada/fondant: la tarta no tiene precio automático (los importes
   // quedan a 0 y requiresQuote obliga a la UI a mostrar "A consultar", nunca

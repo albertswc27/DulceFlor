@@ -42,6 +42,9 @@ export interface SelectedExtra extends SelectedOption {
   priceCents: number;
 }
 
+/** Acabado de las velas de número: cambia el precio por unidad. */
+export type CandleStyle = "vela" | "bengala";
+
 /** Configuración elegida por el cliente para un artículo del pedido. */
 export interface ItemCustomization {
   size: SelectedOption;
@@ -67,6 +70,19 @@ export interface ItemCustomization {
    * en CANDLE_UNIT_PRICE_CENTS (única fuente de verdad).
    */
   candleQuantity?: number;
+  /**
+   * Velas de números en el orden en que se leen sobre la tarta ("25", "100").
+   * Cuando existe, manda sobre candleQuantity: cada dígito es una vela. Los
+   * pedidos antiguos solo tienen la cantidad y siguen calculándose igual.
+   */
+  candleDigits?: string;
+  /**
+   * Acabado de esos números: vela normal o bengala. Cambia el precio por
+   * unidad, no la cifra. Sin valor se asume vela (pedidos anteriores).
+   */
+  candleStyle?: CandleStyle;
+  /** Bengalas sueltas, sin número. Se cuentan y cobran aparte de la cifra. */
+  sparklerQuantity?: number;
   /** Personalización especial en texto libre. */
   notes?: string;
   /** Imagen de referencia adjuntada por el cliente (id en el almacén de imágenes). */

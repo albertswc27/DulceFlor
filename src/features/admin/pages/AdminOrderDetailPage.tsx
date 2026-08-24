@@ -31,7 +31,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { CANDLE_UNIT_PRICE_CENTS, DEPOSIT_PERCENTAGE } from "@/config/business";
+import { DEPOSIT_PERCENTAGE } from "@/config/business";
+import { resolveCandleSelection } from "@/domain/pricing";
 import { formatEuros } from "@/domain/money";
 import { getImage } from "@/services/imageStore";
 import { buildOrderWhatsAppMessage } from "@/domain/whatsapp";
@@ -256,15 +257,40 @@ function CakeItemDetails({ item }: { item: OrderItem }) {
           {extra.label} (+{formatEuros(extra.priceCents)})
         </ItemLine>
       ))}
-      {(c.candleQuantity ?? 0) > 0 && (
-        <ItemLine label="Velas">
-          {c.candleQuantity} uds × {formatEuros(CANDLE_UNIT_PRICE_CENTS)} ={" "}
-          <strong>{formatEuros(item.candlesCents ?? 0)}</strong>
-          {item.requiresQuote && (
-            <span className="text-xs"> (aparte del presupuesto de la tarta)</span>
-          )}
-        </ItemLine>
-      )}
+      {(() => {
+        const { numbers, sparklers } = resolveCandleSelection(c);
+        if (!numbers && !sparklers) return null;
+        return (
+          <>
+            {numbers && (
+              <ItemLine
+                label={numbers.style === "bengala" ? "Bengalas de número" : "Velas de número"}
+              >
+                {/* La cifra es lo que hay que montar sobre la tarta: primero
+                    y en grande, antes que el importe. */}
+                {numbers.digits && (
+                  <strong className="font-display text-base">{numbers.digits}</strong>
+                )}{" "}
+                {numbers.quantity} × {formatEuros(numbers.unitCents)} ={" "}
+                <strong>{formatEuros(numbers.cents)}</strong>
+              </ItemLine>
+            )}
+            {sparklers && (
+              <ItemLine label="Bengalas sueltas">
+                {sparklers.quantity} × {formatEuros(sparklers.unitCents)} ={" "}
+                <strong>{formatEuros(sparklers.cents)}</strong>
+              </ItemLine>
+            )}
+            {item.requiresQuote && (
+              <ItemLine label="">
+                <span className="text-xs">
+                  Velas y bengalas aparte del presupuesto de la tarta.
+                </span>
+              </ItemLine>
+            )}
+          </>
+        );
+      })()}
       {c.dedicationText && (
         <ItemLine label="Dedicatoria">“{c.dedicationText}”</ItemLine>
       )}

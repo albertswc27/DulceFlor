@@ -37,6 +37,7 @@ import {
 import type { CustomerType } from "@/domain/types";
 import {
   BREAKFAST_PHOTOS,
+  CHEESECAKE_PHOTOS,
   GLASS_PHOTOS,
   OTHER_SAVOURY_PHOTOS,
   SAVOURY_HERO_PHOTOS,
@@ -631,6 +632,7 @@ function IndividualMenu() {
           title="Cheesecakes"
           subtitle={`${CHEESECAKE_FLAVORS.length} sabores de receta casera. El precio depende del sabor y del tamaño.`}
         />
+        <PhotoGrid photos={CHEESECAKE_PHOTOS} columns={3} />
         <CheesecakeTable customerType="individual" />
       </section>
 
@@ -772,6 +774,7 @@ function BusinessMenu() {
           title="Cheesecakes"
           subtitle={`${CHEESECAKE_FLAVORS.length} sabores de receta casera con precios para empresas.`}
         />
+        <PhotoGrid photos={CHEESECAKE_PHOTOS} columns={3} />
         <CheesecakeTable customerType="business" />
       </section>
 

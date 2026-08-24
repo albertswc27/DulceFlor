@@ -34,7 +34,10 @@ import personalizadaOblea from "./fotos/tartas-personalizadas/tarta-aniversario-
 import personalizadaConejito from "./fotos/tartas-personalizadas/tarta-infantil-conejito-primer-cumple.webp";
 import personalizadaFutbolBlanca from "./fotos/tartas-personalizadas/tarta-futbol-blanca-escudo.webp";
 import personalizadaLazoDorado from "./fotos/tartas-personalizadas/tarta-cumpleanos-marfil-lazo-dorado.webp";
-import personalizadaPistacho from "./fotos/tartas-personalizadas/tarta-pistacho-placa-felicidades.webp";
+
+/* ------------------------ Tartas de queso ----------------------- */
+import quesoPistacho from "./fotos/tartas-queso/tarta-queso-pistacho-placa-felicidades.webp";
+import quesoVitrina from "./fotos/tartas-queso/vitrina-tartas-queso-surtidas.webp";
 
 /* ---------------------- Aperitivos salados ---------------------- */
 import surtidoSalados from "./fotos/aperitivos-salados/surtido-bocaditos-salados.webp";
@@ -209,11 +212,6 @@ export const CUSTOM_CAKE_PHOTOS: Photo[] = [
     caption: "Marfil con lazo dorado",
   },
   {
-    src: personalizadaPistacho,
-    alt: "Tarta de pistacho con placa de felicitación y cenefa de manga",
-    caption: "Con placa de felicitación",
-  },
-  {
     src: tartaVintage,
     alt: "Tarta con decoración vintage a manga en turquesa, con guirnaldas, lazos y perlas plateadas",
     caption: "Decoración vintage",
@@ -223,6 +221,29 @@ export const CUSTOM_CAKE_PHOTOS: Photo[] = [
 /* ------------------------------------------------------------------ */
 /* Aperitivos                                                          */
 /* ------------------------------------------------------------------ */
+
+/**
+ * Tartas de queso. La del pistacho lleva una placa con el nombre de una
+ * clienta ("Felicidades, Noelia"): Dulce Flor la envió expresamente para
+ * publicarla, pero conviene tenerlo presente si algún día se revisa.
+ *
+ * Falta la de galleta caramelizada: la única toma disponible tenía a otras
+ * personas dentro del encuadre y, recortada hasta dejarlas fuera, quedaba en
+ * 549 px con la tarta cortada por un lado. Pendiente de que Dulce Flor envíe
+ * otra foto de ese sabor.
+ */
+export const CHEESECAKE_PHOTOS: Photo[] = [
+  {
+    src: quesoPistacho,
+    alt: "Tarta de queso horneada con todo el borde cubierto de pistacho troceado y una placa verde de felicitación en el centro",
+    caption: "Tarta de queso al pistacho",
+  },
+  {
+    src: quesoVitrina,
+    alt: "Varias tartas de queso enteras en la vitrina del obrador: maracuyá, chocolate con barritas, merengue tostado y Oreo con nata",
+    caption: "Varios de nuestros sabores",
+  },
+];
 
 /** Foto de cada aperitivo salado con tarifa confirmada, por id de producto. */
 export const SAVOURY_PRODUCT_PHOTOS: Record<string, Photo> = {
@@ -435,7 +456,7 @@ export const FEATURED_WORK_PHOTOS: Photo[] = [
 /**
  * Foto representativa de un producto para las tarjetas del catálogo.
  * Devuelve null cuando NO tenemos una fotografía real de ese producto
- * (cheesecakes, tres leches y especialidades): en ese caso la interfaz
+ * (tres leches y especialidades): en ese caso la interfaz
  * dibuja la ilustración de marca en lugar de enseñar una foto que no
  * corresponde. Nunca se reutiliza la foto de otro producto.
  */
@@ -452,6 +473,8 @@ export function getProductPhoto(productId: string): Photo | null {
       return CUSTOM_CAKE_PHOTOS[0];
     case "pastel-fondant":
       return FONDANT_CAKE_PHOTOS[0];
+    case "cheesecake":
+      return CHEESECAKE_PHOTOS[0];
     case "caja-desayuno":
       return BREAKFAST_PHOTOS[0];
     case "copa-personalizada":
@@ -461,9 +484,43 @@ export function getProductPhoto(productId: string): Photo | null {
   }
 }
 
-/** Foto de portada de cada familia, para encabezar su listado. */
-export const FAMILY_COVER_PHOTOS: Record<string, Photo> = {
-  tartas: CLASSIC_CAKE_PHOTOS[1],
-  aperitivos: SAVOURY_HERO_PHOTOS[0],
-  regalos: GLASS_PHOTOS[0],
+/** Todas las fotos de tarta ya fichadas, para componer mosaicos sin repetir alt/caption. */
+const ALL_CAKE_PHOTOS: Photo[] = [
+  ...CLASSIC_CAKE_PHOTOS,
+  ...CHEESECAKE_PHOTOS,
+  ...CUSTOM_CAKE_PHOTOS,
+  ...FONDANT_CAKE_PHOTOS,
+];
+
+/**
+ * Localiza una foto ya registrada por su archivo. Referenciarlas por índice
+ * es frágil: basta reordenar una galería para que el mosaico enseñe otra cosa.
+ * Si la foto desaparece, esto revienta en el arranque en vez de dejar un hueco.
+ */
+function cakePhoto(src: string): Photo {
+  const found = ALL_CAKE_PHOTOS.find((photo) => photo.src === src);
+  if (!found) throw new Error(`Foto de tarta no registrada en photos.ts: ${src}`);
+  return found;
+}
+
+/**
+ * Mosaico de portada de cada familia: varias piezas pequeñas en lugar de un
+ * banner recortado a franja, para que se vea de un vistazo la variedad de lo
+ * que hace el obrador (pedido por Dulce Flor el 24/08/2026).
+ *
+ * El orden no es casual: alterna gama de color para que dos piezas contiguas
+ * nunca se parezcan, y abre con la más oscura para que las claras no se laven.
+ * Cada foto representa además un tipo distinto de tarta, sin repetir concepto.
+ */
+export const FAMILY_COVER_PHOTOS: Record<string, Photo[]> = {
+  tartas: [
+    cakePhoto(tartaCremaCafe), // clásica de chocolate — marrón oscuro
+    cakePhoto(quesoPistacho), // tarta de queso — verde pistacho
+    cakePhoto(personalizadaCorazon), // corazón de ocasión — rojo
+    cakePhoto(tartaVintage), // decorada elegante — turquesa
+    cakePhoto(tartaLotus), // clásica con galleta — rosa palo
+    cakePhoto(fondantCars), // infantil de fondant — multicolor
+  ],
+  aperitivos: [...SAVOURY_HERO_PHOTOS, ...SWEET_SNACK_PHOTOS].slice(0, 6),
+  regalos: [...GLASS_PHOTOS.slice(0, 3), ...BREAKFAST_PHOTOS.slice(0, 3)],
 };

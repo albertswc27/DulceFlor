@@ -126,6 +126,27 @@ Auditadas **visualmente a ciegas** antes de clasificarlas: el nombre del archivo
 
 14 publicadas (WebP, máx. 1000 px, calidad 82: 3,7 MB → 2,4 MB) y 2 descartadas. En el configurador se muestran solo **3 referencias** por modalidad; el resto se abre en «Ver más ejemplos».
 
+
+## Tartas de queso (lote 24/08/2026)
+
+Auditadas a ciegas y **verificadas dos veces** antes de publicarlas, porque dos de las tres tenían personas dentro del encuadre.
+
+| Archivo original | Destino | Contenido real | Uso |
+| --- | --- | --- | --- |
+| `tarta de queso.jpeg` | `fotos/tartas-queso/tarta-queso-pistacho-placa-felicidades.webp` | Tarta de queso horneada al pistacho con placa de felicitación. **Es la misma toma** que la que estaba archivada como `tartas-personalizadas/tarta-pistacho-placa-felicidades.webp`, mal clasificada: es una tarta de queso, no una personalizada | Foto principal de Cheesecake · mosaico de portada |
+| `variedad de cheesecake.jpeg` | `fotos/tartas-queso/vitrina-tartas-queso-surtidas.webp` | Vitrina con siete tartas de queso (maracuyá, chocolate con barritas, merengue, Oreo…) | Cheesecakes · variedad de sabores |
+| `cheesecake de lotus.jpeg` | — (descartada) | Tarta de queso con caramelo y galleta caramelizada | **No publicada**: ver abajo |
+
+### Recortes aplicados y por qué
+
+- **Tarta de queso de galleta caramelizada — descartada.** El original mostraba un tríptico con **cinco caras reconocibles** (al menos un menor), el nombre y la edad del homenajeado y un poema de felicitación. Recortando hasta dejar todo eso fuera seguía apareciendo un antebrazo desenfocado; un segundo recorte lo quitó, pero una tercera revisión encontró aún una forma dudosa en el borde derecho que no se puede eliminar sin comerse la tarta, que además ya quedaba cortada por la izquierda y en solo 549 × 515 px. Se pidió a Dulce Flor otra foto de ese sabor. El original **no se conserva** en el repositorio.
+- **`vitrina-tartas-queso-surtidas`** — recortado el tercio superior (cristal y estructura de la vitrina), una franja azul que podía ser ropa de alguien al fondo, y una esquirla de tarta irreconocible en la esquina.
+- **`tarta-queso-pistacho-placa-felicidades`** — recortada la franja inferior de mesa vacía para que aguante el recorte cuadrado del mosaico.
+
+### Punto abierto
+
+La tarta de pistacho lleva escrito **«Felicidades, Noelia»**, el nombre de pila de una clienta. Dulce Flor envió la foto expresamente para publicarla y no se ve ninguna cara, pero conviene que lo sepa. El repositorio ya publicaba otras tartas con dedicatoria (`tarta-clasica-merengue-dedicatoria`, `tarta-clasica-chocolate-dedicatoria`).
+
 ## Estructura de carpetas
 
 ```text
@@ -135,7 +156,7 @@ src/assets/
                                 precios y productos. NO se publican en la web.
   photos.ts                     Índice tipado de fotografías por categoría
   fotos/
-    tartas/  tartas-fondant/  tartas-personalizadas/
+    tartas/  tartas-queso/  tartas-fondant/  tartas-personalizadas/
     aperitivos-salados/  aperitivos-dulces/  desayunos/  copas/
 ```
 

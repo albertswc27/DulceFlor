@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   buildOrderItem,
   computeCandlesCents,
+  describeCandleLines,
+  getNumberCandleUnitCents,
+  normalizeCandleDigits,
+  resolveCandleSelection,
+  resolveCandleQuantity,
   computeDeposit,
   computeOrderPricing,
   computeUnitPriceCents,
@@ -14,6 +19,15 @@ import {
   getSizesFor,
   getUnitBasePriceCents,
 } from "./catalog";
+import {
+  CANDLE_UNIT_PRICE_CENTS,
+  EXTRAS,
+  MAX_CANDLE_DIGITS,
+  MAX_SPARKLERS,
+  NUMBER_SPARKLER_PRICE_CENTS,
+  PLAIN_SPARKLER_PRICE_CENTS,
+} from "@/config/business";
+import { formatEuros } from "./money";
 import type { OrderItem } from "./types";
 
 function makeItem(unitPriceCents: number, quantity = 1): OrderItem {
@@ -411,21 +425,21 @@ describe("velas (1 € por unidad, confirmado 23/08/2026)", () => {
   }
 
   it("0 velas no suman nada", () => {
-    expect(computeCandlesCents(0)).toBe(0);
-    expect(computeCandlesCents(undefined)).toBe(0);
+    expect(computeCandlesCents({ candleQuantity: 0 })).toBe(0);
+    expect(computeCandlesCents({})).toBe(0);
     expect(cakeWithCandles(0).candlesCents).toBeUndefined();
     expect(cakeWithCandles(0).totalCents).toBe(2000);
   });
 
   it("1, 3 y 10 velas cuestan 1, 3 y 10 €", () => {
-    expect(computeCandlesCents(1)).toBe(100);
-    expect(computeCandlesCents(3)).toBe(300);
-    expect(computeCandlesCents(10)).toBe(1000);
+    expect(computeCandlesCents({ candleQuantity: 1 })).toBe(100);
+    expect(computeCandlesCents({ candleQuantity: 3 })).toBe(300);
+    expect(computeCandlesCents({ candleQuantity: 10 })).toBe(1000);
   });
 
   it("no acepta cantidades negativas ni decimales", () => {
-    expect(computeCandlesCents(-5)).toBe(0);
-    expect(computeCandlesCents(2.7)).toBe(200);
+    expect(computeCandlesCents({ candleQuantity: -5 })).toBe(0);
+    expect(computeCandlesCents({ candleQuantity: 2.7 })).toBe(200);
   });
 
   it("tarta + toppings + velas se suman correctamente", () => {
@@ -553,5 +567,291 @@ describe("relleno Bariloche", () => {
     expect(CAKE_FILLINGS.map((f) => f.label)).not.toContain(
       "Dulce de leche con chocolate"
     );
+  });
+});
+
+describe("papel comestible en cheesecake (confirmado 24/08/2026)", () => {
+  it("el cheesecake ofrece imagen con papel comestible", () => {
+    const cheesecake = getProduct("cheesecake");
+    const paper = cheesecake?.extras.find((e) => e.id === "papel-comestible");
+    expect(paper).toBeDefined();
+    expect(paper?.priceCents).toBe(EXTRAS.EDIBLE_PAPER_PRICE_CENTS);
+  });
+
+  it("sigue ofreciendo la dedicatoria, sin duplicar extras", () => {
+    const ids = getProduct("cheesecake")?.extras.map((e) => e.id) ?? [];
+    expect(ids).toContain("dedicatoria");
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("el papel comestible suma 7 € al cheesecake sin alterar la base", () => {
+    const base = getUnitBasePriceCents(
+      "cheesecake",
+      "individual",
+      "10-12",
+      "kinder-bueno"
+    )!;
+    const item = buildOrderItem({
+      id: "x",
+      selection: {
+        productId: "cheesecake",
+        customerType: "individual",
+        sizeId: "10-12",
+        flavorId: "kinder-bueno",
+        toppingIds: [],
+        extraIds: ["papel-comestible"],
+      },
+      customization: {
+        size: { id: "10-12", label: "10–12 porciones aprox." },
+        flavor: { id: "kinder-bueno", label: "Kinder Bueno" },
+        toppings: [],
+        extras: [
+          {
+            id: "papel-comestible",
+            label: "Imagen con papel comestible",
+            priceCents: EXTRAS.EDIBLE_PAPER_PRICE_CENTS,
+          },
+        ],
+      },
+      quantity: 1,
+    });
+    expect(item?.unitPriceCents).toBe(base + EXTRAS.EDIBLE_PAPER_PRICE_CENTS);
+  });
+});
+
+describe("velas de números (cifra elegida por el cliente)", () => {
+  function cakeWithDigits(candleDigits: string) {
+    return buildOrderItem({
+      id: "x",
+      selection: {
+        productId: "pastel-clasico",
+        customerType: "individual",
+        sizeId: "4-6-1d",
+        toppingIds: [],
+        extraIds: [],
+      },
+      customization: {
+        size: { id: "4-6-1d", label: "4–6 personas · 1 disco" },
+        filling: { id: "nata", label: "Nata" },
+        toppings: [],
+        extras: [],
+        candleDigits,
+      },
+      quantity: 1,
+    });
+  }
+
+  it("cada dígito es una vela: «25» son dos velas, 2,00 €", () => {
+    const item = cakeWithDigits("25");
+    expect(item?.candlesCents).toBe(2 * CANDLE_UNIT_PRICE_CENTS);
+  });
+
+  it("se puede repetir el mismo número: «22» sigue siendo dos velas", () => {
+    expect(cakeWithDigits("22")?.candlesCents).toBe(2 * CANDLE_UNIT_PRICE_CENTS);
+  });
+
+  it("conserva el orden de la cifra: «25» y «52» no son el mismo pedido", () => {
+    expect(cakeWithDigits("25")?.customization.candleDigits).toBe("25");
+    expect(cakeWithDigits("52")?.customization.candleDigits).toBe("52");
+  });
+
+  it("sin cifra no hay velas ni importe", () => {
+    expect(cakeWithDigits("")?.candlesCents).toBeUndefined();
+  });
+
+  it("descarta lo que no sean dígitos en lugar de propagarlo", () => {
+    expect(normalizeCandleDigits("2a5")).toBe("25");
+    expect(normalizeCandleDigits("  ")).toBe("");
+    expect(normalizeCandleDigits(undefined)).toBe("");
+  });
+
+  it("recorta la cifra al tope, sin cobrar de más", () => {
+    const largo = "1".repeat(MAX_CANDLE_DIGITS + 5);
+    expect(normalizeCandleDigits(largo)).toHaveLength(MAX_CANDLE_DIGITS);
+    expect(cakeWithDigits(largo)?.candlesCents).toBe(
+      MAX_CANDLE_DIGITS * CANDLE_UNIT_PRICE_CENTS
+    );
+  });
+
+  it("los pedidos guardados antes de las velas de números siguen valiendo", () => {
+    expect(resolveCandleQuantity({ candleQuantity: 3 })).toBe(3);
+    expect(describeCandleLines({ candleQuantity: 3 })[0]).toContain("3 uds");
+  });
+
+  it("la cifra manda sobre una cantidad heredada que no coincida", () => {
+    expect(resolveCandleQuantity({ candleDigits: "100", candleQuantity: 9 })).toBe(3);
+  });
+
+  it("el panel y WhatsApp describen la cifra igual", () => {
+    const [linea] = describeCandleLines({ candleDigits: "25" });
+    expect(linea).toContain("Velas de número");
+    expect(linea).toContain("número 25");
+    expect(linea).toContain(formatEuros(2 * CANDLE_UNIT_PRICE_CENTS));
+    expect(describeCandleLines({})).toEqual([]);
+  });
+
+  it("una tarta a presupuestar cobra solo las velas, sin inventar total", () => {
+    const item = buildOrderItem({
+      id: "x",
+      selection: {
+        productId: "pastel-fondant",
+        customerType: "individual",
+        sizeId: "4-6-1d",
+        toppingIds: [],
+        extraIds: [],
+      },
+      customization: {
+        size: { id: "4-6-1d", label: "4–6 personas · 1 disco" },
+        toppings: [],
+        extras: [],
+        candleDigits: "30",
+        designDescription: "Tarta de fondant",
+      },
+      quantity: 1,
+    });
+    expect(item?.requiresQuote).toBe(true);
+    expect(item?.unitPriceCents).toBe(0);
+    expect(item?.totalCents).toBe(2 * CANDLE_UNIT_PRICE_CENTS);
+  });
+});
+
+describe("bengalas (confirmado 24/08/2026)", () => {
+  function cake(customization: Record<string, unknown>) {
+    return buildOrderItem({
+      id: "x",
+      selection: {
+        productId: "pastel-clasico",
+        customerType: "individual",
+        sizeId: "4-6-1d",
+        toppingIds: [],
+        extraIds: [],
+      },
+      customization: {
+        size: { id: "4-6-1d", label: "4–6 personas · 1 disco" },
+        filling: { id: "nata", label: "Nata" },
+        toppings: [],
+        extras: [],
+        ...customization,
+      },
+      quantity: 1,
+    });
+  }
+
+  it("la bengala de número cuesta 2 € y la vela 1 €", () => {
+    expect(getNumberCandleUnitCents("vela")).toBe(CANDLE_UNIT_PRICE_CENTS);
+    expect(getNumberCandleUnitCents("bengala")).toBe(NUMBER_SPARKLER_PRICE_CENTS);
+    expect(NUMBER_SPARKLER_PRICE_CENTS).toBe(200);
+  });
+
+  it("sin acabado elegido se cobra como vela normal", () => {
+    expect(getNumberCandleUnitCents(undefined)).toBe(CANDLE_UNIT_PRICE_CENTS);
+    expect(cake({ candleDigits: "25" })?.candlesCents).toBe(200);
+  });
+
+  it("la misma cifra en bengala cuesta el doble", () => {
+    const velas = cake({ candleDigits: "25", candleStyle: "vela" });
+    const bengalas = cake({ candleDigits: "25", candleStyle: "bengala" });
+    expect(velas?.candlesCents).toBe(2 * CANDLE_UNIT_PRICE_CENTS);
+    expect(bengalas?.candlesCents).toBe(2 * NUMBER_SPARKLER_PRICE_CENTS);
+  });
+
+  it("la bengala suelta cuesta 1,80 € y no depende de la cifra", () => {
+    expect(PLAIN_SPARKLER_PRICE_CENTS).toBe(180);
+    expect(cake({ sparklerQuantity: 1 })?.candlesCents).toBe(180);
+    expect(cake({ sparklerQuantity: 3 })?.candlesCents).toBe(540);
+  });
+
+  it("números y bengalas sueltas se suman como conceptos distintos", () => {
+    const item = cake({
+      candleDigits: "30",
+      candleStyle: "bengala",
+      sparklerQuantity: 2,
+    });
+    // 2 bengalas de número (4,00 €) + 2 bengalas sueltas (3,60 €)
+    expect(item?.candlesCents).toBe(2 * 200 + 2 * 180);
+  });
+
+  it("el desglose separa cada concepto con su precio unitario", () => {
+    const { numbers, sparklers, totalCents } = resolveCandleSelection({
+      candleDigits: "18",
+      candleStyle: "bengala",
+      sparklerQuantity: 1,
+    });
+    expect(numbers).toMatchObject({ digits: "18", quantity: 2, style: "bengala", unitCents: 200, cents: 400 });
+    expect(sparklers).toMatchObject({ quantity: 1, unitCents: 180, cents: 180 });
+    expect(totalCents).toBe(580);
+  });
+
+  it("no acepta bengalas negativas ni decimales, y respeta el tope", () => {
+    expect(cake({ sparklerQuantity: -4 })?.candlesCents).toBeUndefined();
+    expect(cake({ sparklerQuantity: 2.9 })?.candlesCents).toBe(2 * PLAIN_SPARKLER_PRICE_CENTS);
+    expect(cake({ sparklerQuantity: MAX_SPARKLERS + 10 })?.candlesCents).toBe(
+      MAX_SPARKLERS * PLAIN_SPARKLER_PRICE_CENTS
+    );
+  });
+
+  it("describe cada concepto en su propia línea", () => {
+    const lineas = describeCandleLines({
+      candleDigits: "40",
+      candleStyle: "bengala",
+      sparklerQuantity: 2,
+    });
+    expect(lineas).toHaveLength(2);
+    expect(lineas[0]).toContain("Bengalas de número");
+    expect(lineas[0]).toContain("número 40");
+    expect(lineas[1]).toContain("Bengalas sueltas");
+    expect(lineas[1]).toContain(formatEuros(2 * PLAIN_SPARKLER_PRICE_CENTS));
+  });
+
+  it("una tarta a presupuestar cobra las bengalas sin inventar el total", () => {
+    const item = buildOrderItem({
+      id: "x",
+      selection: {
+        productId: "pastel-fondant",
+        customerType: "individual",
+        sizeId: "4-6-1d",
+        toppingIds: [],
+        extraIds: [],
+      },
+      customization: {
+        size: { id: "4-6-1d", label: "4–6 personas · 1 disco" },
+        toppings: [],
+        extras: [],
+        candleDigits: "50",
+        candleStyle: "bengala",
+        sparklerQuantity: 1,
+        designDescription: "Tarta de fondant",
+      },
+      quantity: 1,
+    });
+    expect(item?.requiresQuote).toBe(true);
+    expect(item?.unitPriceCents).toBe(0);
+    expect(item?.totalCents).toBe(2 * NUMBER_SPARKLER_PRICE_CENTS + PLAIN_SPARKLER_PRICE_CENTS);
+  });
+
+  it("las bengalas cuentan para la paga y señal como cualquier otro importe", () => {
+    // 39 € de tarta + 3 bengalas de número (6 €) cruzan el umbral de 40 €.
+    const item = buildOrderItem({
+      id: "x",
+      selection: {
+        productId: "pastel-clasico",
+        customerType: "individual",
+        sizeId: "20-22-1d",
+        toppingIds: [],
+        extraIds: [],
+      },
+      customization: {
+        size: { id: "20-22-1d", label: "20–22 personas · 1 disco" },
+        filling: { id: "nata", label: "Nata" },
+        toppings: [],
+        extras: [],
+        candleDigits: "100",
+        candleStyle: "bengala",
+      },
+      quantity: 1,
+    })!;
+    const pricing = computeOrderPricing([item], 0);
+    expect(pricing.candlesCents).toBe(3 * NUMBER_SPARKLER_PRICE_CENTS);
+    expect(pricing.depositRequired).toBe(true);
   });
 });

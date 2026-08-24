@@ -21,6 +21,26 @@ export const CANDLE_UNIT_PRICE_CENTS = 100;
 /** Tope razonable de velas por tarta, para evitar cantidades absurdas. */
 export const MAX_CANDLES = 50;
 
+/**
+ * Las velas son de números: el cliente compone la cifra que quiere ver en la
+ * tarta (una edad, un aniversario). Seis dígitos cubren cualquier caso real
+ * y evitan que alguien encargue una cifra interminable.
+ */
+export const MAX_CANDLE_DIGITS = 6;
+
+/**
+ * Acabado de los números (confirmado 24/08/2026): la misma cifra puede
+ * montarse con velas normales o con bengalas, y la bengala cuesta más.
+ * El precio por unidad depende del acabado, no de la cifra.
+ */
+export const NUMBER_SPARKLER_PRICE_CENTS = 200;
+
+/** Bengala suelta, sin número. */
+export const PLAIN_SPARKLER_PRICE_CENTS = 180;
+
+/** Tope de bengalas sueltas por tarta. */
+export const MAX_SPARKLERS = 20;
+
 /** La paga y señal se exige cuando el total SUPERA este importe (> 40 €, no >=). */
 export const DEPOSIT_THRESHOLD_CENTS = 4000;
 
@@ -33,9 +53,17 @@ export const MIN_ORDER_LEAD_TIME_HOURS = 72;
 /** Intervalo entre horas seleccionables. */
 export const SLOT_INTERVAL_MINUTES = 30;
 
-/** WhatsApp de Dulce Flor. */
+/**
+ * Dos teléfonos con funciones distintas (confirmado 24/08/2026):
+ * los pedidos entran por WhatsApp y las llamadas las atiende otra persona.
+ * No mezclarlos: llamar al de WhatsApp no garantiza respuesta.
+ */
 export const WHATSAPP_PHONE = "34624213113";
 export const WHATSAPP_PHONE_DISPLAY = "+34 624 21 31 13";
+
+/** Teléfono de atención telefónica (llamadas, no pedidos por escrito). */
+export const PHONE_CALLS = "34614280430";
+export const PHONE_CALLS_DISPLAY = "+34 614 280 430";
 
 /** Dirección de la tienda (confirmada 18/08/2026). */
 export const BUSINESS_ADDRESS = {

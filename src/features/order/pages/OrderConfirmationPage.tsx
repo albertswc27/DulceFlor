@@ -6,6 +6,7 @@ import * as React from "react";
 import { Link, useParams } from "react-router-dom";
 import { CheckCircle2, Copy, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
+import { PHONE_CALLS, PHONE_CALLS_DISPLAY } from "@/config/business";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -102,6 +103,19 @@ export default function OrderConfirmationPage() {
               {message}
             </pre>
           </details>
+          {/* Los pedidos se gestionan por WhatsApp, pero quien atiende el
+              teléfono es otra persona: se ofrece como alternativa, no como
+              sustituto del mensaje. */}
+          <p className="text-sm text-muted-foreground">
+            ¿Prefieres hablarlo por teléfono? Llámanos al{" "}
+            <a
+              href={`tel:+${PHONE_CALLS}`}
+              className="font-medium text-primary underline underline-offset-4"
+            >
+              {PHONE_CALLS_DISPLAY}
+            </a>
+            .
+          </p>
         </CardContent>
       </Card>
 

@@ -35,6 +35,8 @@ import {
   DEPOSIT_PERCENTAGE,
   DEPOSIT_THRESHOLD_CENTS,
   MIN_ORDER_LEAD_TIME_HOURS,
+  PHONE_CALLS,
+  PHONE_CALLS_DISPLAY,
   TOPPING_PRICE_CENTS,
 } from "@/config/business";
 import { CakeReferences } from "@/features/order/components/CakeReferences";
@@ -639,6 +641,18 @@ function FinalCtaSection() {
         <Button asChild size="xl" variant="accent" className="mt-8">
           <Link to="/pedido">Hacer pedido</Link>
         </Button>
+        {/* Alternativa para quien prefiere hablar: es otro número, distinto
+            del de WhatsApp, y lo atiende otra persona del negocio. */}
+        <p className="mt-5 text-sm text-cocoa-foreground/70">
+          ¿Prefieres llamar? Marca el{" "}
+          <a
+            href={`tel:+${PHONE_CALLS}`}
+            className="font-medium text-secondary underline underline-offset-4"
+          >
+            {PHONE_CALLS_DISPLAY}
+          </a>
+          .
+        </p>
       </Reveal>
     </section>
   );

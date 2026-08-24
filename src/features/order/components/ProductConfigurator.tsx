@@ -18,7 +18,7 @@ import {
   type CatalogProduct,
 } from "@/domain/catalog";
 import {
-  computeCandlesCents,
+  resolveCandleSelection,
   computeUnitPriceBreakdown,
   getToppingPriceCents,
   type ItemSelection,
@@ -29,9 +29,17 @@ import {
   designDescriptionSchema,
   freeTextSchema,
 } from "@/domain/validation";
-import type { CustomerType, ItemCustomization } from "@/domain/types";
+import type {
+  CandleStyle,
+  CustomerType,
+  ItemCustomization,
+} from "@/domain/types";
 import { saveImage, IMAGE_ERROR_MESSAGES } from "@/services/imageStore";
-import { CUSTOM_CAKE_PHOTOS, FONDANT_CAKE_PHOTOS } from "@/assets/photos";
+import {
+  CHEESECAKE_PHOTOS,
+  CUSTOM_CAKE_PHOTOS,
+  FONDANT_CAKE_PHOTOS,
+} from "@/assets/photos";
 import { OptionCard } from "./OptionCard";
 import { QuantityStepper } from "./QuantityStepper";
 import { AnimatedPrice } from "./AnimatedPrice";
@@ -120,7 +128,12 @@ function CakeConfigurator({
   const [customToppingText, setCustomToppingText] = React.useState("");
   const [designDescription, setDesignDescription] = React.useState("");
   const [referenceImage, setReferenceImage] = React.useState<string | null>(null);
-  const [candleQuantity, setCandleQuantity] = React.useState(0);
+  // Las velas son de números: se guarda la cifra, y la cantidad de velas es
+  // simplemente cuántos dígitos tiene. El acabado (vela o bengala) cambia el
+  // precio por unidad, y las bengalas sueltas van aparte.
+  const [candleDigits, setCandleDigits] = React.useState("");
+  const [candleStyle, setCandleStyle] = React.useState<CandleStyle>("vela");
+  const [sparklerQuantity, setSparklerQuantity] = React.useState(0);
   const [error, setError] = React.useState<string | null>(null);
 
   // Al cambiar de producto se reinicia la selección (salvo edición inicial).
@@ -137,7 +150,9 @@ function CakeConfigurator({
     setCustomToppingText("");
     setDesignDescription("");
     setReferenceImage(null);
-    setCandleQuantity(0);
+    setCandleDigits("");
+    setCandleStyle("vela");
+    setSparklerQuantity(0);
     setError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.id, customerType]);
@@ -172,8 +187,10 @@ function CakeConfigurator({
 
   const dedicationSelected = extraIds.includes("dedicatoria");
 
-  /** Las velas tienen precio conocido, también en las tartas a presupuestar. */
-  const candlesCents = computeCandlesCents(candleQuantity);
+  /** Velas y bengalas: precio conocido, también en las tartas a presupuestar. */
+  const candles = { candleDigits, candleStyle, sparklerQuantity };
+  const candleSelection = resolveCandleSelection(candles);
+  const candlesCents = candleSelection.totalCents;
   /** Importe visible de la tarta configurada (sin contar las velas). */
   const cakeCents = breakdown ? breakdown.unitTotalCents * quantity : null;
 
@@ -265,7 +282,10 @@ function CakeConfigurator({
       dedicationText: dedicationSelected ? dedicationText.trim() : undefined,
       designDescription: isQuote ? designDescription.trim() : undefined,
       notes: notes.trim() || undefined,
-      candleQuantity: candleQuantity > 0 ? candleQuantity : undefined,
+      candleDigits: candleDigits || undefined,
+      candleStyle: candleDigits ? candleStyle : undefined,
+      candleQuantity: candleDigits ? candleDigits.length : undefined,
+      sparklerQuantity: sparklerQuantity > 0 ? sparklerQuantity : undefined,
       referenceImageId,
     };
 
@@ -316,6 +336,18 @@ function CakeConfigurator({
 
       {/* Referencias reales del acabado clásico */}
       {showClassicReferences && <CakeReferences />}
+
+      {/* Las tartas de queso son un producto muy visual y el sabor cambia
+          mucho el aspecto: enseñar ejemplos antes de elegir evita sorpresas. */}
+      {isCheesecake && (
+        <CakeReferences
+          photos={CHEESECAKE_PHOTOS}
+          title="Así son nuestras tartas de queso"
+          description="Fotografías reales del obrador. El aspecto cambia según el sabor que elijas; la decoración de la foto es orientativa."
+          limit={3}
+          footnote="¿Quieres una decoración concreta o una imagen impresa encima? Elige el papel comestible más abajo o cuéntanoslo en los cambios especiales."
+        />
+      )}
 
       {/* Tamaño (selección visual) */}
       <fieldset>
@@ -520,7 +552,14 @@ function CakeConfigurator({
       </div>
 
       {/* Velas: precio conocido incluso en las tartas a presupuestar */}
-      <CandlePicker quantity={candleQuantity} onChange={setCandleQuantity} />
+      <CandlePicker
+        digits={candleDigits}
+        style={candleStyle}
+        sparklerQuantity={sparklerQuantity}
+        onDigitsChange={setCandleDigits}
+        onStyleChange={setCandleStyle}
+        onSparklerQuantityChange={setSparklerQuantity}
+      />
 
       {/* Texto libre */}
       <div className="space-y-1.5">
@@ -563,7 +602,7 @@ function CakeConfigurator({
               </p>
               {candlesCents > 0 && (
                 <p className="text-sm text-muted-foreground">
-                  + {formatEuros(candlesCents)} en velas
+                  + {formatEuros(candlesCents)} en velas y bengalas
                 </p>
               )}
             </div>
@@ -599,10 +638,19 @@ function CakeConfigurator({
               <span>+{formatEuros(breakdown.extrasCents)}</span>
             </div>
           )}
-          {candlesCents > 0 && (
+          {candleSelection.numbers && (
             <div className="flex justify-between">
-              <span>Velas ({candleQuantity})</span>
-              <span>+{formatEuros(candlesCents)}</span>
+              <span>
+                {candleSelection.numbers.style === "bengala" ? "Bengalas" : "Velas"} (
+                {candleSelection.numbers.digits})
+              </span>
+              <span>+{formatEuros(candleSelection.numbers.cents)}</span>
+            </div>
+          )}
+          {candleSelection.sparklers && (
+            <div className="flex justify-between">
+              <span>Bengalas sueltas ({candleSelection.sparklers.quantity})</span>
+              <span>+{formatEuros(candleSelection.sparklers.cents)}</span>
             </div>
           )}
         </div>
