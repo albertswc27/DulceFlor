@@ -283,16 +283,19 @@ class OrderRepositoryImpl implements OrderRepository {
     if (!supabase) return false;
     try {
       const row = toRow(order);
-      const { error } =
-        kind === "create"
-          ? // ON CONFLICT DO NOTHING: solo necesita permiso de INSERT, así que
-            // el reintento de un cliente funciona aunque la fila ya esté.
-            await supabase.from("orders").upsert(row, {
-              onConflict: "id",
-              ignoreDuplicates: true,
-            })
-          : await supabase.from("orders").update(row).eq("id", order.id);
-      if (error) return false;
+      if (kind === "create") {
+        // INSERT a secas: es lo único para lo que un cliente ("anon") tiene
+        // permiso. NO se usa upsert con ignore-duplicates, que parece pensado
+        // para esto pero por dentro necesita permiso de SELECT (comprobado
+        // contra el servidor: da 401 para anon).
+        const { error } = await supabase.from("orders").insert(row);
+        // Si el pedido ya estaba subido (reintento de algo que sí llegó), el
+        // servidor responde violación de unicidad: eso es éxito, no fallo.
+        if (error && error.code !== "23505") return false;
+      } else {
+        const { error } = await supabase.from("orders").update(row).eq("id", order.id);
+        if (error) return false;
+      }
       clearPending(order.id);
       return true;
     } catch {
