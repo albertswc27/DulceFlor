@@ -1,15 +1,29 @@
 /**
  * Capa de persistencia de pedidos.
  *
- * POC: implementación sobre localStorage detrás de una interfaz estrecha
- * (OrderRepository) para poder sustituirla por un backend real (Supabase,
- * Firebase, API propia…) sin tocar UI ni dominio. Limitaciones documentadas
- * en docs/architecture.md: los datos viven solo en el navegador/dispositivo
- * donde se crean.
+ * Funciona en dos capas, y el orden importa:
+ *
+ *  1. **localStorage**, siempre. Crear un pedido es una escritura local
+ *     inmediata y síncrona. Esto no es un resto del pasado: es lo que hace
+ *     que el pedido no se pierda si el móvil no tiene cobertura al pulsar
+ *     «Enviar», y lo que permite abrir WhatsApp dentro del gesto del usuario
+ *     (si hubiera un `await` por medio, el navegador bloquearía la ventana).
+ *
+ *  2. **Supabase**, cuando está configurado. El pedido se sube en segundo
+ *     plano y queda disponible para el panel desde cualquier dispositivo, que
+ *     es justo lo que no ocurría antes: un pedido hecho desde el móvil de un
+ *     cliente nunca llegaba a la tienda.
+ *
+ * Si Supabase no está configurado, todo sigue funcionando como antes, solo
+ * que los pedidos no salen del dispositivo. Ver docs/setup.md.
+ *
+ * Lo que no se sube nunca son las imágenes de referencia: pesan y viven en su
+ * propio almacén local (`imageStore`). El pedido solo lleva su identificador.
  */
-import { formatPublicOrderId, newInternalId } from "@/domain/orderId";
+import { newInternalId, newPublicOrderId } from "@/domain/orderId";
 import { computeOrderPricing } from "@/domain/pricing";
 import type { Order, OrderStatus } from "@/domain/types";
+import { getSupabase, isSupabaseConfigured } from "./supabase";
 
 export interface OrderRepository {
   create(draft: Omit<Order, "id" | "publicId" | "createdAt" | "status">): Order;
@@ -21,10 +35,16 @@ export interface OrderRepository {
    * recalcula el total y la señal desde el motor de dominio.
    */
   setQuotedPrice(id: string, quotedPriceCents: number): Order | undefined;
+  /**
+   * Sube lo que quedó pendiente y baja lo que hay en la base compartida.
+   * Devuelve el listado ya combinado. Sin Supabase, devuelve lo local.
+   */
+  sync(): Promise<{ orders: Order[]; error: string | null }>;
 }
 
 const ORDERS_KEY = "dulce-flor:orders";
-const SEQ_KEY_PREFIX = "dulce-flor:order-seq:";
+/** Ids de pedidos creados o modificados que aún no han llegado al servidor. */
+const PENDING_KEY = "dulce-flor:orders-pending";
 
 /**
  * Comprobación estructural mínima: un registro corrupto o de un esquema
@@ -63,15 +83,103 @@ function writeOrders(orders: Order[]): void {
   localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
 }
 
-function nextSequence(year: number): number {
-  const key = `${SEQ_KEY_PREFIX}${year}`;
-  const current = Number(localStorage.getItem(key) ?? "0");
-  const next = current + 1;
-  localStorage.setItem(key, String(next));
-  return next;
+function readPending(): Set<string> {
+  try {
+    const raw = localStorage.getItem(PENDING_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(parsed) ? parsed.filter((x) => typeof x === "string") : []);
+  } catch {
+    return new Set();
+  }
 }
 
-class LocalStorageOrderRepository implements OrderRepository {
+function writePending(ids: Set<string>): void {
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify([...ids]));
+  } catch {
+    // Sin espacio: el pedido ya está guardado, solo se pierde el reintento.
+  }
+}
+
+function markPending(id: string): void {
+  const ids = readPending();
+  ids.add(id);
+  writePending(ids);
+}
+
+function clearPending(id: string): void {
+  const ids = readPending();
+  if (ids.delete(id)) writePending(ids);
+}
+
+/* ------------------------------------------------------------------ */
+/* Traducción entre el pedido del dominio y la fila de la base          */
+/* ------------------------------------------------------------------ */
+
+export interface OrderRow {
+  id: string;
+  public_id: string;
+  created_at: string;
+  status: string;
+  customer_type: string;
+  fulfillment_type: string;
+  requested_date: string;
+  requested_time: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email: string | null;
+  payload: Record<string, unknown>;
+}
+
+/**
+ * Los campos que el panel filtra u ordena van en columnas propias; el resto
+ * viaja en `payload`. Así se puede añadir una opción nueva al catálogo (velas,
+ * bengalas, discos…) sin migrar la base de datos.
+ */
+export function toRow(order: Order): OrderRow {
+  const { id, publicId, createdAt, status, customer, ...rest } = order;
+  return {
+    id,
+    public_id: publicId,
+    created_at: createdAt,
+    status,
+    customer_type: order.customerType,
+    fulfillment_type: order.fulfillmentType,
+    requested_date: order.requestedDate,
+    requested_time: order.requestedTime,
+    customer_name: customer.name,
+    customer_phone: customer.phone,
+    customer_email: customer.email ?? null,
+    payload: { ...rest, customer } as unknown as Record<string, unknown>,
+  };
+}
+
+export function fromRow(row: OrderRow): Order | null {
+  const order = {
+    ...(row.payload as unknown as Omit<Order, "id" | "publicId" | "createdAt" | "status">),
+    id: row.id,
+    publicId: row.public_id,
+    createdAt: row.created_at,
+    status: row.status as OrderStatus,
+  } as Order;
+  // Una fila escrita por una versión distinta de la web podría no encajar:
+  // se descarta en vez de reventar el panel entero.
+  return isOrderShape(order) ? order : null;
+}
+
+/** Mensaje corto y en cristiano para la interfaz. */
+function describeError(error: unknown): string {
+  const message = (error as { message?: string })?.message ?? String(error);
+  if (/Failed to fetch|NetworkError|ERR_INTERNET/i.test(message)) {
+    return "Sin conexión con el servidor de pedidos.";
+  }
+  if (/JWT|not authenticated|permission denied|row-level security/i.test(message)) {
+    return "Tu sesión no tiene permiso para leer los pedidos. Vuelve a entrar.";
+  }
+  return message;
+}
+
+class OrderRepositoryImpl implements OrderRepository {
   create(draft: Omit<Order, "id" | "publicId" | "createdAt" | "status">): Order {
     const orders = readOrders();
 
@@ -87,12 +195,19 @@ class LocalStorageOrderRepository implements OrderRepository {
     const order: Order = {
       ...draft,
       id: newInternalId(),
-      publicId: formatPublicOrderId(now.getFullYear(), nextSequence(now.getFullYear())),
+      publicId: newPublicOrderId(now.getFullYear()),
       createdAt: now.toISOString(),
       status: requiresQuote ? "pending_quote" : "pending",
     };
     orders.push(order);
     writeOrders(orders);
+
+    // A partir de aquí el pedido ya está a salvo en el dispositivo. La subida
+    // va suelta y sin esperar: si falla (sin cobertura, servidor caído), queda
+    // marcada como pendiente y se reintenta en la siguiente sincronización.
+    markPending(order.id);
+    void this.push(order);
+
     return order;
   }
 
@@ -105,28 +220,88 @@ class LocalStorageOrderRepository implements OrderRepository {
   }
 
   updateStatus(id: string, status: OrderStatus): Order | undefined {
-    const orders = readOrders();
-    const index = orders.findIndex((o) => o.id === id);
-    if (index === -1) return undefined;
-    orders[index] = { ...orders[index], status };
-    writeOrders(orders);
-    return orders[index];
+    return this.mutate(id, (order) => ({ ...order, status }));
   }
 
   setQuotedPrice(id: string, quotedPriceCents: number): Order | undefined {
+    return this.mutate(id, (order) => ({
+      ...order,
+      pricing: computeOrderPricing(
+        order.items,
+        order.pricing.deliveryFeeCents,
+        quotedPriceCents
+      ),
+    }));
+  }
+
+  private mutate(id: string, change: (order: Order) => Order): Order | undefined {
     const orders = readOrders();
     const index = orders.findIndex((o) => o.id === id);
     if (index === -1) return undefined;
-    const order = orders[index];
-    const pricing = computeOrderPricing(
-      order.items,
-      order.pricing.deliveryFeeCents,
-      quotedPriceCents
-    );
-    orders[index] = { ...order, pricing };
+    const updated = change(orders[index]);
+    orders[index] = updated;
     writeOrders(orders);
-    return orders[index];
+    markPending(updated.id);
+    void this.push(updated);
+    return updated;
+  }
+
+  /** Sube un pedido. Silencioso a propósito: el reintento lo hace `sync()`. */
+  private async push(order: Order): Promise<boolean> {
+    const supabase = await getSupabase();
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase.from("orders").upsert(toRow(order));
+      if (error) return false;
+      clearPending(order.id);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async sync(): Promise<{ orders: Order[]; error: string | null }> {
+    if (!isSupabaseConfigured()) return { orders: this.list(), error: null };
+    const supabase = await getSupabase();
+    if (!supabase) return { orders: this.list(), error: null };
+
+    // 1) Lo que quedó sin subir. Se hace antes de bajar para que un cambio de
+    //    estado hecho sin conexión no lo pise la versión antigua del servidor.
+    const pending = readPending();
+    if (pending.size > 0) {
+      const locals = readOrders().filter((o) => pending.has(o.id));
+      for (const order of locals) await this.push(order);
+      // Un id pendiente que ya no existe en local no se puede subir nunca.
+      for (const id of pending) {
+        if (!locals.some((o) => o.id === id)) clearPending(id);
+      }
+    }
+
+    // 2) Bajamos todo y lo combinamos con lo local.
+    try {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) return { orders: this.list(), error: describeError(error) };
+
+      const remote = (data as OrderRow[]).map(fromRow).filter((o): o is Order => o !== null);
+      const merged = new Map(readOrders().map((o) => [o.id, o]));
+      for (const order of remote) {
+        // Lo local manda solo si aún no se ha subido; si no, gana el servidor.
+        if (!readPending().has(order.id)) merged.set(order.id, order);
+      }
+      const orders = [...merged.values()];
+      writeOrders(orders);
+      return {
+        orders: orders.sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+        error: null,
+      };
+    } catch (error) {
+      return { orders: this.list(), error: describeError(error) };
+    }
   }
 }
 
-export const orderRepository: OrderRepository = new LocalStorageOrderRepository();
+export const orderRepository: OrderRepository = new OrderRepositoryImpl();

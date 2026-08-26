@@ -20,7 +20,7 @@ import {
   type Order,
   type OrderStatus,
 } from "@/domain/types";
-import { orderRepository } from "@/services/orderRepository";
+import { useSyncedOrders } from "@/features/admin/hooks/useSyncedOrders";
 import {
   ORDER_STATUS_SEQUENCE,
   SELECT_CLASS,
@@ -101,7 +101,7 @@ function TotalLabel({ order }: { order: Order }) {
 
 export default function AdminOrdersPage() {
   const navigate = useNavigate();
-  const [orders] = React.useState<Order[]>(() => orderRepository.list());
+  const { orders, syncing, error: syncError, shared, refresh } = useSyncedOrders();
 
   const [search, setSearch] = React.useState("");
   const [status, setStatus] = React.useState<StatusFilter>("all");
@@ -151,6 +151,7 @@ export default function AdminOrdersPage() {
             {filtered.length === orders.length
               ? `${orders.length} ${orders.length === 1 ? "pedido" : "pedidos"} en total`
               : `${filtered.length} de ${orders.length} pedidos`}
+            {syncing && " · actualizando…"}
           </p>
         </div>
       </div>
@@ -226,10 +227,27 @@ export default function AdminOrdersPage() {
 
       {/* Sin backend, cada navegador guarda sus propios pedidos. Decirlo aquí
           evita el susto de creer que se ha perdido un pedido de un cliente. */}
-      <p className="mb-4 rounded-lg border border-warning/30 bg-warning/10 px-4 py-2.5 text-sm text-warning">
-        <strong>Este listado es de este dispositivo.</strong> Los pedidos que
-        hacen los clientes desde su móvil no aparecen aquí: llegan por WhatsApp.
-      </p>
+      {!shared && (
+        <p className="mb-4 rounded-lg border border-warning/30 bg-warning/10 px-4 py-2.5 text-sm text-warning">
+          <strong>Este listado es de este dispositivo.</strong> Los pedidos que
+          hacen los clientes desde su móvil no aparecen aquí: llegan por WhatsApp.
+        </p>
+      )}
+
+      {syncError && (
+        <p
+          role="alert"
+          className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm text-destructive"
+        >
+          <span>
+            No se han podido descargar los pedidos del servidor: {syncError} Abajo
+            ves los que ya tenías guardados en este dispositivo.
+          </span>
+          <Button type="button" variant="outline" size="sm" onClick={refresh}>
+            Reintentar
+          </Button>
+        </p>
+      )}
 
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-border bg-background-soft/60 px-6 py-14 text-center">
@@ -244,7 +262,9 @@ export default function AdminOrdersPage() {
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
               {orders.length === 0
-                ? "Aquí solo se ven los pedidos hechos desde este mismo dispositivo, como los del kiosk. Los pedidos que hacen los clientes desde su móvil llegan por WhatsApp."
+                ? shared
+                  ? "Cuando alguien haga un pedido aparecerá aquí, lo haya hecho desde donde lo haya hecho."
+                  : "Aquí solo se ven los pedidos hechos desde este mismo dispositivo, como los del kiosk. Los pedidos que hacen los clientes desde su móvil llegan por WhatsApp."
                 : "Prueba a ajustar la búsqueda o limpia los filtros."}
             </p>
           </div>

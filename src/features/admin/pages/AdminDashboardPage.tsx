@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/card";
 import { formatEuros } from "@/domain/money";
 import { ORDER_STATUS_LABELS, type Order } from "@/domain/types";
-import { orderRepository } from "@/services/orderRepository";
+import { useSyncedOrders } from "@/features/admin/hooks/useSyncedOrders";
 import {
   STATUS_BADGE_VARIANT,
   formatRequestedDayShort,
@@ -88,17 +88,14 @@ function UpcomingOrderRow({ order }: { order: Order }) {
 }
 
 export default function AdminDashboardPage() {
-  const [orders, setOrders] = React.useState<Order[]>(() => orderRepository.list());
+  const { orders, syncing, refresh } = useSyncedOrders();
 
-  // Re-lee los pedidos al recuperar el foco: así aparecen los creados desde
-  // el kiosk (u otra pestaña) sin necesidad de recargar la página.
+  // Vuelve a sincronizar al recuperar el foco: así aparecen los pedidos
+  // creados mientras tanto, en el kiosk o desde el móvil de un cliente.
   React.useEffect(() => {
-    function refresh() {
-      setOrders(orderRepository.list());
-    }
     window.addEventListener("focus", refresh);
     return () => window.removeEventListener("focus", refresh);
-  }, []);
+  }, [refresh]);
 
   const now = React.useMemo(() => new Date(), []);
   const todayIso = format(now, "yyyy-MM-dd");
@@ -160,6 +157,7 @@ export default function AdminDashboardPage() {
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Resumen de la actividad de pedidos de Dulce Flor.
+          {syncing && " Actualizando…"}
         </p>
       </div>
 

@@ -362,6 +362,31 @@ export default function AdminOrderDetailPage() {
     orderId ? (orderRepository.getById(orderId) ?? null) : null
   );
   const [quoteInput, setQuoteInput] = React.useState("");
+  // Se puede llegar aquí por enlace directo a un pedido que todavía no está
+  // en este dispositivo (lo hizo un cliente desde su móvil): sincronizamos
+  // antes de decir que no existe.
+  const [buscando, setBuscando] = React.useState(!order);
+
+  React.useEffect(() => {
+    if (order || !orderId) return;
+    let vivo = true;
+    void orderRepository.sync().then(() => {
+      if (!vivo) return;
+      setOrder(orderRepository.getById(orderId) ?? null);
+      setBuscando(false);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [order, orderId]);
+
+  if (!order && buscando) {
+    return (
+      <div className="mx-auto max-w-md py-10 text-center text-muted-foreground">
+        Buscando el pedido…
+      </div>
+    );
+  }
 
   if (!order) {
     return (

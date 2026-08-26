@@ -17,6 +17,10 @@ import {
   WHATSAPP_PHONE_DISPLAY,
 } from "@/config/business";
 import { LEGAL } from "@/config/legal";
+import { isSupabaseConfigured } from "@/services/supabase";
+
+/** Hay base de datos compartida: cambia dónde se guardan los pedidos. */
+const SHARED_DATABASE = isSupabaseConfigured();
 
 function Section({
   title,
@@ -153,17 +157,49 @@ export default function LegalPage() {
       </Section>
 
       <Section title="Dónde se guardan">
-        <p>
-          En esta versión de la web, la solicitud de pedido y las imágenes que
-          adjuntes se almacenan <strong>en el almacenamiento local de tu propio
-          navegador</strong> y en el dispositivo de la tienda donde se registre
-          el pedido; no se envían a ningún servidor externo. Puedes eliminarlos
-          en cualquier momento borrando los datos de navegación.
-        </p>
-        <p>
-          Cuando la web incorpore un servidor de pedidos, este apartado se
-          actualizará indicando el proveedor y los plazos de conservación.
-        </p>
+        {/* Este texto describe lo que hace de verdad la web según esté o no
+            conectada a la base de datos compartida. Si algún día se cambia de
+            proveedor, hay que actualizarlo aquí. */}
+        {SHARED_DATABASE ? (
+          <>
+            <p>
+              Tu solicitud de pedido se guarda en una base de datos alojada por{" "}
+              <strong>Supabase</strong>, que actúa como encargado del
+              tratamiento por cuenta de Dulce Flor. Es lo que permite que el
+              pedido llegue al obrador aunque lo hagas desde tu propio móvil.
+            </p>
+            <p>
+              Solo el personal de Dulce Flor, tras iniciar sesión, puede
+              consultar los pedidos: la base de datos rechaza cualquier lectura
+              que no venga de una sesión autorizada.
+            </p>
+            <p>
+              <strong>Las imágenes de referencia que adjuntes no se suben</strong>:
+              se quedan en el almacenamiento local de tu navegador y puedes
+              borrarlas en cualquier momento limpiando los datos de navegación.
+            </p>
+            <p>
+              Los pedidos se conservan mientras sean necesarios para gestionar
+              el encargo y atender obligaciones legales o reclamaciones. Puedes
+              pedir su supresión escribiendo por WhatsApp al{" "}
+              {WHATSAPP_PHONE_DISPLAY}.
+            </p>
+          </>
+        ) : (
+          <>
+            <p>
+              En esta versión de la web, la solicitud de pedido y las imágenes
+              que adjuntes se almacenan <strong>en el almacenamiento local de tu
+              propio navegador</strong> y en el dispositivo de la tienda donde se
+              registre el pedido; no se envían a ningún servidor externo. Puedes
+              eliminarlos en cualquier momento borrando los datos de navegación.
+            </p>
+            <p>
+              Cuando la web incorpore un servidor de pedidos, este apartado se
+              actualizará indicando el proveedor y los plazos de conservación.
+            </p>
+          </>
+        )}
       </Section>
 
       <Section title="Cookies y almacenamiento">

@@ -1,9 +1,20 @@
 /**
  * Autenticación del panel de administración.
  *
- * ⚠️ LIMITACIÓN DE LA POC — LEER ANTES DE PRODUCCIÓN:
- * No existe backend, por lo que esta autenticación se ejecuta íntegramente
- * en el navegador. Sirve para modelar el flujo (login, sesión, rutas
+ * Hay DOS modos, y el que manda depende de si hay base de datos configurada:
+ *
+ * A) **Con Supabase** (producción): la contraseña la comprueba el servidor.
+ *    Es autenticación de verdad, y además es imprescindible: las políticas de
+ *    la base de datos solo dejan LEER pedidos a una sesión iniciada, así que
+ *    sin este login el panel no vería nada. Saltarse el formulario editando
+ *    el JavaScript no sirve de nada: el servidor seguiría diciendo que no.
+ *
+ * B) **Sin Supabase** (desarrollo, o despliegue sin base de datos): se cae al
+ *    modo local descrito abajo, que sí es saltable y solo sirve para proteger
+ *    la tablet del kiosk frente a un cliente curioso.
+ *
+ * ⚠️ LIMITACIÓN DEL MODO LOCAL:
+ * Se ejecuta íntegramente en el navegador. Sirve para modelar el flujo (login, sesión, rutas
  * protegidas, multiusuario) y para proteger la tablet del kiosk frente a un
  * cliente curioso. NO sustituye a una autenticación de servidor: alguien con
  * conocimientos técnicos puede saltársela editando el código que se ejecuta
@@ -27,6 +38,27 @@
  * Dulce Flor. Por eso el riesgo real está en los dispositivos de la tienda,
  * que es justo lo que cubren el bloqueo de kiosk y el límite de intentos.
  */
+
+import { getSupabase, isSupabaseConfigured } from "./supabase";
+
+/**
+ * Las cuentas del panel se crean en Supabase con un correo derivado del
+ * usuario, para que el equipo siga escribiendo "dulceflor1" y no un email.
+ * Si alguien escribe un correo completo, se usa tal cual.
+ */
+const ADMIN_EMAIL_DOMAIN =
+  (import.meta.env.VITE_ADMIN_EMAIL_DOMAIN as string | undefined)?.trim() ||
+  "dulceflorbcn.es";
+
+function toEmail(username: string): string {
+  const clean = username.trim().toLowerCase();
+  return clean.includes("@") ? clean : `${clean}@${ADMIN_EMAIL_DOMAIN}`;
+}
+
+/** true cuando la contraseña la comprueba el servidor y no el navegador. */
+export function isRemoteAuth(): boolean {
+  return isSupabaseConfigured();
+}
 
 /** Coste de la derivación. Subirlo encarece un ataque por fuerza bruta. */
 const PBKDF2_ITERATIONS = 210_000;
@@ -109,9 +141,12 @@ function getUsers(): AdminUser[] {
   return [];
 }
 
-/** true cuando el panel está desplegado sin cuentas: nadie puede entrar. */
+/**
+ * true cuando el panel está desplegado sin ninguna forma de entrar. Con
+ * Supabase las cuentas viven en el servidor, así que nunca falta nada aquí.
+ */
 export function isAuthUnconfigured(): boolean {
-  return getUsers().length === 0;
+  return !isSupabaseConfigured() && getUsers().length === 0;
 }
 
 /* ------------------------------------------------------------------ */
@@ -283,6 +318,36 @@ export async function login(
     };
   }
 
+  // Con base de datos, manda el servidor. La sesión de Supabase es la que
+  // permite leer pedidos, así que sin ella el panel estaría vacío.
+  const supabase = await getSupabase();
+  if (supabase) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: toEmail(username),
+      password,
+    });
+    if (error || !data.user) {
+      registerFailure();
+      const nextWait = getLockoutRemainingMs();
+      return {
+        ok: false,
+        error: nextWait
+          ? `Usuario o contraseña incorrectos. Espera ${formatWait(nextWait)} antes de reintentar.`
+          : "Usuario o contraseña incorrectos",
+      };
+    }
+    clearThrottle();
+    const session: AdminSession = {
+      username: username.trim().toLowerCase(),
+      displayName:
+        (data.user.user_metadata?.display_name as string | undefined) ??
+        username.trim().toLowerCase(),
+      expiresAt: (data.session?.expires_at ?? 0) * 1000 || Date.now() + SESSION_TTL_MS,
+    };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    return { ok: true, session };
+  }
+
   if (isAuthUnconfigured()) {
     return {
       ok: false,
@@ -330,6 +395,27 @@ export function getSession(): AdminSession | null {
 
 export function logout(): void {
   sessionStorage.removeItem(SESSION_KEY);
+  // No se espera: cerrar sesión en la interfaz debe ser inmediato aunque la
+  // red vaya lenta. El espejo local ya está borrado.
+  void getSupabase().then((client) => client?.auth.signOut());
+}
+
+/**
+ * Comprueba que la sesión del servidor sigue viva y borra el espejo local si
+ * no lo está. Sin esto, la interfaz podría creerse dentro mientras la base de
+ * datos rechaza todas las lecturas.
+ */
+export async function revalidateSession(): Promise<AdminSession | null> {
+  const local = getSession();
+  if (!local || !isSupabaseConfigured()) return local;
+  const supabase = await getSupabase();
+  if (!supabase) return local;
+  const { data } = await supabase.auth.getSession();
+  if (!data.session) {
+    sessionStorage.removeItem(SESSION_KEY);
+    return null;
+  }
+  return local;
 }
 
 /**
@@ -350,8 +436,15 @@ export async function verifyPassword(
     };
   }
 
-  const user = await checkCredentials(username, password);
-  if (!user) {
+  // Reverificar contra el servidor: si no hay conexión NO se desbloquea, que
+  // es lo correcto — es preferible que el kiosk siga cerrado a abrirlo sin
+  // haber comprobado nada.
+  const supabase = await getSupabase();
+  const ok = supabase
+    ? !(await supabase.auth.signInWithPassword({ email: toEmail(username), password })).error
+    : Boolean(await checkCredentials(username, password));
+
+  if (!ok) {
     registerFailure();
     const nextWait = getLockoutRemainingMs();
     return {

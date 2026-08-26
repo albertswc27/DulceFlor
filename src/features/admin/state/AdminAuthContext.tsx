@@ -7,6 +7,7 @@ import {
   getSession,
   login as authLogin,
   logout as authLogout,
+  revalidateSession,
   type AdminSession,
 } from "@/services/auth";
 
@@ -24,12 +25,22 @@ const AdminAuthContext = React.createContext<AdminAuthContextValue | null>(null)
 export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = React.useState<AdminSession | null>(() => getSession());
 
-  // Revalida la sesión periódicamente para expirar sesiones caducadas.
+  // Revalida la sesión, al arrancar y cada minuto. Con base de datos, quien
+  // manda es el servidor: si allí ha caducado, la interfaz no puede seguir
+  // creyéndose dentro mientras las lecturas de pedidos fallan.
   React.useEffect(() => {
-    const interval = setInterval(() => {
-      setSession(getSession());
-    }, 60_000);
-    return () => clearInterval(interval);
+    let vivo = true;
+    const comprobar = () => {
+      void revalidateSession().then((s) => {
+        if (vivo) setSession(s);
+      });
+    };
+    comprobar();
+    const interval = setInterval(comprobar, 60_000);
+    return () => {
+      vivo = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const value = React.useMemo<AdminAuthContextValue>(
