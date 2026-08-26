@@ -141,9 +141,11 @@ export default function KioskPage() {
     if (exitBusy || !exitTarget || !session) return;
     setExitBusy(true);
     setExitError(null);
-    const ok = await verifyPassword(session.username, exitPassword);
-    if (!ok) {
-      setExitError("Contraseña incorrecta.");
+    const result = await verifyPassword(session.username, exitPassword);
+    if (!result.ok) {
+      // El mensaje ya explica si es contraseña incorrecta o espera por
+      // intentos fallidos: es justo aquí donde alguien probaría a adivinarla.
+      setExitError(result.error ?? "Contraseña incorrecta.");
       setExitBusy(false);
       return;
     }

@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAdminAuth } from "@/features/admin/state/AdminAuthContext";
-import { isKioskLocked } from "@/services/auth";
+import { isAuthUnconfigured, isKioskLocked } from "@/services/auth";
 import logo from "@/assets/logo-dulce-flor.jpeg";
 
 export default function AdminLoginPage() {
@@ -34,6 +34,7 @@ export default function AdminLoginPage() {
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const unconfigured = isAuthUnconfigured();
 
   // Con el kiosk bloqueado y sesión activa, esta pantalla también rebota al
   // kiosk: un cliente no debe poder navegar por la zona de administración.
@@ -100,6 +101,19 @@ export default function AdminLoginPage() {
                 />
               </div>
 
+              {/* Sin cuentas configuradas nadie puede entrar: más vale decirlo
+                  aquí que dejar a alguien probando contraseñas buenas. */}
+              {unconfigured && (
+                <p
+                  role="alert"
+                  className="rounded-lg bg-warning/10 px-4 py-2.5 text-sm text-warning"
+                >
+                  Este panel todavía no tiene cuentas configuradas. Define{" "}
+                  <code>VITE_ADMIN_ACCOUNTS</code> en el entorno; lo explica{" "}
+                  <code>docs/setup.md</code>.
+                </p>
+              )}
+
               {error && (
                 <p
                   role="alert"
@@ -109,7 +123,12 @@ export default function AdminLoginPage() {
                 </p>
               )}
 
-              <Button type="submit" size="lg" className="w-full" disabled={loading}>
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full"
+                disabled={loading || unconfigured}
+              >
                 <LockKeyhole />
                 {loading ? "Comprobando…" : "Entrar"}
               </Button>

@@ -28,7 +28,7 @@ src/
     *.test.ts        Tests de negocio
   services/
     orderRepository.ts  Persistencia tras interfaz (POC: localStorage)
-    auth.ts             Autenticación admin (POC: client-side, ver límites)
+    auth.ts             Autenticación admin (PBKDF2 + límite de intentos; client-side, ver límites)
   components/
     ui/              Primitivas (button, card, input, dialog…)
     layout/          PublicLayout (navbar + footer)
@@ -63,7 +63,9 @@ creó el pedido.
 
 ## Autenticación admin (POC) — LÍMITES
 
-- Todo ocurre en el navegador: usuarios definidos en `services/auth.ts` con hash SHA-256 de contraseñas de desarrollo, sesión de 8 h en `sessionStorage`, rutas protegidas con `RequireAdmin`.
+- Todo ocurre en el navegador. Las cuentas **no están en el repositorio**: salen de la variable de entorno `VITE_ADMIN_ACCOUNTS`, que genera `scripts/admin-credentials.cjs` (ver `setup.md`). Sesión de 8 h en `sessionStorage`, rutas protegidas con `RequireAdmin`.
+- Las contraseñas se guardan como `PBKDF2-SHA256` con sal propia por cuenta y 210.000 iteraciones, se comparan en tiempo constante, y los intentos fallidos se penalizan con un bloqueo creciente compartido entre el login y la salida del kiosk.
+- Sigue sin ser autenticación de servidor: alguien con conocimientos técnicos puede saltársela en su propio navegador. Importa poco porque **los pedidos viven en el localStorage de cada dispositivo**, así que desde fuera no hay nada que leer; el riesgo real está en los equipos de la tienda, que es lo que cubren el bloqueo de kiosk y el límite de intentos.
 - **NO es segura para producción**: sin servidor no hay forma de impedir que alguien inspeccione el código. Documentado también en el propio archivo.
 - Para producción: mover verificación a backend o proveedor (Supabase Auth, Clerk, etc.), sesiones httpOnly, y entonces sí exigir autorización en cada operación del repositorio.
 
