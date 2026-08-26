@@ -62,6 +62,12 @@ const CUENTAS = buildAccounts([
 async function loadAuth() {
   vi.resetModules();
   vi.stubEnv("VITE_ADMIN_ACCOUNTS", CUENTAS);
+  // Estos tests cubren el modo LOCAL de autenticación. Si el entorno tiene
+  // Supabase configurado (un .env con las variables de producción), el login
+  // tiraría de la rama remota y probaría contra el servidor real. Se apaga
+  // aquí para que la prueba sea del código local, no de la red.
+  vi.stubEnv("VITE_SUPABASE_URL", "");
+  vi.stubEnv("VITE_SUPABASE_ANON_KEY", "");
   return import("./auth");
 }
 
@@ -106,6 +112,8 @@ describe("credenciales fuera del repositorio", () => {
   it("sin cuentas configuradas nadie entra", async () => {
     vi.resetModules();
     vi.stubEnv("VITE_ADMIN_ACCOUNTS", "");
+    vi.stubEnv("VITE_SUPABASE_URL", "");
+    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "");
     const auth = await import("./auth");
     // En el build de desarrollo queda la cuenta `dev`; lo que no puede pasar
     // es que se acepte una credencial antigua del repositorio.
