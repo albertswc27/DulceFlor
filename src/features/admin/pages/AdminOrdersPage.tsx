@@ -224,6 +224,13 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
+      {/* Sin backend, cada navegador guarda sus propios pedidos. Decirlo aquí
+          evita el susto de creer que se ha perdido un pedido de un cliente. */}
+      <p className="mb-4 rounded-lg border border-warning/30 bg-warning/10 px-4 py-2.5 text-sm text-warning">
+        <strong>Este listado es de este dispositivo.</strong> Los pedidos que
+        hacen los clientes desde su móvil no aparecen aquí: llegan por WhatsApp.
+      </p>
+
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-border bg-background-soft/60 px-6 py-14 text-center">
           <span className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary/20 text-primary">
@@ -237,7 +244,7 @@ export default function AdminOrdersPage() {
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
               {orders.length === 0
-                ? "Los pedidos de la web y del kiosk aparecerán en este listado."
+                ? "Aquí solo se ven los pedidos hechos desde este mismo dispositivo, como los del kiosk. Los pedidos que hacen los clientes desde su móvil llegan por WhatsApp."
                 : "Prueba a ajustar la búsqueda o limpia los filtros."}
             </p>
           </div>

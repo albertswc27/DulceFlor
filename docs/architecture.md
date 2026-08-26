@@ -56,6 +56,7 @@ creó el pedido.
 `OrderRepository` es una interfaz estrecha implementada hoy sobre `localStorage`:
 
 - Los pedidos solo existen en el navegador donde se crean (el panel admin ve los pedidos creados en ese mismo dispositivo). Suficiente para validar el producto y para el kiosk en la tablet de tienda.
+- **Consecuencia práctica, comprobada el 26/08/2026:** un pedido hecho por un cliente desde su móvil **nunca aparece** en el panel de Dulce Flor. Quien entrega el pedido es el mensaje de WhatsApp, no la base de datos. La interfaz lo dice ahora explícitamente en el listado de pedidos y en la pantalla de confirmación, para que nadie crea que se ha perdido un pedido. Mientras no haya backend, **el panel sirve para los pedidos del kiosk, no como bandeja de entrada**.
 - `create()` es **idempotente** por `clientRequestId`: reintentos o dobles clics no duplican pedidos.
 - El ID público `DF-AAAA-NNNN` usa un contador anual en el mismo almacenamiento.
 

@@ -68,16 +68,20 @@ export default function OrderConfirmationPage() {
         </span>
         <h1 className="mt-4 font-display text-3xl font-bold text-primary">
           {order.pricing.pendingQuote
-            ? "Solicitud de presupuesto registrada"
-            : "Solicitud de pedido registrada"}
+            ? "Ya casi está: envíanos tu solicitud"
+            : "Ya casi está: envíanos tu pedido"}
         </h1>
+        {/* Sin backend, guardar el pedido NO lo hace llegar a Dulce Flor: lo
+            que lo entrega es el mensaje de WhatsApp. Decir "registrada" a
+            secas hacía creer que ya estaba hecho y la gente cerraba la
+            pestaña sin enviarlo. */}
         <p className="mx-auto mt-2 max-w-md text-muted-foreground">
-          Tu solicitud <strong>{order.publicId}</strong> ha quedado registrada y está{" "}
-          <strong>pendiente de confirmación por Dulce Flor</strong>. Te contactaremos por
-          WhatsApp para confirmarla.
+          Hemos guardado tu solicitud <strong>{order.publicId}</strong>. Para que llegue
+          a Dulce Flor <strong>falta un último paso: enviarnos el resumen por
+          WhatsApp</strong>. En cuanto lo recibamos, te confirmamos el pedido.
         </p>
         <Badge variant="warning" className="mt-3">
-          Pendiente de confirmación
+          Pendiente de enviar por WhatsApp
         </Badge>
       </div>
 
