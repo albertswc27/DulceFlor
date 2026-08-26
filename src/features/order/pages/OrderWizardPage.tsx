@@ -283,13 +283,34 @@ export default function OrderWizardPage() {
       }
       return;
     }
-    // 1) El pedido YA está guardado. 2) Abrimos WhatsApp con el mensaje
-    // preparado dentro del gesto del usuario para evitar bloqueos de popup.
+    // 1) El pedido YA está guardado. 2) Intentamos abrir WhatsApp con el
+    // mensaje preparado, dentro del gesto del usuario.
+    //
+    // Sin la cadena de features, el navegador abre una PESTAÑA normal en vez
+    // de una ventana emergente. Es una diferencia importante: Safari (y iOS)
+    // traen el bloqueo de emergentes activado de fábrica y tumbaban esta
+    // llamada en silencio, mientras que una pestaña sí pasa. Además así
+    // window.open devuelve una referencia utilizable — con "noopener" el
+    // estándar obliga a devolver null y no había forma de saber si se había
+    // abierto o no.
     const message = buildOrderWhatsAppMessage(result.order);
     const url = buildWhatsAppUrl(message);
-    window.open(url, "_blank", "noopener");
+    let opened: Window | null = null;
+    try {
+      opened = window.open(url, "_blank");
+      // Cortamos la referencia inversa a mano, que es lo que aportaba
+      // "noopener": la pestaña nueva no debe poder tocar esta.
+      if (opened) opened.opener = null;
+    } catch {
+      opened = null;
+    }
     draft.reset();
-    navigate(`/pedido/confirmacion/${result.order.id}`);
+    // Si no se abrió, la confirmación lo dice en vez de dar por hecho que el
+    // cliente ha visto WhatsApp: es la diferencia entre "no me funciona" y
+    // "pulsa este botón".
+    navigate(`/pedido/confirmacion/${result.order.id}`, {
+      state: { whatsappOpened: Boolean(opened) },
+    });
   }
 
   const stepOrder: StepId[] = [

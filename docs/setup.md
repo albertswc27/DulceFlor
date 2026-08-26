@@ -53,7 +53,8 @@ configura en Vercel y en un `.env` local (ignorado por git).
 node scripts/admin-credentials.cjs
 ```
 
-Imprime por pantalla, una sola vez:
+Genera contraseñas de **10 caracteres** (longitud pedida por Dulce Flor el
+26/08/2026) e imprime por pantalla, una sola vez:
 
 1. Las contraseñas en claro, para repartirlas por un canal privado.
 2. El valor completo de `VITE_ADMIN_ACCOUNTS`.

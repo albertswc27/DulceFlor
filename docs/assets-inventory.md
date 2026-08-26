@@ -147,6 +147,24 @@ Auditadas a ciegas y **verificadas dos veces** antes de publicarlas, porque dos 
 
 La tarta de pistacho lleva escrito **«Felicidades, Noelia»**, el nombre de pila de una clienta. Dulce Flor envió la foto expresamente para publicarla y no se ve ninguna cara, pero conviene que lo sepa. El repositorio ya publicaba otras tartas con dedicatoria (`tarta-clasica-merengue-dedicatoria`, `tarta-clasica-chocolate-dedicatoria`).
 
+
+## Tarta Tres Leches (26/08/2026)
+
+| Archivo original | Destino | Contenido real | Uso |
+| --- | --- | --- | --- |
+| `WhatsApp Image 2026-08-26 at 12.40.16.jpeg` | `fotos/tartas/tarta-tres-leches-fuente-cristal.webp` | Bizcocho empapado en fuente de cristal, cubierto de nata con rosetones y espolvoreado de canela, con una porción cortada | Tres Leches · carta y ficha de producto |
+
+Se le quitó una **banda negra de 9 px** en el borde superior (medida sobre los
+píxeles, no a ojo): es la marca típica de una imagen recortada de otro sitio.
+
+### Punto abierto — conviene confirmarlo
+
+La foto **no parece del obrador**: producción de estudio, atrezzo de bodegón y
+esa banda negra de origen. El resto de la web usa fotografías reales de Dulce
+Flor, así que desentona y, si fuera de un banco de imágenes, publicarla en una
+web comercial tendría además un problema de derechos. Pendiente de que Dulce
+Flor confirme que es suya o la sustituya por una propia.
+
 ## Estructura de carpetas
 
 ```text

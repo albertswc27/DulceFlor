@@ -35,6 +35,9 @@ import personalizadaConejito from "./fotos/tartas-personalizadas/tarta-infantil-
 import personalizadaFutbolBlanca from "./fotos/tartas-personalizadas/tarta-futbol-blanca-escudo.webp";
 import personalizadaLazoDorado from "./fotos/tartas-personalizadas/tarta-cumpleanos-marfil-lazo-dorado.webp";
 
+/* ------------------------- Tres leches -------------------------- */
+import tresLechesFuente from "./fotos/tartas/tarta-tres-leches-fuente-cristal.webp";
+
 /* ------------------------ Tartas de queso ----------------------- */
 import quesoPistacho from "./fotos/tartas-queso/tarta-queso-pistacho-placa-felicidades.webp";
 import quesoVitrina from "./fotos/tartas-queso/vitrina-tartas-queso-surtidas.webp";
@@ -221,6 +224,19 @@ export const CUSTOM_CAKE_PHOTOS: Photo[] = [
 /* ------------------------------------------------------------------ */
 /* Aperitivos                                                          */
 /* ------------------------------------------------------------------ */
+
+/**
+ * Tarta Tres Leches. Enviada por Dulce Flor el 26/08/2026 para que la sección
+ * quede con foto igual que las de al lado. Se le quitó una banda negra de 9 px
+ * que traía arriba, señal de que venía recortada de otro sitio.
+ */
+export const TRES_LECHES_PHOTOS: Photo[] = [
+  {
+    src: tresLechesFuente,
+    alt: "Tarta tres leches en fuente de cristal, cubierta de nata montada con borde de rosetones y espolvoreada de canela, con una porción cortada servida en un plato",
+    caption: "Bizcocho jugoso con nata",
+  },
+];
 
 /**
  * Tartas de queso. La del pistacho lleva una placa con el nombre de una
@@ -456,7 +472,7 @@ export const FEATURED_WORK_PHOTOS: Photo[] = [
 /**
  * Foto representativa de un producto para las tarjetas del catálogo.
  * Devuelve null cuando NO tenemos una fotografía real de ese producto
- * (tres leches y especialidades): en ese caso la interfaz
+ * (las especialidades): en ese caso la interfaz
  * dibuja la ilustración de marca en lugar de enseñar una foto que no
  * corresponde. Nunca se reutiliza la foto de otro producto.
  */
@@ -475,6 +491,8 @@ export function getProductPhoto(productId: string): Photo | null {
       return FONDANT_CAKE_PHOTOS[0];
     case "cheesecake":
       return CHEESECAKE_PHOTOS[0];
+    case "tres-leches":
+      return TRES_LECHES_PHOTOS[0];
     case "caja-desayuno":
       return BREAKFAST_PHOTOS[0];
     case "copa-personalizada":

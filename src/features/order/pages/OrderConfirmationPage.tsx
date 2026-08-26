@@ -3,20 +3,24 @@
  * aunque WhatsApp no se abra o el usuario no envíe el mensaje, no se pierde.
  */
 import * as React from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { CheckCircle2, Copy, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
-import { PHONE_CALLS, PHONE_CALLS_DISPLAY } from "@/config/business";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DEPOSIT_PERCENTAGE } from "@/config/business";
+import {
+  DEPOSIT_PERCENTAGE,
+  PHONE_CALLS,
+  PHONE_CALLS_DISPLAY,
+} from "@/config/business";
 import { formatEuros } from "@/domain/money";
 import { buildOrderWhatsAppMessage, buildWhatsAppUrl } from "@/domain/whatsapp";
 import { orderRepository } from "@/services/orderRepository";
 
 export default function OrderConfirmationPage() {
   const { orderId } = useParams<{ orderId: string }>();
+  const locationState = useLocation().state as { whatsappOpened?: boolean } | null;
   const order = React.useMemo(
     () => (orderId ? orderRepository.getById(orderId) : undefined),
     [orderId]
@@ -39,6 +43,10 @@ export default function OrderConfirmationPage() {
       </div>
     );
   }
+
+  // El wizard pasa por state si logró abrir WhatsApp. Si se llega aquí por
+  // enlace directo o recarga, no hay state: se asume que no hubo bloqueo.
+  const whatsappBlocked = locationState?.whatsappOpened === false;
 
   const message = buildOrderWhatsAppMessage(order);
   const whatsappUrl = buildWhatsAppUrl(message);
@@ -78,11 +86,25 @@ export default function OrderConfirmationPage() {
           <CardTitle>Último paso: envíanos el resumen por WhatsApp</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Al enviar la solicitud se abre WhatsApp con el mensaje ya preparado; solo tienes
-            que pulsar «Enviar». Si no se abrió, usa estos botones — tu pedido{" "}
-            <strong>ya está guardado</strong> y no se pierde.
-          </p>
+          {/* El wizard nos dice si consiguió abrir WhatsApp. Cuando el
+              navegador lo bloqueó, hay que decirlo claramente: si no, el
+              cliente cree que ya ha enviado el pedido y no pulsa nada. */}
+          {whatsappBlocked ? (
+            <p
+              role="alert"
+              className="rounded-lg bg-warning/10 px-4 py-3 text-sm text-warning"
+            >
+              <strong>Tu navegador ha bloqueado la apertura de WhatsApp.</strong> No
+              pasa nada: tu pedido <strong>ya está guardado</strong>. Pulsa «Abrir
+              WhatsApp» aquí abajo para enviarnos el resumen.
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Al enviar la solicitud se abre WhatsApp con el mensaje ya preparado; solo
+              tienes que pulsar «Enviar». Si no se abrió, usa estos botones — tu pedido{" "}
+              <strong>ya está guardado</strong> y no se pierde.
+            </p>
+          )}
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button asChild size="lg" className="flex-1">
               <a href={whatsappUrl} target="_blank" rel="noreferrer">
@@ -103,6 +125,14 @@ export default function OrderConfirmationPage() {
               {message}
             </pre>
           </details>
+          {/* En ordenador, wa.me abre WhatsApp Web, que pide sesión iniciada.
+              Quien no la tenga ve un código QR y cree que la web falla. */}
+          <p className="text-xs text-muted-foreground">
+            ¿Se ha abierto WhatsApp Web pidiéndote escanear un código? Es que no tienes
+            la sesión iniciada en este ordenador. Puedes iniciarla, abrir el enlace
+            desde el móvil, o pulsar «Copiar resumen» y pegárnoslo en un mensaje.
+          </p>
+
           {/* Los pedidos se gestionan por WhatsApp, pero quien atiende el
               teléfono es otra persona: se ofrece como alternativa, no como
               sustituto del mensaje. */}

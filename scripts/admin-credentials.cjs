@@ -32,23 +32,28 @@ const ACCOUNTS = [
 ];
 
 /**
- * Contraseña legible pero fuerte: cuatro bloques de cinco caracteres de un
- * alfabeto sin parejas que se confundan al dictarla por teléfono (nada de
- * O/0, l/1, I). Unos 100 bits de entropía, imposible de adivinar por
- * diccionario y todavía copiable a mano.
+ * Alfabeto sin parejas que se confundan al dictar la contraseña por teléfono
+ * o al copiarla a mano: fuera O/0, l/1 y la I mayúscula.
  */
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
 
+/**
+ * Longitud pedida por Dulce Flor (26/08/2026): 10 caracteres, para poder
+ * teclearla rápido en la tablet del mostrador.
+ *
+ * 10 caracteres de este alfabeto son 56^10, unos 58 bits. Combinado con las
+ * 210.000 iteraciones de PBKDF2, probarlas todas lleva siglos incluso con
+ * GPUs dedicadas, así que sigue siendo seguro. Lo que NO sería seguro es
+ * bajar de aquí o usar palabras reconocibles.
+ */
+const PASSWORD_LENGTH = 10;
+
 function generatePassword() {
-  const blocks = [];
-  for (let b = 0; b < 4; b += 1) {
-    let block = "";
-    for (let i = 0; i < 5; i += 1) {
-      block += ALPHABET[crypto.randomInt(ALPHABET.length)];
-    }
-    blocks.push(block);
+  let password = "";
+  for (let i = 0; i < PASSWORD_LENGTH; i += 1) {
+    password += ALPHABET[crypto.randomInt(ALPHABET.length)];
   }
-  return blocks.join("-");
+  return password;
 }
 
 function derive(password, saltHex) {

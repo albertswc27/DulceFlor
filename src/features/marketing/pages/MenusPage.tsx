@@ -43,6 +43,7 @@ import {
   SAVOURY_HERO_PHOTOS,
   SAVOURY_PRODUCT_PHOTOS,
   SWEET_SNACK_PHOTOS,
+  TRES_LECHES_PHOTOS,
   type Photo,
 } from "@/assets/photos";
 import {
@@ -644,6 +645,7 @@ function IndividualMenu() {
           title="Tarta Tres Leches"
           subtitle={tresLeches?.description}
         />
+        <PhotoGrid photos={TRES_LECHES_PHOTOS} columns={3} />
         <Card>
           <CardContent className="pt-5">
             <SizePriceList productId="tres-leches" customerType="individual" />
@@ -786,6 +788,7 @@ function BusinessMenu() {
           title="Tarta Tres Leches"
           subtitle={tresLeches?.description}
         />
+        <PhotoGrid photos={TRES_LECHES_PHOTOS} columns={3} />
         <Card>
           <CardContent className="pt-5">
             <SizePriceList productId="tres-leches" customerType="business" />
