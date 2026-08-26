@@ -61,6 +61,16 @@ create index if not exists orders_requested_date_idx
 
 alter table public.orders enable row level security;
 
+-- Privilegios de tabla. Van aparte de las políticas y se comprueban ANTES:
+-- aunque una política se escribiera mal algún día, "anon" no puede leer
+-- porque directamente no tiene el permiso. Doble cierre.
+--
+-- Esto hace falta explícitamente si al crear el proyecto se desmarcó
+-- «Automatically expose new tables», que es lo recomendable.
+grant usage on schema public to anon, authenticated;
+grant insert on public.orders to anon;
+grant select, insert, update on public.orders to authenticated;
+
 drop policy if exists "cualquiera puede crear un pedido" on public.orders;
 create policy "cualquiera puede crear un pedido"
   on public.orders for insert

@@ -53,10 +53,30 @@ para mantenerlo despierto; si se pausa, se reactiva desde el panel de Supabase.
 ### 1. Crear el proyecto
 
 1. Entrar en [supabase.com](https://supabase.com) y crear una cuenta.
-2. **New project**. Nombre: `dulce-flor`. Region: **West EU (Ireland)** o
-   **Central EU (Frankfurt)** — que los datos de clientes se queden en la UE.
-3. Guardar la contraseña de la base de datos que genera (no se usa desde la
-   web, pero hace falta para entrar por SQL).
+2. **New project**, y rellenar así:
+
+   | Campo | Valor |
+   | --- | --- |
+   | Organization | la que ya sale |
+   | GitHub | **saltar**, no hace falta |
+   | Project name | `dulce-flor` |
+   | Database password | «Generate a password» y **guardarla en un gestor de contraseñas** |
+   | Region | **Central EU (Frankfurt)** o West EU (Ireland) |
+
+   La contraseña de la base de datos **no es la del panel**: es la del
+   Postgres, y no se usa desde la web. Guardarla igualmente.
+
+   La región importa: en la UE los datos de clientes no salen del espacio
+   europeo y el aviso legal se sostiene sin cláusulas de transferencia
+   internacional.
+
+3. En **Security**, del mismo formulario:
+
+   | Casilla | Cómo dejarla | Por qué |
+   | --- | --- | --- |
+   | Enable Data API | ✅ **marcada** | Es por donde habla la web. Sin esto no funciona nada. |
+   | Automatically expose new tables | ❌ **desmarcada** | Lo recomienda la propia Supabase. El esquema da los permisos uno a uno: `anon` solo puede insertar. |
+   | Enable automatic RLS | ✅ **marcada** | Red de seguridad: si algún día se crea una tabla y se olvida protegerla, nace protegida. |
 
 ### 2. Crear la tabla y los permisos
 

@@ -83,33 +83,64 @@ function writeOrders(orders: Order[]): void {
   localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
 }
 
-function readPending(): Set<string> {
+/**
+ * Crear y modificar no son la misma operación contra el servidor, y no da
+ * igual cuál se reintente:
+ *
+ *  - Un pedido nuevo lo sube el cliente, que va como "anon" y SOLO tiene
+ *    permiso de INSERT. Si el reintento se hiciera como upsert, al chocar con
+ *    la fila ya subida intentaría un UPDATE y el servidor lo rechazaría, así
+ *    que el pedido se quedaría reintentando para siempre.
+ *  - Un cambio de estado lo hace el panel, ya con sesión iniciada, y sí puede
+ *    actualizar.
+ *
+ * Por eso la cola guarda qué hay que hacer con cada pedido, no solo su id.
+ */
+type PendingKind = "create" | "update";
+
+function readPending(): Map<string, PendingKind> {
   try {
     const raw = localStorage.getItem(PENDING_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return new Set(Array.isArray(parsed) ? parsed.filter((x) => typeof x === "string") : []);
+    const parsed = raw ? JSON.parse(raw) : null;
+    // Formato antiguo (solo ids): se asume creación, que es lo único que
+    // podía haber quedado pendiente en un dispositivo de cliente.
+    if (Array.isArray(parsed)) {
+      return new Map(parsed.filter((x) => typeof x === "string").map((id) => [id, "create"]));
+    }
+    if (parsed && typeof parsed === "object") {
+      return new Map(
+        Object.entries(parsed as Record<string, string>).filter(
+          (entry): entry is [string, PendingKind] =>
+            entry[1] === "create" || entry[1] === "update"
+        )
+      );
+    }
+    return new Map();
   } catch {
-    return new Set();
+    return new Map();
   }
 }
 
-function writePending(ids: Set<string>): void {
+function writePending(pending: Map<string, PendingKind>): void {
   try {
-    localStorage.setItem(PENDING_KEY, JSON.stringify([...ids]));
+    localStorage.setItem(PENDING_KEY, JSON.stringify(Object.fromEntries(pending)));
   } catch {
     // Sin espacio: el pedido ya está guardado, solo se pierde el reintento.
   }
 }
 
-function markPending(id: string): void {
-  const ids = readPending();
-  ids.add(id);
-  writePending(ids);
+function markPending(id: string, kind: PendingKind): void {
+  const pending = readPending();
+  // Si el pedido aún no ha llegado nunca al servidor, lo que toca sigue
+  // siendo crearlo, aunque entretanto se le haya cambiado el estado.
+  if (pending.get(id) === "create") return;
+  pending.set(id, kind);
+  writePending(pending);
 }
 
 function clearPending(id: string): void {
-  const ids = readPending();
-  if (ids.delete(id)) writePending(ids);
+  const pending = readPending();
+  if (pending.delete(id)) writePending(pending);
 }
 
 /* ------------------------------------------------------------------ */
@@ -205,8 +236,8 @@ class OrderRepositoryImpl implements OrderRepository {
     // A partir de aquí el pedido ya está a salvo en el dispositivo. La subida
     // va suelta y sin esperar: si falla (sin cobertura, servidor caído), queda
     // marcada como pendiente y se reintenta en la siguiente sincronización.
-    markPending(order.id);
-    void this.push(order);
+    markPending(order.id, "create");
+    void this.push(order, "create");
 
     return order;
   }
@@ -241,17 +272,26 @@ class OrderRepositoryImpl implements OrderRepository {
     const updated = change(orders[index]);
     orders[index] = updated;
     writeOrders(orders);
-    markPending(updated.id);
-    void this.push(updated);
+    markPending(updated.id, "update");
+    void this.push(updated, readPending().get(updated.id) ?? "update");
     return updated;
   }
 
   /** Sube un pedido. Silencioso a propósito: el reintento lo hace `sync()`. */
-  private async push(order: Order): Promise<boolean> {
+  private async push(order: Order, kind: PendingKind): Promise<boolean> {
     const supabase = await getSupabase();
     if (!supabase) return false;
     try {
-      const { error } = await supabase.from("orders").upsert(toRow(order));
+      const row = toRow(order);
+      const { error } =
+        kind === "create"
+          ? // ON CONFLICT DO NOTHING: solo necesita permiso de INSERT, así que
+            // el reintento de un cliente funciona aunque la fila ya esté.
+            await supabase.from("orders").upsert(row, {
+              onConflict: "id",
+              ignoreDuplicates: true,
+            })
+          : await supabase.from("orders").update(row).eq("id", order.id);
       if (error) return false;
       clearPending(order.id);
       return true;
@@ -269,11 +309,12 @@ class OrderRepositoryImpl implements OrderRepository {
     //    estado hecho sin conexión no lo pise la versión antigua del servidor.
     const pending = readPending();
     if (pending.size > 0) {
-      const locals = readOrders().filter((o) => pending.has(o.id));
-      for (const order of locals) await this.push(order);
-      // Un id pendiente que ya no existe en local no se puede subir nunca.
-      for (const id of pending) {
-        if (!locals.some((o) => o.id === id)) clearPending(id);
+      const locals = new Map(readOrders().map((o) => [o.id, o]));
+      for (const [id, kind] of pending) {
+        const order = locals.get(id);
+        // Un id pendiente que ya no existe en local no se puede subir nunca.
+        if (!order) clearPending(id);
+        else await this.push(order, kind);
       }
     }
 
