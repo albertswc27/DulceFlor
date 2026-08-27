@@ -328,6 +328,37 @@ export function computeDeposit(totalCents: number): {
 }
 
 /**
+ * Lo que queda por cobrar de un pedido cuando el cliente lo recoge, restando
+ * la señal ya recibida (`depositPaidCents`, normalmente cobrada en el kiosk).
+ *
+ * Devuelve null cuando el total todavía no es definitivo (tarta a
+ * presupuestar): en ese caso el resto no se puede calcular hasta cerrar el
+ * presupuesto. Nunca devuelve un negativo: si se pagó de más, el resto es 0.
+ */
+export function computeBalanceDueCents(
+  pricing: Pick<OrderPricing, "totalCents" | "pendingQuote">,
+  depositPaidCents: number | undefined
+): number | null {
+  if (pricing.pendingQuote) return null;
+  const paid = Math.max(0, Math.floor(depositPaidCents ?? 0));
+  return Math.max(0, pricing.totalCents - paid);
+}
+
+/**
+ * Dinero a DEVOLVER cuando la señal cobrada supera el total final. Normalmente
+ * es 0: solo pasa si se cobró una señal sobre una tarta a presupuestar y el
+ * presupuesto cerró por debajo. Devuelve 0 mientras el total no sea firme.
+ */
+export function computeOverpaidCents(
+  pricing: Pick<OrderPricing, "totalCents" | "pendingQuote">,
+  depositPaidCents: number | undefined
+): number {
+  if (pricing.pendingQuote) return 0;
+  const paid = Math.max(0, Math.floor(depositPaidCents ?? 0));
+  return Math.max(0, paid - pricing.totalCents);
+}
+
+/**
  * Cálculo completo del pedido.
  * - deliveryFeeCents null = fuera de zona automática (según distancia); el
  *   total se calcula sin transporte y la UI debe indicarlo claramente.

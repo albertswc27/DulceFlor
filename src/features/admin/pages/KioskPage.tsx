@@ -31,7 +31,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { formatEuros } from "@/domain/money";
+import { formatEuros, parseEurosToCents } from "@/domain/money";
+import { computeBalanceDueCents } from "@/domain/pricing";
 import {
   CATEGORY_FAMILY,
   CATEGORY_LABELS,
@@ -174,6 +175,9 @@ export default function KioskPage() {
   const [municipality, setMunicipality] = React.useState(state.address?.municipality ?? "");
   const [postalCode, setPostalCode] = React.useState(state.address?.postalCode ?? "");
   const [details, setDetails] = React.useState(state.address?.details ?? "");
+  // Señal (paga y señal) flexible que el equipo cobra al registrar el pedido.
+  // Texto en euros; se convierte a céntimos al enviar.
+  const [depositEuros, setDepositEuros] = React.useState("");
 
   const products = state.customerType ? getProductsFor(state.customerType) : [];
   // Parrilla de tarjetas agrupada por familia (tartas, aperitivos, regalos):
@@ -239,10 +243,27 @@ export default function KioskPage() {
 
   function handleSubmit() {
     if (submitting) return;
+
+    // Señal opcional: si el equipo ha escrito algo, tiene que ser un importe
+    // válido y no puede superar el total ya conocido.
+    let depositPaidCents: number | undefined;
+    if (depositEuros.trim() !== "") {
+      const cents = parseEurosToCents(depositEuros);
+      if (cents === null) {
+        toast.error("La señal no es un importe válido. Escribe algo como 20 o 20,50.");
+        return;
+      }
+      if (!derived.pricing.pendingQuote && cents > derived.pricing.totalCents) {
+        toast.error("La señal no puede superar el total del pedido.");
+        return;
+      }
+      depositPaidCents = cents > 0 ? cents : undefined;
+    }
+
     setSubmitting(true);
     let result: SubmitResult;
     try {
-      result = submitOrder(state, derived, "kiosk");
+      result = submitOrder(state, derived, "kiosk", { depositPaidCents });
     } catch {
       toast.error(
         "No se pudo registrar el pedido en este dispositivo. Libera espacio de almacenamiento e inténtalo de nuevo."
@@ -269,6 +290,7 @@ export default function KioskPage() {
     setMunicipality("");
     setPostalCode("");
     setDetails("");
+    setDepositEuros("");
     setSuccess(result.order);
   }
 
@@ -370,6 +392,69 @@ export default function KioskPage() {
           </span>
         </span>
       </button>
+    );
+  }
+
+  /**
+   * Sección de paga y señal (solo kiosk): un importe flexible que el equipo
+   * cobra al registrar el pedido. Se muestra el resto que quedará por cobrar
+   * al recoger, para que quede anotado y no haya sorpresas.
+   */
+  function renderDepositSection(prefix: string) {
+    const trimmed = depositEuros.trim();
+    const cents = trimmed === "" ? null : parseEurosToCents(depositEuros);
+    const pending = derived.pricing.pendingQuote;
+    const exceedsTotal =
+      cents !== null && !pending && cents > derived.pricing.totalCents;
+    const invalid = trimmed !== "" && (cents === null || exceedsTotal);
+    const balance =
+      cents !== null && cents > 0 && !invalid
+        ? computeBalanceDueCents(derived.pricing, cents)
+        : null;
+
+    return (
+      <section>
+        <SectionHeading>Paga y señal (opcional)</SectionHeading>
+        <div className="space-y-1.5">
+          <Label htmlFor={`${prefix}-deposit`}>Importe que deja ahora el cliente</Label>
+          <div className="relative">
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            >
+              €
+            </span>
+            <Input
+              id={`${prefix}-deposit`}
+              value={depositEuros}
+              onChange={(e) => setDepositEuros(e.target.value)}
+              inputMode="decimal"
+              placeholder="0,00"
+              autoComplete="off"
+              className="pl-7"
+              aria-invalid={invalid || undefined}
+            />
+          </div>
+          {invalid ? (
+            <p className="text-sm text-destructive">
+              {exceedsTotal
+                ? "La señal no puede superar el total del pedido."
+                : "Escribe un importe válido, por ejemplo 20 o 20,50."}
+            </p>
+          ) : cents && cents > 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {balance === null
+                ? "El resto se calculará al cerrar el presupuesto."
+                : `Pendiente al recoger: ${formatEuros(balance)}`}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Anota lo que el cliente paga ahora; el resto se cobra al recoger.
+              Déjalo vacío si no deja señal.
+            </p>
+          )}
+        </div>
+      </section>
     );
   }
 
@@ -528,6 +613,8 @@ export default function KioskPage() {
           </p>
         )}
 
+        {renderDepositSection(prefix)}
+
         <Button
           type="button"
           size="xl"
@@ -626,7 +713,20 @@ export default function KioskPage() {
             ? "Pendiente de presupuesto"
             : formatEuros(success.pricing.totalCents)}
         </p>
-        {success.pricing.pendingQuote ? (
+        {success.depositPaidCents ? (
+          <p className="mt-3 max-w-sm rounded-lg bg-success/10 px-4 py-2.5 text-sm text-foreground">
+            Señal cobrada: <strong>{formatEuros(success.depositPaidCents)}</strong>.{" "}
+            {(() => {
+              const balance = computeBalanceDueCents(
+                success.pricing,
+                success.depositPaidCents
+              );
+              return balance === null
+                ? "El resto se cobrará al cerrar el presupuesto."
+                : `Pendiente al recoger: ${formatEuros(balance)}.`;
+            })()}
+          </p>
+        ) : success.pricing.pendingQuote ? (
           <p className="mt-3 max-w-sm rounded-lg bg-secondary/15 px-4 py-2.5 text-sm text-foreground">
             Solicitud a medida: enviaremos el presupuesto por WhatsApp.
           </p>

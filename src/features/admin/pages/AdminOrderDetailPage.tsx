@@ -32,9 +32,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { DEPOSIT_PERCENTAGE } from "@/config/business";
-import { resolveCandleSelection } from "@/domain/pricing";
+import {
+  computeBalanceDueCents,
+  computeOverpaidCents,
+  resolveCandleSelection,
+} from "@/domain/pricing";
 import { formatEuros } from "@/domain/money";
-import { getImage } from "@/services/imageStore";
+import { getImage, getRemoteImageUrl } from "@/services/imageStore";
+import { isSupabaseConfigured } from "@/services/supabase";
 import { buildOrderWhatsAppMessage } from "@/domain/whatsapp";
 import {
   getProduct,
@@ -69,8 +74,11 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
 
 /**
  * Miniatura de la imagen de referencia de un artículo, ampliable en diálogo.
- * getImage puede devolver null: las imágenes viven en el navegador donde se
- * creó el pedido (limitación documentada de la POC).
+ *
+ * Primero mira el almacén local (instantáneo, sirve en el mismo dispositivo
+ * donde se hizo el pedido). Si no está —el caso normal cuando el pedido lo
+ * hizo un cliente desde su móvil— la descarga del Storage con una URL firmada,
+ * que es lo que hace que la foto llegue de verdad al panel.
  */
 function ReferenceImageThumb({
   imageId,
@@ -79,14 +87,32 @@ function ReferenceImageThumb({
   imageId: string;
   productName: string;
 }) {
-  const dataUrl = React.useMemo(() => getImage(imageId), [imageId]);
+  const [src, setSrc] = React.useState<string | null>(() => getImage(imageId));
+  // Solo hay que ir al servidor si no está en local y hay Storage configurado.
+  const [loading, setLoading] = React.useState(
+    () => getImage(imageId) === null && isSupabaseConfigured()
+  );
   const alt = `Imagen de referencia de ${productName}`;
 
-  if (!dataUrl) {
+  React.useEffect(() => {
+    if (src || !isSupabaseConfigured()) return;
+    let alive = true;
+    setLoading(true);
+    void getRemoteImageUrl(imageId).then((url) => {
+      if (!alive) return;
+      setSrc(url);
+      setLoading(false);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [imageId, src]);
+
+  if (!src) {
     return (
       <li>
         <span className="text-foreground">Imagen de referencia:</span>{" "}
-        Imagen no disponible en este dispositivo
+        {loading ? "cargando imagen…" : "imagen no disponible"}
       </li>
     );
   }
@@ -101,7 +127,7 @@ function ReferenceImageThumb({
             aria-label={`Ampliar ${alt.toLowerCase()}`}
             className="mt-1.5 block overflow-hidden rounded-lg border border-border bg-card shadow-card transition-shadow hover:shadow-lifted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            <img src={dataUrl} alt={alt} className="h-24 w-24 object-cover" />
+            <img src={src} alt={alt} className="h-24 w-24 object-cover" />
           </button>
         </DialogTrigger>
         <DialogContent className="max-w-3xl p-4 sm:p-6">
@@ -110,7 +136,7 @@ function ReferenceImageThumb({
             <DialogDescription className="sr-only">{alt}</DialogDescription>
           </DialogHeader>
           <img
-            src={dataUrl}
+            src={src}
             alt={alt}
             className="max-h-[70vh] w-full rounded-lg object-contain"
           />
@@ -465,6 +491,12 @@ export default function AdminOrderDetailPage() {
   // subtotalCents ya incluye las velas: se separan para no contarlas dos veces.
   const candlesCents = pricing.candlesCents ?? 0;
   const productsCents = pricing.subtotalCents - candlesCents;
+  // Señal ya cobrada (normalmente en el kiosk) y lo que resta por cobrar al
+  // recoger. Cuando hay señal, esto sustituye a la sugerencia del 30 %: ya se
+  // ha cobrado dinero, así que lo útil es saber cuánto queda.
+  const depositPaidCents = order.depositPaidCents ?? 0;
+  const balanceDueCents = computeBalanceDueCents(pricing, order.depositPaidCents);
+  const overpaidCents = computeOverpaidCents(pricing, order.depositPaidCents);
 
   return (
     <div className="space-y-6">
@@ -717,27 +749,59 @@ export default function AdminOrderDetailPage() {
                   automática y debe confirmarse con el cliente.
                 </p>
               )}
-              {!pricing.pendingQuote && pricing.depositRequired && (
-                <div className="space-y-1 rounded-lg bg-secondary/15 px-3 py-2.5 text-sm">
-                  <p className="font-medium text-primary">
-                    Requiere paga y señal del {DEPOSIT_PERCENTAGE}%.
+              {/* Ya se cobró una señal: mandan estas cifras, no la sugerencia
+                  del 30 %, porque el dinero ya ha cambiado de manos. */}
+              {depositPaidCents > 0 ? (
+                <div className="space-y-1 rounded-lg bg-success/10 px-3 py-2.5 text-sm">
+                  <p className="font-medium text-success">
+                    Señal ya cobrada al registrar el pedido.
                   </p>
                   <div className="flex justify-between text-muted-foreground">
-                    <span>Señal ({DEPOSIT_PERCENTAGE}%)</span>
+                    <span>Señal recibida</span>
                     <span className="font-medium text-foreground">
-                      {formatEuros(pricing.depositCents)}
+                      {formatEuros(depositPaidCents)}
                     </span>
                   </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Pendiente</span>
-                    <span className="font-medium text-foreground">
-                      {formatEuros(pricing.remainingCents)}
-                    </span>
-                  </div>
-                  <p className="pt-1 text-xs text-muted-foreground">
-                    Bizum, transferencia o pago en tienda. Sin pago online.
-                  </p>
+                  {overpaidCents > 0 ? (
+                    <div className="flex justify-between font-medium text-warning">
+                      <span>Devolver al cliente</span>
+                      <span>{formatEuros(overpaidCents)}</span>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Pendiente al recoger</span>
+                      <span className="font-medium text-foreground">
+                        {balanceDueCents === null
+                          ? "según presupuesto"
+                          : formatEuros(balanceDueCents)}
+                      </span>
+                    </div>
+                  )}
                 </div>
+              ) : (
+                !pricing.pendingQuote &&
+                pricing.depositRequired && (
+                  <div className="space-y-1 rounded-lg bg-secondary/15 px-3 py-2.5 text-sm">
+                    <p className="font-medium text-primary">
+                      Requiere paga y señal del {DEPOSIT_PERCENTAGE}%.
+                    </p>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Señal ({DEPOSIT_PERCENTAGE}%)</span>
+                      <span className="font-medium text-foreground">
+                        {formatEuros(pricing.depositCents)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Pendiente</span>
+                      <span className="font-medium text-foreground">
+                        {formatEuros(pricing.remainingCents)}
+                      </span>
+                    </div>
+                    <p className="pt-1 text-xs text-muted-foreground">
+                      Bizum, transferencia o pago en tienda. Sin pago online.
+                    </p>
+                  </div>
+                )
               )}
             </CardContent>
           </Card>

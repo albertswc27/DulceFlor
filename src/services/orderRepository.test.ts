@@ -101,6 +101,31 @@ describe("traducción del pedido a la base de datos", () => {
     const rota = { ...toRow(PEDIDO), payload: { basura: true } } as unknown as OrderRow;
     expect(fromRow(rota)).toBeNull();
   });
+
+  it("conserva la señal cobrada en el kiosk (depositPaidCents)", () => {
+    const conSenal: Order = { ...PEDIDO, source: "kiosk", depositPaidCents: 2000 };
+    const vuelta = fromRow(toRow(conSenal))!;
+    expect(vuelta.depositPaidCents).toBe(2000);
+    // Y un pedido sin señal no inventa el campo.
+    expect(fromRow(toRow(PEDIDO))!.depositPaidCents).toBeUndefined();
+  });
+
+  it("conserva el id de la imagen de referencia, que va en el JSON", () => {
+    const conImagen: Order = {
+      ...PEDIDO,
+      items: [
+        {
+          ...PEDIDO.items[0],
+          customization: {
+            ...PEDIDO.items[0].customization,
+            referenceImageId: "img-abc-123",
+          },
+        },
+      ],
+    };
+    const vuelta = fromRow(toRow(conImagen))!;
+    expect(vuelta.items[0].customization.referenceImageId).toBe("img-abc-123");
+  });
 });
 
 describe("identificador público", () => {

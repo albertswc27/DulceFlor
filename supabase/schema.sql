@@ -95,10 +95,56 @@ create policy "solo el equipo actualiza los pedidos"
 -- el panel de Supabase.
 
 -- =====================================================================
+--  Imágenes de referencia (Supabase Storage)
+--
+--  Bucket privado donde aterrizan las fotos que adjunta el cliente, para que
+--  la foto llegue al panel se haga el pedido donde se haga. Antes se quedaban
+--  en el móvil del cliente y no las veía nadie.
+--
+--  Mismo modelo de confianza que la tabla de pedidos:
+--   - Cualquiera puede SUBIR (es parte del formulario público).
+--   - Solo una sesión iniciada puede DESCARGAR.
+--   - Nadie borra desde la web.
+--
+--  El bucket es privado (public = false): las imágenes solo se sirven con URL
+--  firmada temporal, que requiere sesión. El límite de tamaño y de tipos frena
+--  el abuso de que cualquiera con la clave anon suba archivos arbitrarios.
+-- =====================================================================
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'order-references',
+  'order-references',
+  false,
+  3145728, -- 3 MB: las imágenes se comprimen en el navegador antes de subir
+  array['image/jpeg', 'image/png', 'image/webp']
+)
+on conflict (id) do update
+  set public = excluded.public,
+      file_size_limit = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;
+
+-- RLS de storage.objects ya viene activado por Supabase; definimos las
+-- políticas concretas para este bucket.
+
+drop policy if exists "subir imagen de referencia" on storage.objects;
+create policy "subir imagen de referencia"
+  on storage.objects for insert
+  to anon, authenticated
+  with check (bucket_id = 'order-references');
+
+drop policy if exists "el equipo lee las imagenes de referencia" on storage.objects;
+create policy "el equipo lee las imagenes de referencia"
+  on storage.objects for select
+  to authenticated
+  using (bucket_id = 'order-references');
+
+-- =====================================================================
 --  Comprobación rápida
 --
---  Después de ejecutar, esto debe devolver cuatro filas: rowsecurity = true
---  y las tres políticas.
+--  Lo primero debe devolver rowsecurity = true; lo segundo, las tres políticas
+--  de la tabla; lo tercero, el bucket order-references.
 -- =====================================================================
 -- select relrowsecurity from pg_class where relname = 'orders';
 -- select policyname, cmd, roles from pg_policies where tablename = 'orders';
+-- select id, public, file_size_limit from storage.buckets where id = 'order-references';

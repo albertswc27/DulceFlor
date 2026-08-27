@@ -41,16 +41,27 @@ src/
 
 Principio rector: **la UI nunca calcula precios ni disponibilidad**; siempre llama al dominio. El configurador público y el kiosk comparten estado (`OrderDraftContext`), componentes (`ProductConfigurator`, `OrderSummary`, `SlotPicker`) y registro (`submitOrder`).
 
-## Imágenes de referencia (POC)
+## Imágenes de referencia
 
 `services/imageStore.ts`: las fotos de referencia del cliente se redimensionan y
 comprimen en el navegador (máx. 1280 px, JPEG) y se guardan bajo claves propias
 de localStorage; el pedido solo referencia el `referenceImageId` (nunca base64
 incrustado en el objeto del pedido). Al quitar un artículo del carrito se borra
-su imagen, y al arrancar se limpian huérfanas. Con backend real, esta interfaz
-se sustituye por subida a storage (Supabase Storage/S3) conservando los ids.
-Limitación (igual que los pedidos): las imágenes viven en el navegador donde se
-creó el pedido.
+su imagen local, y al arrancar se limpian huérfanas.
+
+Con Supabase configurado, además, **la imagen viaja al Storage** (bucket privado
+`order-references`) para que llegue al panel se haga el pedido donde se haga —
+antes se quedaba en el móvil del cliente:
+
+- Se sube al **registrar el pedido** (no antes: un borrador que el cliente
+  descarta no debe subir nada), por su propia cola reintentable en segundo
+  plano, igual que el pedido. La subida va como `anon` (o `authenticated` en el
+  kiosk), que solo tiene permiso de INSERT: un reintento de algo que ya subió se
+  trata como éxito, sin necesitar UPDATE/SELECT.
+- El panel la muestra pidiendo el local primero y, si no está, una **URL firmada
+  temporal** del Storage (requiere sesión, política de `storage.objects`).
+- Sin Supabase, todo esto se apaga y las imágenes se quedan solo en el
+  dispositivo, como antes.
 
 ## Persistencia (POC) y camino a producción
 
@@ -62,8 +73,9 @@ creó el pedido.
   2. **Supabase, en segundo plano.** El pedido se sube sin bloquear nada. Si falla, queda marcado como pendiente y se reintenta en la siguiente sincronización (`orderRepository.sync()`), que el panel dispara al abrirse y al recuperar el foco.
 - El acceso a esos datos lo controlan las **políticas de seguridad por fila** (`supabase/schema.sql`): cualquiera puede INSERT (es un formulario público), solo una sesión iniciada puede SELECT/UPDATE, y nadie puede DELETE desde la web. La clave anon es pública por diseño; lo que protege los datos son las políticas.
 - Como consecuencia, **la autenticación del panel pasa a ser de servidor** cuando hay Supabase: sin sesión válida la base de datos no devuelve ni una fila, así que saltarse el formulario editando el JavaScript ya no sirve de nada.
-- Las **imágenes de referencia no se suben**: pesan y se quedan en `imageStore` local. El pedido solo lleva su identificador.
-- Sin las variables de Supabase, todo esto se apaga solo y la web vuelve al comportamiento anterior (pedidos solo en el dispositivo, autenticación local), avisándolo en la interfaz.
+- Las **imágenes de referencia** también se suben, a Supabase Storage y por su propia cola (ver «Imágenes de referencia»). El pedido solo lleva su identificador.
+- La **paga y señal flexible** que cobra el kiosk se guarda en `Order.depositPaidCents` (viaja en el `payload`, sin columna propia). El resto por cobrar sale de `computeBalanceDueCents`; si el presupuesto final quedara por debajo de lo cobrado, `computeOverpaidCents` marca lo que hay que devolver.
+- Sin las variables de Supabase, todo esto se apaga solo y la web vuelve al comportamiento anterior (pedidos e imágenes solo en el dispositivo, autenticación local), avisándolo en la interfaz.
 - `create()` es **idempotente** por `clientRequestId`: reintentos o dobles clics no duplican pedidos.
 - El ID público `DF-AAAA-NNNN` usa un contador anual en el mismo almacenamiento.
 

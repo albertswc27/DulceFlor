@@ -78,15 +78,25 @@ para mantenerlo despierto; si se pausa, se reactiva desde el panel de Supabase.
    | Automatically expose new tables | ❌ **desmarcada** | Lo recomienda la propia Supabase. El esquema da los permisos uno a uno: `anon` solo puede insertar. |
    | Enable automatic RLS | ✅ **marcada** | Red de seguridad: si algún día se crea una tabla y se olvida protegerla, nace protegida. |
 
-### 2. Crear la tabla y los permisos
+### 2. Crear la tabla, el almacén de imágenes y los permisos
 
 En el proyecto: **SQL Editor → New query**, pegar entero el contenido de
 [`supabase/schema.sql`](../supabase/schema.sql) y pulsar **Run**.
 
-Ese fichero crea la tabla y, sobre todo, las **políticas de seguridad por
-fila**, que son lo que impide que cualquiera se descargue la agenda de
-clientes: cualquiera puede crear un pedido (es un formulario público), pero
-solo una sesión iniciada puede leerlos.
+Ese fichero crea:
+
+- La **tabla de pedidos** y sus **políticas de seguridad por fila**, que son lo
+  que impide que cualquiera se descargue la agenda de clientes: cualquiera
+  puede crear un pedido (es un formulario público), pero solo una sesión
+  iniciada puede leerlos.
+- El **bucket privado `order-references`** para las fotos que adjunta el
+  cliente, con la misma regla: cualquiera puede subir, solo el equipo (sesión
+  iniciada) puede descargar. Así la foto llega al panel se haga el pedido donde
+  se haga, en vez de quedarse en el móvil del cliente.
+
+El fichero es idempotente: si ya lo ejecutaste antes (cuando solo estaba la
+tabla), **vuelve a pegarlo y ejecutarlo** para añadir el bucket de imágenes; no
+rompe nada de lo que ya había.
 
 ### 3. Crear las cuentas del equipo
 

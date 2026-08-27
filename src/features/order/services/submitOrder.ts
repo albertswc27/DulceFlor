@@ -19,10 +19,19 @@ export type SubmitResult =
   | { ok: true; order: Order }
   | { ok: false; errors: string[] };
 
+export interface SubmitOptions {
+  /**
+   * Señal (paga y señal) cobrada al registrar el pedido, en céntimos. Solo la
+   * usa el kiosk de tienda; los pedidos de la web no dejan señal por aquí.
+   */
+  depositPaidCents?: number;
+}
+
 export function submitOrder(
   state: OrderDraftState,
   _derived: OrderDraftDerived,
-  source: "web" | "kiosk" = "web"
+  source: "web" | "kiosk" = "web",
+  options: SubmitOptions = {}
 ): SubmitResult {
   const errors: string[] = [];
 
@@ -73,6 +82,17 @@ export function submitOrder(
     state.fulfillmentType === "delivery" ? (zoneResolution?.feeCents ?? null) : 0
   );
 
+  // La señal se guarda solo si es un importe positivo; nunca por encima del
+  // total ya conocido (con tarta a presupuestar el total aún no es firme, así
+  // que se acepta tal cual y el resto se calcula al cerrar el presupuesto).
+  const depositRaw = Math.max(0, Math.floor(options.depositPaidCents ?? 0));
+  const depositPaidCents =
+    depositRaw > 0
+      ? pricing.pendingQuote
+        ? depositRaw
+        : Math.min(depositRaw, pricing.totalCents)
+      : undefined;
+
   const order = orderRepository.create({
     clientRequestId: state.clientRequestId,
     customerType: state.customerType!,
@@ -93,6 +113,7 @@ export function submitOrder(
     requestedDate: state.requestedDate!,
     requestedTime: state.requestedTime!,
     pricing,
+    depositPaidCents,
     reusableTray:
       state.customerType === "business" && state.reusableTray ? true : undefined,
     source,

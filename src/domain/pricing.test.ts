@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildOrderItem,
+  computeBalanceDueCents,
+  computeOverpaidCents,
   computeCandlesCents,
   describeCandleLines,
   getNumberCandleUnitCents,
@@ -853,5 +855,54 @@ describe("bengalas (confirmado 24/08/2026)", () => {
     const pricing = computeOrderPricing([item], 0);
     expect(pricing.candlesCents).toBe(3 * NUMBER_SPARKLER_PRICE_CENTS);
     expect(pricing.depositRequired).toBe(true);
+  });
+});
+
+describe("resto por cobrar con señal (paga y señal flexible del kiosk)", () => {
+  const base = { pendingQuote: undefined } as const;
+
+  it("sin señal, el resto es el total entero", () => {
+    expect(computeBalanceDueCents({ totalCents: 4200, ...base }, undefined)).toBe(4200);
+    expect(computeBalanceDueCents({ totalCents: 4200, ...base }, 0)).toBe(4200);
+  });
+
+  it("con señal, resta lo ya cobrado", () => {
+    expect(computeBalanceDueCents({ totalCents: 4200, ...base }, 2000)).toBe(2200);
+  });
+
+  it("una señal igual al total deja 0 por cobrar", () => {
+    expect(computeBalanceDueCents({ totalCents: 4200, ...base }, 4200)).toBe(0);
+  });
+
+  it("nunca devuelve negativo aunque se pagara de más", () => {
+    expect(computeBalanceDueCents({ totalCents: 4200, ...base }, 5000)).toBe(0);
+  });
+
+  it("ignora una señal negativa o con decimales imposibles", () => {
+    expect(computeBalanceDueCents({ totalCents: 4200, ...base }, -100)).toBe(4200);
+    expect(computeBalanceDueCents({ totalCents: 4200, ...base }, 19.9)).toBe(4200 - 19);
+  });
+
+  it("con tarta a presupuestar no se puede calcular el resto: null", () => {
+    expect(
+      computeBalanceDueCents({ totalCents: 300, pendingQuote: true }, 1000)
+    ).toBe(null);
+  });
+
+  it("si se cobró de más (presupuesto cerró por debajo), hay que devolver", () => {
+    // Señal de 100 € sobre una tarta que finalmente cuesta 60 €.
+    const pricing = { totalCents: 6000, pendingQuote: undefined } as const;
+    expect(computeBalanceDueCents(pricing, 10000)).toBe(0);
+    expect(computeOverpaidCents(pricing, 10000)).toBe(4000);
+  });
+
+  it("sin sobrepago, la devolución es 0", () => {
+    const pricing = { totalCents: 6000, pendingQuote: undefined } as const;
+    expect(computeOverpaidCents(pricing, 2000)).toBe(0);
+    expect(computeOverpaidCents(pricing, undefined)).toBe(0);
+  });
+
+  it("mientras el total no sea firme (pendingQuote) no se declara sobrepago", () => {
+    expect(computeOverpaidCents({ totalCents: 300, pendingQuote: true }, 9000)).toBe(0);
   });
 });

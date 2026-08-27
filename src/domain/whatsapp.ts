@@ -6,7 +6,11 @@
 import { DEPOSIT_PERCENTAGE, WHATSAPP_PHONE } from "@/config/business";
 import { getProduct } from "./catalog";
 import { formatEuros } from "./money";
-import { describeCandleLines } from "./pricing";
+import {
+  computeBalanceDueCents,
+  computeOverpaidCents,
+  describeCandleLines,
+} from "./pricing";
 import {
   CUSTOMER_TYPE_LABELS,
   FULFILLMENT_LABELS,
@@ -113,6 +117,7 @@ export function buildOrderWhatsAppMessage(order: Order): string {
 
   const candlesCents = order.pricing.candlesCents ?? 0;
   const productsCents = order.pricing.subtotalCents - candlesCents;
+  const hasPaidDeposit = (order.depositPaidCents ?? 0) > 0;
 
   if (order.pricing.pendingQuote) {
     // Solicitud sin presupuestar: nunca mostrar un total inexistente.
@@ -149,11 +154,30 @@ export function buildOrderWhatsAppMessage(order: Order): string {
     if (order.pricing.hasPendingExtras) {
       lines.push("  + modificaciones pendientes de confirmar (ver indicaciones)");
     }
-    if (order.pricing.depositRequired) {
+    // La sugerencia del 30 % solo tiene sentido si NO se ha cobrado ya una
+    // señal; si hay señal recibida, mandan las cifras reales de abajo (igual
+    // que hace el panel), para no dar dos "pendiente" contradictorios.
+    if (order.pricing.depositRequired && !hasPaidDeposit) {
       lines.push(
         `Paga y señal (${DEPOSIT_PERCENTAGE}%): ${formatEuros(order.pricing.depositCents)}`
       );
       lines.push(`Pendiente: ${formatEuros(order.pricing.remainingCents)}`);
+    }
+  }
+
+  // Señal ya cobrada (normalmente en tienda): es dinero recibido, así que va
+  // después del total, con lo que resta por cobrar al recoger.
+  if (hasPaidDeposit) {
+    lines.push("");
+    lines.push(`Señal recibida: ${formatEuros(order.depositPaidCents!)}`);
+    const balance = computeBalanceDueCents(order.pricing, order.depositPaidCents);
+    const overpaid = computeOverpaidCents(order.pricing, order.depositPaidCents);
+    if (balance === null) {
+      lines.push("Pendiente al recoger: se calculará con el presupuesto");
+    } else if (overpaid > 0) {
+      lines.push(`Devolver al cliente: ${formatEuros(overpaid)}`);
+    } else {
+      lines.push(`Pendiente al recoger: ${formatEuros(balance)}`);
     }
   }
 

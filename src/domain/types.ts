@@ -182,6 +182,15 @@ export interface Order {
   pricing: OrderPricing;
 
   /**
+   * Señal (paga y señal) YA cobrada al registrar el pedido, en céntimos.
+   * Es dinero realmente recibido, normalmente en el kiosk de tienda, y es un
+   * importe FLEXIBLE que fija el equipo (no el 30 % automático de `pricing`).
+   * Sirve para conocer lo que resta por cobrar al recoger:
+   * ver `computeBalanceDueCents`. Ausente en los pedidos que no dejaron señal.
+   */
+  depositPaidCents?: number;
+
+  /**
    * Solo pedidos de empresa: entrega en fuente de cristal reutilizable
    * (la fuente anterior puede recogerse en la siguiente entrega).
    */

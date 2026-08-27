@@ -23,6 +23,7 @@
 import { newInternalId, newPublicOrderId } from "@/domain/orderId";
 import { computeOrderPricing } from "@/domain/pricing";
 import type { Order, OrderStatus } from "@/domain/types";
+import { enqueueImageUpload, flushImageUploads } from "./imageStore";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 
 export interface OrderRepository {
@@ -239,6 +240,15 @@ class OrderRepositoryImpl implements OrderRepository {
     markPending(order.id, "create");
     void this.push(order, "create");
 
+    // Las imágenes de referencia de un pedido real sí se suben (a Storage),
+    // para que lleguen al panel desde cualquier dispositivo. Van por su propia
+    // cola, en segundo plano y reintentables, igual que el pedido.
+    for (const item of order.items) {
+      const imageId = item.customization?.referenceImageId;
+      if (imageId) enqueueImageUpload(imageId);
+    }
+    void flushImageUploads();
+
     return order;
   }
 
@@ -307,6 +317,10 @@ class OrderRepositoryImpl implements OrderRepository {
     if (!isSupabaseConfigured()) return { orders: this.list(), error: null };
     const supabase = await getSupabase();
     if (!supabase) return { orders: this.list(), error: null };
+
+    // Reintenta también las imágenes que quedaron sin subir (p. ej. el pedido
+    // se creó sin cobertura). No bloquea la sincronización de pedidos.
+    void flushImageUploads();
 
     // 1) Lo que quedó sin subir. Se hace antes de bajar para que un cambio de
     //    estado hecho sin conexión no lo pise la versión antigua del servidor.
