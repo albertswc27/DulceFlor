@@ -6,6 +6,7 @@ import * as React from "react";
 import { Link } from "react-router-dom";
 import { addDays, format } from "date-fns";
 import {
+  AlertTriangle,
   ArrowRight,
   Cake,
   CalendarDays,
@@ -66,9 +67,15 @@ function UpcomingOrderRow({ order }: { order: Order }) {
       className="flex items-center justify-between gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-background-soft/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div className="min-w-0">
-        <p className="truncate font-medium text-primary">
-          {order.publicId}
-          <span className="font-normal text-muted-foreground"> · {order.customer.name}</span>
+        <p className="flex flex-wrap items-center gap-2 font-medium text-primary">
+          <span className="truncate">
+            {order.publicId}
+            <span className="font-normal text-muted-foreground">
+              {" "}
+              · {order.customer.name}
+            </span>
+          </span>
+          {order.urgent && <Badge variant="destructive">Urgente</Badge>}
         </p>
         <p className="text-sm text-muted-foreground">
           {formatRequestedDayShort(order.requestedDate)} · {order.requestedTime} h
@@ -116,6 +123,11 @@ export default function AdminDashboardPage() {
     ).length;
     const inPreparation = orders.filter((o) => o.status === "in_preparation").length;
     const ready = orders.filter((o) => o.status === "ready").length;
+    // Urgentes aún vivos: registrados con menos de 3 días de margen y todavía
+    // sin completar ni cancelar. Son los que piden atención inmediata.
+    const urgentActive = orders.filter(
+      (o) => o.urgent && o.status !== "completed" && o.status !== "cancelled"
+    ).length;
     // Sin cancelados ni pendientes de presupuesto: el total de estos últimos
     // es parcial (o 0) hasta que administración introduce el presupuesto.
     const expectedRevenueCents = orders
@@ -128,6 +140,7 @@ export default function AdminDashboardPage() {
       next7Days,
       inPreparation,
       ready,
+      urgentActive,
       expectedRevenueCents,
     };
   }, [orders, todayIso, weekEndIso]);
@@ -187,6 +200,11 @@ export default function AdminDashboardPage() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+            <MetricCard
+              icon={AlertTriangle}
+              label="Urgentes activos"
+              value={String(metrics.urgentActive)}
+            />
             <MetricCard icon={Hourglass} label="Pendientes" value={String(metrics.pending)} />
             <MetricCard
               icon={ReceiptEuro}

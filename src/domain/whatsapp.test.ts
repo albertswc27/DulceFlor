@@ -43,6 +43,20 @@ function orderWith(overrides: Partial<Order>): Order {
   };
 }
 
+describe("buildOrderWhatsAppMessage y la urgencia", () => {
+  it("un pedido urgente lo grita en la cabecera del mensaje", () => {
+    const msg = buildOrderWhatsAppMessage(orderWith({ urgent: true }));
+    const lines = msg.split("\n");
+    expect(lines[1]).toContain("PEDIDO URGENTE");
+    expect(lines[1]).toContain("3 días");
+  });
+
+  it("un pedido con margen no menciona la urgencia", () => {
+    const msg = buildOrderWhatsAppMessage(orderWith({}));
+    expect(msg).not.toContain("URGENTE");
+  });
+});
+
 describe("buildOrderWhatsAppMessage y la señal", () => {
   it("sin señal cobrada, sugiere la paga y señal del 30 %", () => {
     const msg = buildOrderWhatsAppMessage(orderWith({}));

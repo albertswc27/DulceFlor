@@ -179,6 +179,15 @@ export interface Order {
   /** "HH:MM" */
   requestedTime: string;
 
+  /**
+   * true si al registrarse quedaban menos de 3 días para la fecha pedida
+   * (antelación estándar): el pedido se acepta pero hay que confirmarlo por
+   * WhatsApp cuanto antes. Se fija al crear el pedido y no se recalcula:
+   * refleja la urgencia que había en ese momento. Ausente en pedidos antiguos
+   * y en los que llegaron con margen.
+   */
+  urgent?: boolean;
+
   pricing: OrderPricing;
 
   /**

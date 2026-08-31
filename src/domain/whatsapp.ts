@@ -3,7 +3,11 @@
  * La web NO envía el mensaje: registra el pedido, abre WhatsApp con el texto
  * preparado y es la persona usuaria quien lo envía.
  */
-import { DEPOSIT_PERCENTAGE, WHATSAPP_PHONE } from "@/config/business";
+import {
+  DEPOSIT_PERCENTAGE,
+  STANDARD_ORDER_LEAD_TIME_HOURS,
+  WHATSAPP_PHONE,
+} from "@/config/business";
 import { getProduct } from "./catalog";
 import { formatEuros } from "./money";
 import {
@@ -44,6 +48,15 @@ export function buildOrderWhatsAppMessage(order: Order): string {
           }`
       : "NUEVO PEDIDO DULCE FLOR"
   );
+  // La urgencia va arriba del todo: este mensaje es el aviso que recibe la
+  // tienda, y un pedido con menos de 3 días no puede pasar desapercibido.
+  if (order.urgent) {
+    lines.push(
+      `🔴 PEDIDO URGENTE: menos de ${
+        STANDARD_ORDER_LEAD_TIME_HOURS / 24
+      } días de antelación. Pendiente de que Dulce Flor confirme si puede prepararlo.`
+    );
+  }
   lines.push("");
   if (onlyQuoteItems && isGiftRequest) {
     lines.push(`Tipo: ${quoteItem!.productName}`);

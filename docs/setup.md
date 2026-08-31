@@ -218,7 +218,7 @@ esfuerzo:
 
 ## Configuración pendiente de Dulce Flor
 
-Casi todo está confirmado (horario 10:00–22:00 todos los días, antelación 3 días, zonas de entrega, dirección, toppings y extras). Queda pendiente:
+Casi todo está confirmado (horario 10:00–22:00 todos los días, antelación estándar de 3 días — desde el 29/08/2026 los pedidos con menos margen se aceptan como URGENTES a confirmar por WhatsApp —, zonas de entrega, dirección, toppings y extras). Queda pendiente:
 
 - Nombre completo del titular (autónomo) para el aviso legal — el NIF ya se recibió por WhatsApp y, por privacidad, no se guarda en este repositorio público.
 - Días de cierre semanales, si los hubiera (`BUSINESS_HOURS` en `src/config/business.ts`).

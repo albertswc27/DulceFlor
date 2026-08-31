@@ -18,4 +18,4 @@ npm run dev
 
 ## Estado
 
-Primera iteración completa (2026-08-17). Datos marcados como **provisionales** (horario, antelación, zona 2 de entrega, lista de toppings) pendientes de confirmación por Dulce Flor — ver `docs/business-rules.md`.
+Primera iteración completa (2026-08-17); desde entonces el cliente ha ido confirmando reglas por WhatsApp (la antelación, entre ellas: estándar de 3 días que ya no bloquea — con menos margen el pedido es urgente — y reserva con hasta 6 meses vista). Queda como **provisional** la zona 2 de entrega — ver `docs/business-rules.md`.

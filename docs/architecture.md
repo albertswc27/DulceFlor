@@ -115,4 +115,4 @@ observador no llega a dispararse, la página se ve igualmente.
 - **Céntimos enteros** para todo importe (`formatEuros` para pintar). Sin floats.
 - **Zona de entrega por CP/municipio** (sin APIs de pago ni geocoding externo).
 - **WhatsApp por deep link** `wa.me` con mensaje URL-encoded: el pedido se guarda ANTES de abrir WhatsApp; la UI nunca afirma que el mensaje se envió. Migrable a WhatsApp Business API en el futuro.
-- **Horario/zonas/antelación centralizados** en `config/business.ts` marcados PROVISIONAL.
+- **Horario/zonas/antelación centralizados** en `config/business.ts`. Horario y antelación ya confirmados (la antelación estándar de 3 días no bloquea: con menos margen el pedido queda URGENTE; máximo 6 meses de reserva y colchón de 60 min, confirmados el 30/08/2026); sigue PROVISIONAL la zona 2 de entrega.

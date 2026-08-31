@@ -519,6 +519,7 @@ export default function AdminOrderDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {order.urgent && <Badge variant="destructive">Urgente</Badge>}
           <Badge variant="outline">{order.source === "kiosk" ? "Kiosk" : "Web"}</Badge>
           <Badge variant={STATUS_BADGE_VARIANT[order.status]}>
             {ORDER_STATUS_LABELS[order.status]}
@@ -632,6 +633,24 @@ export default function AdminOrderDetailPage() {
 
         {/* Columna lateral */}
         <div className="space-y-6">
+          {order.urgent && (
+            <div
+              role="alert"
+              className="rounded-xl border-2 border-destructive/50 bg-destructive/10 p-4"
+            >
+              <Badge variant="destructive">PEDIDO URGENTE</Badge>
+              <p className="mt-2 text-sm text-foreground">
+                Se registró con menos de 3 días de margen, para el{" "}
+                <strong>
+                  {formatRequestedDay(order.requestedDate)} a las{" "}
+                  {order.requestedTime} h
+                </strong>
+                . Confirma cuanto antes con el cliente (WhatsApp o teléfono) si
+                da tiempo a prepararlo.
+              </p>
+            </div>
+          )}
+
           {pricing.pendingQuote && (
             <div
               role="alert"

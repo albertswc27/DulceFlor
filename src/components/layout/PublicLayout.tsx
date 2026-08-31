@@ -9,7 +9,8 @@ import {
   BUSINESS_MAPS_URL,
   INSTAGRAM_HANDLE,
   INSTAGRAM_URL,
-  MIN_ORDER_LEAD_TIME_HOURS,
+  MAX_ORDER_ADVANCE_MONTHS,
+  STANDARD_ORDER_LEAD_TIME_HOURS,
   PHONE_CALLS,
   PHONE_CALLS_DISPLAY,
   WHATSAPP_PHONE,
@@ -210,7 +211,9 @@ function Footer() {
               </a>
             </li>
             <li className="text-cocoa-foreground/70">
-              Pedidos con antelación mínima de {MIN_ORDER_LEAD_TIME_HOURS / 24} días.
+              Pedidos con hasta {MAX_ORDER_ADVANCE_MONTHS} meses de antelación;
+              con menos de {STANDARD_ORDER_LEAD_TIME_HOURS / 24} días, urgentes
+              por WhatsApp.
             </li>
           </ul>
         </div>

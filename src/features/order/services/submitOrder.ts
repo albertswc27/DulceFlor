@@ -4,7 +4,7 @@
  * si WhatsApp no se abre, el pedido no se pierde.
  */
 import { resolveDeliveryZone } from "@/domain/delivery";
-import { isRequestedSlotValid } from "@/domain/schedule";
+import { isRequestedSlotUrgent, isRequestedSlotValid } from "@/domain/schedule";
 import { computeOrderPricing } from "@/domain/pricing";
 import { addressSchema, customerSchema } from "@/domain/validation";
 import type { Order } from "@/domain/types";
@@ -55,7 +55,7 @@ export function submitOrder(
     errors.push("Selecciona fecha y hora.");
   } else if (!isRequestedSlotValid(state.requestedDate, state.requestedTime)) {
     errors.push(
-      "La fecha u hora seleccionada ya no está disponible (horario o antelación mínima). Vuelve a elegirla."
+      "La fecha u hora seleccionada ya no está disponible (horario o límites de antelación). Vuelve a elegirla."
     );
   }
 
@@ -112,6 +112,11 @@ export function submitOrder(
     deliveryZoneLabel: zoneResolution?.zone?.label,
     requestedDate: state.requestedDate!,
     requestedTime: state.requestedTime!,
+    // La urgencia se fija AQUÍ, no al elegir la fecha: si el cliente dejó el
+    // borrador a medias unos días, cuenta el margen real que queda al enviar.
+    urgent: isRequestedSlotUrgent(state.requestedDate!, state.requestedTime!)
+      ? true
+      : undefined,
     pricing,
     depositPaidCents,
     reusableTray:

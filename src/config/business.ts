@@ -2,13 +2,19 @@
  * CONFIGURACIÓN CENTRAL DEL NEGOCIO — única fuente de verdad para reglas cambiantes.
  *
  * Confirmado por Dulce Flor por WhatsApp (17/08/2026):
- *   - Antelación mínima: 3 días («Mínimo 3 días»).
+ *   - Antelación estándar: 3 días («Mínimo 3 días»). OJO: matizado el
+ *     29/08/2026 — ya NO bloquea; con menos margen el pedido es URGENTE
+ *     (ver STANDARD_ORDER_LEAD_TIME_HOURS más abajo).
  *   - Horario: 10:00–22:00 («Hacemos de 10am hasta las 10pm»); no indicaron
  *     días de cierre, se asume abierto todos los días hasta que digan lo contrario.
  *
  * Confirmado por Dulce Flor (18/08/2026): dirección de la tienda, zonas de
  * entrega tal como estaban, y fuera de Barcelona los gastos de envío se
  * calculan según distancia (se confirman por WhatsApp).
+ *
+ * Confirmado por Dulce Flor (29/08/2026): se puede reservar con meses de
+ * antelación, y los pedidos con menos de 3 días se aceptan como urgentes a
+ * confirmar por WhatsApp.
  * Ver docs/business-rules.md para el detalle completo.
  */
 
@@ -47,8 +53,28 @@ export const DEPOSIT_THRESHOLD_CENTS = 4000;
 /** Porcentaje de paga y señal sobre el total. */
 export const DEPOSIT_PERCENTAGE = 30;
 
-/** Confirmado (17/08/2026): mínimo 3 días de antelación. */
-export const MIN_ORDER_LEAD_TIME_HOURS = 72;
+/**
+ * Antelación estándar (confirmado 17/08/2026: «Mínimo 3 días»; matizado el
+ * 29/08/2026): ya NO bloquea el calendario. Un pedido para antes de este
+ * plazo se acepta pero queda marcado como URGENTE y debe confirmarse por
+ * WhatsApp con la tienda.
+ */
+export const STANDARD_ORDER_LEAD_TIME_HOURS = 72;
+
+/**
+ * Colchón mínimo incluso para pedidos urgentes: nadie puede pedir algo «para
+ * dentro de 10 minutos» desde la web (confirmado por Dulce Flor el
+ * 30/08/2026). El equipo siempre puede atender en persona lo más inmediato.
+ */
+export const URGENT_MIN_LEAD_TIME_MINUTES = 60;
+
+/**
+ * Horizonte máximo de reserva. El 29/08/2026 Dulce Flor confirmó que hay
+ * clientes que apartan tarta con meses de antelación (p. ej. para noviembre)
+ * y dejó la cifra a nuestro criterio; los 6 meses quedaron confirmados el
+ * 30/08/2026.
+ */
+export const MAX_ORDER_ADVANCE_MONTHS = 6;
 
 /** Intervalo entre horas seleccionables. */
 export const SLOT_INTERVAL_MINUTES = 30;

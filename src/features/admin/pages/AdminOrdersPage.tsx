@@ -310,11 +310,12 @@ export default function AdminOrdersPage() {
                         >
                           {order.publicId}
                         </Link>
-                        {family && (
-                          <Badge variant="outline" className="mt-1 flex w-fit">
-                            {family}
-                          </Badge>
-                        )}
+                        <span className="mt-1 flex flex-wrap gap-1">
+                          {order.urgent && (
+                            <Badge variant="destructive">Urgente</Badge>
+                          )}
+                          {family && <Badge variant="outline">{family}</Badge>}
+                        </span>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
                         {formatCreatedAt(order.createdAt)}
@@ -375,6 +376,7 @@ export default function AdminOrdersPage() {
                         <p className="font-display font-bold text-primary">
                           {order.publicId}
                         </p>
+                        {order.urgent && <Badge variant="destructive">Urgente</Badge>}
                         {family && <Badge variant="outline">{family}</Badge>}
                       </div>
                       <p className="truncate text-sm text-foreground">

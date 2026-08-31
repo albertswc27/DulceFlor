@@ -85,6 +85,18 @@ export default function OrderConfirmationPage() {
         </Badge>
       </div>
 
+      {order.urgent && (
+        <p
+          role="alert"
+          className="mt-6 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-foreground"
+        >
+          <strong>Tu pedido es urgente</strong> (quedan menos de 3 días).{" "}
+          <strong>Envíanos el WhatsApp ahora</strong> para que podamos decirte
+          cuanto antes si llegamos a tiempo: hasta que lo recibamos no podemos
+          confirmarlo.
+        </p>
+      )}
+
       <Card className="mt-8">
         <CardHeader>
           <CardTitle>Último paso: envíanos el resumen por WhatsApp</CardTitle>

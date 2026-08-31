@@ -7,6 +7,8 @@
  */
 import * as React from "react";
 import { useNavigate } from "react-router-dom";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowLeft,
@@ -45,7 +47,7 @@ import {
 } from "@/domain/catalog";
 import { cn } from "@/lib/utils";
 import { resolveDeliveryZone } from "@/domain/delivery";
-import { isRequestedSlotValid } from "@/domain/schedule";
+import { isRequestedSlotUrgent, isRequestedSlotValid } from "@/domain/schedule";
 import { formatEuros } from "@/domain/money";
 import { buildOrderWhatsAppMessage, buildWhatsAppUrl } from "@/domain/whatsapp";
 import { addressSchema, customerSchema } from "@/domain/validation";
@@ -916,6 +918,23 @@ export default function OrderWizardPage() {
 
               {step === "review" && (
                 <div className="space-y-5">
+                  {/* Urgencia calculada al vuelo: si el borrador lleva días
+                      abierto, cuenta el margen que queda AHORA. */}
+                  {state.requestedDate &&
+                    state.requestedTime &&
+                    isRequestedSlotUrgent(state.requestedDate, state.requestedTime) && (
+                      <p
+                        role="alert"
+                        className="rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-foreground"
+                      >
+                        <strong>Pedido urgente:</strong> lo quieres para dentro de
+                        menos de 3 días. Lo registramos igualmente, pero{" "}
+                        <strong>
+                          necesitamos que nos envíes el WhatsApp al terminar
+                        </strong>{" "}
+                        para confirmarte cuanto antes si llegamos a tiempo.
+                      </p>
+                    )}
                   <OrderItemsList />
 
                   <Card>
@@ -938,7 +957,22 @@ export default function OrderWizardPage() {
                       )}
                       <p>
                         <span className="text-muted-foreground">Fecha: </span>
-                        {state.requestedDate} · {state.requestedTime}
+                        {state.requestedDate
+                          ? format(parseISO(state.requestedDate), "EEEE d 'de' MMMM", {
+                              locale: es,
+                            })
+                          : state.requestedDate}{" "}
+                        · {state.requestedTime}
+                        {state.requestedDate &&
+                          state.requestedTime &&
+                          isRequestedSlotUrgent(
+                            state.requestedDate,
+                            state.requestedTime
+                          ) && (
+                            <Badge variant="warning" className="ml-2">
+                              Urgente
+                            </Badge>
+                          )}
                       </p>
                       <p>
                         <span className="text-muted-foreground">Contacto: </span>

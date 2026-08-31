@@ -15,7 +15,9 @@ Fuente de verdad de catálogo y precios: [`src/domain/catalog.ts`](../src/domain
 | Teléfono de llamadas | +34 614 280 430 (confirmado 24/08/2026). Lo atiende otra persona del negocio: **las llamadas no entran por el número de WhatsApp** | `PHONE_CALLS` |
 | Estado inicial del pedido | «Pendiente de confirmación por Dulce Flor» (la web nunca afirma que la tienda ha aceptado) | `status: "pending"` |
 
-| Antelación mínima | 3 días («Mínimo 3 días», WhatsApp 17/08/2026) | `MIN_ORDER_LEAD_TIME_HOURS = 72` |
+| Antelación estándar | 3 días («Mínimo 3 días», WhatsApp 17/08/2026). **Matizado el 29/08/2026: ya no bloquea el calendario.** Con menos margen el pedido se acepta como **URGENTE**: queda marcado en el sistema (`Order.urgent`), el mensaje de WhatsApp lo encabeza con «PEDIDO URGENTE» y la tienda debe confirmarlo expresamente. 72 h exactas NO es urgente | `STANDARD_ORDER_LEAD_TIME_HOURS = 72` |
+| Colchón mínimo urgente | Ni siquiera un pedido urgente puede ser «para dentro de 10 minutos»: mínimo 60 min de margen desde la web/kiosk (confirmado 30/08/2026) | `URGENT_MIN_LEAD_TIME_MINUTES = 60` |
+| Antelación máxima | Se puede reservar con hasta 6 meses vista (el 29/08/2026 confirmaron que hay clientes que apartan tarta para meses después y dejaron la cifra a nuestro criterio; los 6 meses quedaron confirmados el 30/08/2026). El día que cae justo en el límite se puede elegir entero | `MAX_ORDER_ADVANCE_MONTHS = 6` |
 | Horario | 10:00–22:00 («de 10am hasta las 10pm», WhatsApp 17/08/2026). No indicaron días de cierre → abierto todos los días hasta nuevo aviso | `BUSINESS_HOURS` |
 | Cartas claras = empresas | Confirmado 17/08/2026 | catálogo `availableFor` |
 | Lista de toppings | Confirmada 17/08/2026 (derivada de las cartas) | `TOPPINGS` |
@@ -120,7 +122,7 @@ Cajas de desayuno y copas personalizadas: **sin precio automático** (`pricingTy
 1. Tipo de cliente (particular/empresa) → catálogos y precios distintos.
 2. Configuración de producto (tamaño, sabor, relleno, toppings, extras, dedicatoria, texto libre, cantidad).
 3. Recogida (0 €) o entrega (tarifa por zona / consultar).
-4. Fecha y hora dentro de horario y antelación.
+4. Fecha y hora en calendario mensual: dentro de horario, con hasta 6 meses de antelación. Con menos de 3 días el slot se acepta pero el pedido queda **urgente** (aviso en el selector, en el resumen, en la confirmación y en el panel; el mensaje de WhatsApp lo encabeza).
 5. Datos de contacto (+ empresa si procede).
 6. Resumen con desglose (producto / toppings / extras / transporte / total / señal / pendiente).
 7. **Se guarda el pedido primero** (idempotente vía `clientRequestId`), se genera `DF-AAAA-NNNN`, y después se abre WhatsApp con el mensaje preparado (deep link `wa.me`; el usuario lo envía manualmente — la web nunca afirma haber enviado el WhatsApp).

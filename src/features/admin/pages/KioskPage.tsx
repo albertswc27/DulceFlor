@@ -562,6 +562,7 @@ export default function KioskPage() {
             selectedDate={state.requestedDate}
             selectedTime={state.requestedTime}
             onSelect={(date, time) => draft.setSlot(date, time)}
+            variant="kiosk"
           />
         </section>
 
@@ -704,6 +705,12 @@ export default function KioskPage() {
         <p className="mt-1 font-display text-5xl font-bold text-primary sm:text-6xl">
           {success.publicId}
         </p>
+        {success.urgent && (
+          <p className="mt-3 max-w-sm rounded-lg border border-warning/40 bg-warning/10 px-4 py-2.5 text-sm font-medium text-foreground">
+            ⚠️ Pedido urgente: menos de 3 días de margen. Avisa al obrador y
+            confírmalo con el cliente.
+          </p>
+        )}
         <p className="mt-4 text-muted-foreground">
           {success.customer.name} · {formatRequestedDay(success.requestedDate)} ·{" "}
           {success.requestedTime} h
