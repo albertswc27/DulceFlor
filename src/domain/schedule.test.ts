@@ -75,6 +75,18 @@ describe("pedidos urgentes (menos de 72 h, aceptados desde el 29/08/2026)", () =
     expect(first!.time).toBe("19:00");
   });
 
+  it("agotado el día, el primer hueco salta al día (y mes) siguiente", () => {
+    // Lunes 31/08 a las 22:30: ya no queda hora hoy. El selector se apoya en
+    // esto para abrir el calendario en septiembre en vez de en un agosto
+    // entero en gris.
+    const lateLastDayOfMonth = new Date(2026, 7, 31, 22, 30, 0);
+    const first = findFirstAvailableSlot(lateLastDayOfMonth);
+    expect(first).not.toBeNull();
+    expect(first!.date.getMonth()).toBe(8); // septiembre
+    expect(first!.date.getDate()).toBe(1);
+    expect(first!.time).toBe("10:00");
+  });
+
   it("clasifica la urgencia por slot: antes del umbral sí, después no", () => {
     // El umbral (72 h) cae el viernes 21/08 a las 18:00.
     const friday = new Date(2026, 7, 21);

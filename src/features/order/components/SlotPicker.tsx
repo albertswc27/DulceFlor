@@ -24,6 +24,7 @@ import {
   STANDARD_ORDER_LEAD_TIME_HOURS,
 } from "@/config/business";
 import {
+  findFirstAvailableSlot,
   getAvailableSlotsForDate,
   isDateFullyUrgent,
   isDateSelectable,
@@ -151,18 +152,37 @@ export function SlotPicker({
     }
   }, [now, selectedDate, selectedTime, onSelect]);
 
-  const firstMonth = startOfMonth(now);
+  // El primer mes navegable es el del primer hueco libre, no el de hoy: la
+  // noche del último día del mes ya no queda nada elegible en este mes y el
+  // calendario se abriría entero en gris, sin pista de que hay que pulsar la
+  // flecha para ver el siguiente.
+  const firstMonth = startOfMonth(
+    findFirstAvailableSlot(now)?.date ?? now
+  );
   const lastMonth = startOfMonth(latestAllowedDateTime(now));
 
   const [month, setMonth] = React.useState<Date>(() => {
     // Arranca en el mes de la fecha ya elegida (si sigue dentro de los
-    // límites); si no, en el mes actual.
+    // límites); si no, en el del primer hueco disponible.
     if (selectedDate) {
       const chosen = startOfMonth(parseISO(selectedDate));
       if (chosen >= firstMonth && chosen <= lastMonth) return chosen;
     }
     return firstMonth;
   });
+
+  // Con el reloj vivo, el mes visible puede quedarse fuera de los límites
+  // (pasa la medianoche del día 1, o se agota el mes en curso): se recoloca
+  // en vez de dejar a la vista un mes que ya no se puede elegir.
+  const firstMonthTime = firstMonth.getTime();
+  const lastMonthTime = lastMonth.getTime();
+  React.useEffect(() => {
+    setMonth((current) => {
+      if (current.getTime() < firstMonthTime) return new Date(firstMonthTime);
+      if (current.getTime() > lastMonthTime) return new Date(lastMonthTime);
+      return current;
+    });
+  }, [firstMonthTime, lastMonthTime]);
 
   const canGoPrev = month > firstMonth;
   const canGoNext = month < lastMonth;
