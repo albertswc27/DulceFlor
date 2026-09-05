@@ -631,7 +631,7 @@ export const PRODUCTS: CatalogProduct[] = [
       individual: [
         { id: "5-6", label: "5–6 porciones", servings: "5–6 porciones", priceCents: 1900 },
         { id: "8-10", label: "8–10 porciones", servings: "8–10 porciones", priceCents: 2500 },
-        { id: "12-14", label: "12–14 porciones", servings: "12–14 porciones", priceCents: 3000 },
+        { id: "12-14", label: "12–14 porciones", servings: "12–14 porciones", priceCents: 3500 },
         { id: "28-30", label: "28–30 porciones", servings: "28–30 porciones", priceCents: 5900 },
       ],
       business: [
