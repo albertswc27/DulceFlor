@@ -22,7 +22,7 @@
  */
 import { newInternalId, newPublicOrderId } from "@/domain/orderId";
 import { computeOrderPricing } from "@/domain/pricing";
-import type { Order, OrderStatus } from "@/domain/types";
+import { normalizeOrderStatus, type Order, type OrderStatus } from "@/domain/types";
 import { enqueueImageUpload, flushImageUploads } from "./imageStore";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 
@@ -36,6 +36,11 @@ export interface OrderRepository {
    * recalcula el total y la señal desde el motor de dominio.
    */
   setQuotedPrice(id: string, quotedPriceCents: number): Order | undefined;
+  /**
+   * Deja constancia de que se ha avisado al cliente de que su pedido está
+   * tramitado. El envío lo remata la persona del mostrador desde WhatsApp.
+   */
+  markCustomerNotified(id: string): Order | undefined;
   /**
    * Sube lo que quedó pendiente y baja lo que hay en la base compartida.
    * Devuelve el listado ya combinado. Sin Supabase, devuelve lo local.
@@ -74,7 +79,13 @@ function readOrders(): Order[] {
     const raw = localStorage.getItem(ORDERS_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(isOrderShape) : [];
+    if (!Array.isArray(parsed)) return [];
+    // Los estados «en preparación» y «listo» se retiraron al simplificar el
+    // flujo: un pedido guardado con ellos se lee como tramitado en vez de
+    // aparecer sin etiqueta en el panel.
+    return parsed
+      .filter(isOrderShape)
+      .map((order) => ({ ...order, status: normalizeOrderStatus(order.status) }));
   } catch {
     return [];
   }
@@ -192,7 +203,7 @@ export function fromRow(row: OrderRow): Order | null {
     id: row.id,
     publicId: row.public_id,
     createdAt: row.created_at,
-    status: row.status as OrderStatus,
+    status: normalizeOrderStatus(row.status),
   } as Order;
   // Una fila escrita por una versión distinta de la web podría no encajar:
   // se descarta en vez de reventar el panel entero.
@@ -270,8 +281,19 @@ class OrderRepositoryImpl implements OrderRepository {
       pricing: computeOrderPricing(
         order.items,
         order.pricing.deliveryFeeCents,
-        quotedPriceCents
+        quotedPriceCents,
+        // La urgencia se fijó al registrar el pedido y no se recalcula: si el
+        // pedido entró urgente, su suplemento sigue formando parte del total
+        // aunque el presupuesto se cierre días después.
+        Boolean(order.urgent)
       ),
+    }));
+  }
+
+  markCustomerNotified(id: string): Order | undefined {
+    return this.mutate(id, (order) => ({
+      ...order,
+      customerNotifiedAt: new Date().toISOString(),
     }));
   }
 

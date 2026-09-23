@@ -19,17 +19,20 @@ import {
   occasionSchema,
 } from "@/domain/validation";
 import type { CustomerType, ItemCustomization } from "@/domain/types";
-import { saveImage, IMAGE_ERROR_MESSAGES } from "@/services/imageStore";
+import { getImage, saveImage, IMAGE_ERROR_MESSAGES } from "@/services/imageStore";
 import { BREAKFAST_PHOTOS, GLASS_PHOTOS } from "@/assets/photos";
 import { CakeReferences } from "./CakeReferences";
 import { ReferenceImagePicker } from "./ReferenceImagePicker";
-import type { ConfiguratorResult } from "./ProductConfigurator";
+import type { ConfiguratorInitial, ConfiguratorResult } from "./ProductConfigurator";
 
 interface GiftRequestConfiguratorProps {
   product: CatalogProduct;
   customerType: CustomerType;
   onConfirm: (result: ConfiguratorResult) => void;
+  confirmLabel?: string;
   compact?: boolean;
+  /** Estado de partida al reconfigurar una solicitud ya añadida al pedido. */
+  initial?: ConfiguratorInitial;
 }
 
 /** Sugerencias de ocasión: solo ayudan a rellenar, no limitan el texto. */
@@ -46,25 +49,39 @@ export function GiftRequestConfigurator({
   product,
   customerType,
   onConfirm,
+  confirmLabel,
   compact = false,
+  initial,
 }: GiftRequestConfiguratorProps) {
   const isBreakfast = product.giftType === "desayuno";
   const photos = isBreakfast ? BREAKFAST_PHOTOS : GLASS_PHOTOS;
 
-  const [occasion, setOccasion] = React.useState("");
-  const [dedication, setDedication] = React.useState("");
-  const [description, setDescription] = React.useState("");
-  const [notes, setNotes] = React.useState("");
-  const [referenceImage, setReferenceImage] = React.useState<string | null>(null);
+  const [occasion, setOccasion] = React.useState(initial?.occasion ?? "");
+  const [dedication, setDedication] = React.useState(initial?.dedicationText ?? "");
+  const [description, setDescription] = React.useState(
+    initial?.designDescription ?? ""
+  );
+  const [notes, setNotes] = React.useState(initial?.notes ?? "");
+  const [referenceImage, setReferenceImage] = React.useState<string | null>(() =>
+    initial?.referenceImageId ? getImage(initial.referenceImageId) : null
+  );
+  /** Id ya guardado: si la foto no cambia se reutiliza en vez de duplicarla. */
+  const [savedImageId, setSavedImageId] = React.useState<string | null>(
+    initial?.referenceImageId ?? null
+  );
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    setOccasion("");
-    setDedication("");
-    setDescription("");
-    setNotes("");
-    setReferenceImage(null);
+    setOccasion(initial?.occasion ?? "");
+    setDedication(initial?.dedicationText ?? "");
+    setDescription(initial?.designDescription ?? "");
+    setNotes(initial?.notes ?? "");
+    setReferenceImage(
+      initial?.referenceImageId ? getImage(initial.referenceImageId) : null
+    );
+    setSavedImageId(initial?.referenceImageId ?? null);
     setError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.id]);
 
   function handleConfirm() {
@@ -91,12 +108,16 @@ export function GiftRequestConfigurator({
 
     let referenceImageId: string | undefined;
     if (referenceImage) {
-      const saved = saveImage(referenceImage);
-      if (!saved.ok) {
-        setError(IMAGE_ERROR_MESSAGES[saved.error]);
-        return;
+      if (savedImageId && getImage(savedImageId) === referenceImage) {
+        referenceImageId = savedImageId;
+      } else {
+        const saved = saveImage(referenceImage);
+        if (!saved.ok) {
+          setError(IMAGE_ERROR_MESSAGES[saved.error]);
+          return;
+        }
+        referenceImageId = saved.id;
       }
-      referenceImageId = saved.id;
     }
 
     const customization: ItemCustomization = {
@@ -244,7 +265,7 @@ export function GiftRequestConfigurator({
       )}
 
       <Button type="button" size="xl" className="w-full" onClick={handleConfirm}>
-        Solicitar presupuesto
+        {confirmLabel ?? "Solicitar presupuesto"}
       </Button>
     </div>
   );

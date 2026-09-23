@@ -22,7 +22,9 @@ import {
   BUSINESS_HOURS,
   MAX_ORDER_ADVANCE_MONTHS,
   STANDARD_ORDER_LEAD_TIME_HOURS,
+  URGENT_ORDER_SURCHARGE_CENTS,
 } from "@/config/business";
+import { formatEuros } from "@/domain/money";
 import {
   findFirstAvailableSlot,
   getAvailableSlotsForDate,
@@ -51,6 +53,7 @@ const CLOSED_DAYS = Object.entries(BUSINESS_HOURS)
   .map(([day]) => DAY_NAMES_PLURAL[Number(day)]);
 
 const STANDARD_LEAD_DAYS = STANDARD_ORDER_LEAD_TIME_HOURS / 24;
+const URGENCY_SURCHARGE_LABEL = formatEuros(URGENT_ORDER_SURCHARGE_CENTS);
 
 interface SlotPickerProps {
   selectedDate: string | null; // "yyyy-MM-dd"
@@ -90,10 +93,11 @@ function UrgentNotice({
           <strong>
             Este día, las horas anteriores a las {calmFromTime} son urgentes
           </strong>{" "}
-          (quedan menos de {STANDARD_LEAD_DAYS} días para ellas).{" "}
+          (quedan menos de {STANDARD_LEAD_DAYS} días para ellas). Si eliges una de
+          esas horas, el pedido lleva un suplemento de {URGENCY_SURCHARGE_LABEL}
           {variant === "public"
-            ? "Si eliges una de esas horas, necesitaremos confirmarte por WhatsApp si llegamos a tiempo."
-            : "Si eliges una de esas horas, el pedido quedará marcado como urgente en el panel."}
+            ? " y necesitaremos confirmarte por WhatsApp si llegamos a tiempo."
+            : " y quedará marcado como urgente en el panel."}
         </span>
       ) : (
         <span>
@@ -101,6 +105,7 @@ function UrgentNotice({
             {timeChosen ? "Pedido urgente" : "Fecha urgente"}: quedan menos de{" "}
             {STANDARD_LEAD_DAYS} días.
           </strong>{" "}
+          Lleva un suplemento de {URGENCY_SURCHARGE_LABEL}.{" "}
           {variant === "public"
             ? "Puedes pedirlo igualmente, pero necesitamos confirmarte por WhatsApp si llegamos a tiempo: envíanos el resumen en cuanto termines."
             : "Quedará marcado como urgente en el panel: confirma con el obrador que da tiempo antes de comprometerlo."}
@@ -221,7 +226,8 @@ export function SlotPicker({
         <p className="mb-3 text-sm text-muted-foreground">
           Puedes reservar con hasta {MAX_ORDER_ADVANCE_MONTHS} meses de
           antelación. Recomendamos pedir con al menos {STANDARD_LEAD_DAYS} días:
-          con menos margen el pedido es urgente.
+          con menos margen el pedido es urgente y lleva un suplemento de{" "}
+          {URGENCY_SURCHARGE_LABEL}.
           {CLOSED_DAYS.length > 0 && ` Los ${CLOSED_DAYS.join(" y los ")} cerramos.`}
         </p>
 

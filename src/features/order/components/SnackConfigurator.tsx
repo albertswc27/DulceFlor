@@ -18,7 +18,7 @@ import type { CustomerType, ItemCustomization } from "@/domain/types";
 import { SAVOURY_PRODUCT_PHOTOS } from "@/assets/photos";
 import { cn } from "@/lib/utils";
 import { AnimatedPrice } from "./AnimatedPrice";
-import type { ConfiguratorResult } from "./ProductConfigurator";
+import type { ConfiguratorInitial, ConfiguratorResult } from "./ProductConfigurator";
 
 interface SnackConfiguratorProps {
   product: CatalogProduct;
@@ -26,6 +26,8 @@ interface SnackConfiguratorProps {
   onConfirm: (result: ConfiguratorResult) => void;
   confirmLabel?: string;
   compact?: boolean;
+  /** Estado de partida al reconfigurar un artículo ya añadido al pedido. */
+  initial?: ConfiguratorInitial;
 }
 
 /** Paso al subir/bajar unidades dentro del tramo abierto (50+). */
@@ -37,20 +39,24 @@ export function SnackConfigurator({
   onConfirm,
   confirmLabel = "Añadir al pedido",
   compact = false,
+  initial,
 }: SnackConfiguratorProps) {
   const reduced = useReducedMotion() ?? false;
   const tiers = product.quantityTiers ?? [];
   const minQuantity = getMinimumQuantity(product);
   const photo = SAVOURY_PRODUCT_PHOTOS[product.id];
 
-  const [quantity, setQuantity] = React.useState<number>(minQuantity);
-  const [notes, setNotes] = React.useState("");
+  const [quantity, setQuantity] = React.useState<number>(
+    initial?.quantity ?? minQuantity
+  );
+  const [notes, setNotes] = React.useState(initial?.notes ?? "");
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    setQuantity(getMinimumQuantity(product));
-    setNotes("");
+    setQuantity(initial?.quantity ?? getMinimumQuantity(product));
+    setNotes(initial?.notes ?? "");
     setError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product]);
 
   const selection = {

@@ -21,7 +21,14 @@ Fuente de verdad de catálogo y precios: [`src/domain/catalog.ts`](../src/domain
 | Horario | 10:00–22:00 («de 10am hasta las 10pm», WhatsApp 17/08/2026). No indicaron días de cierre → abierto todos los días hasta nuevo aviso | `BUSINESS_HOURS` |
 | Cartas claras = empresas | Confirmado 17/08/2026 | catálogo `availableFor` |
 | Lista de toppings | Confirmada 17/08/2026 (derivada de las cartas) | `TOPPINGS` |
-| Dedicatoria +2 € y papel comestible +7 € | Aplican a todos los productos (confirmado 17/08/2026) | `EXTRAS` |
+| Extras de tarta | Dedicatoria **2,50 €**, imagen en papel comestible **8 €** y **toppers de 6 figuras 5 €** (actualizados y añadido el 20/09/2026). Los tres se ofrecen en las tartas con precio automático | `EXTRAS` |
+| Sabores de bizcocho incluidos | Solo **Chocolate, Vainilla y 3 Leches** (Dulce Flor los marcó uno a uno sobre una captura del configurador, 20/09/2026). El resto lleva **+2,90 €** | `FREE_SPONGE_FLAVOR_IDS`, `SPONGE_FLAVOR_SURCHARGE_CENTS = 290` |
+| Rellenos incluidos | Solo **Dulce de leche, Chocolate y Bariloche**. El resto lleva **+2,50 €** | `FREE_FILLING_IDS`, `CAKE_FILLING_SURCHARGE_CENTS = 250` |
+| Caja de transporte | Toda tarta con precio automático sale en caja y su coste (**0,99 €**) va **dentro del precio**, no como línea aparte (petición expresa de Dulce Flor, 20/09/2026). El configurador solo dice «Caja incluida», sin importe; el panel sí la desglosa para cuadrar el gasto. No se aplica a aperitivos ni a lo que se presupuesta a mano | `CAKE_BOX_PRICE_CENTS = 99`, `getPackagingCents` |
+| Suplemento por urgencia | **5 €** por pedido (no por artículo) cuando quedan menos de 3 días (confirmado 20/09/2026). Se muestra como línea propia en el resumen, la confirmación, el WhatsApp y el panel, y cuenta para el umbral de la señal | `URGENT_ORDER_SURCHARGE_CENTS = 500` |
+| Mini alfajores | Primer bocadito dulce con tarifa cerrada: **25 uds = 12,50 €** (0,50 €/ud), confirmado 20/09/2026. El resto de dulces sigue sin carta | producto `mini-alfajores` |
+| Aviso al cliente al tramitar | Al pasar un pedido a «Tramitado», el panel prepara un WhatsApp para el cliente con nº de pedido, fecha, hora, importe y **condiciones de recogida**. Lo envía la persona del mostrador (no es automático) y queda registrado | `buildCustomerNotificationMessage`, `customerNotifiedAt` |
+| Condiciones de recogida | Las mismas que hoy se entregan en papel: revisar el pedido antes de salir; una vez retirado, Dulce Flor no responde de daños por transporte o manipulación | `PICKUP_CONDITIONS` |
 | Papel comestible en cheesecake | Confirmado el 24/08/2026: el cheesecake **sí admite** imagen en papel comestible (antes solo ofrecía dedicatoria) | `extras` de `cheesecake` |
 | Dirección de la tienda | C. Ntra. Sra. de Montserrat, 13, bajos · 08922 Santa Coloma de Gramenet (confirmada 18/08/2026) | `BUSINESS_ADDRESS` |
 | Zonas de entrega | Confirmadas 18/08/2026 tal como estaban; fuera de estas zonas, gastos de envío **según distancia** (se confirman por WhatsApp) | `DELIVERY_ZONES` |
@@ -100,9 +107,11 @@ Las cantidades intermedias aplican el tramo inferior (18 uds → tarifa de 15; 3
 
 Los tramos varían según el producto: mini sándwiches y mini panes 15/25/50; tequeños y mini hamburguesas 15/30/50; empanadas 20/35/50. **Ya no queda ningún salado sin tarifa** (22/08/2026): los 21 productos fotografiados tienen precio y foto propia.
 
-### Aperitivos dulces — PENDIENTE
+### Aperitivos dulces — parcialmente confirmado
 
-Hay fotografías reales (vasitos individuales y cupcakes personalizados) pero **el catálogo y las tarifas están pendientes de confirmación**. En la web se muestran como muestra de trabajo con invitación a consultar por WhatsApp; no son pedibles con precio automático.
+**Mini alfajores** (confirmado 20/09/2026): caja de **25 uds por 12,50 €**, es decir 0,50 €/ud. Es la única cantidad que facilitó Dulce Flor, así que se define como un único tramo abierto: por debajo de 25 no hay tarifa y por encima se mantiene el precio unitario (no se inventa un descuento por volumen que nadie ha confirmado).
+
+El resto (vasitos individuales, cupcakes personalizados) sigue **sin catálogo ni tarifas**: se muestran como muestra de trabajo con invitación a consultar por WhatsApp, y no son pedibles con precio automático.
 
 ### Desayunos y regalos personalizados
 
@@ -112,9 +121,11 @@ Cajas de desayuno y copas personalizadas: **sin precio automático** (`pricingTy
 
 - **Pasteles clásicos** (particulares): matriz 4 rangos de personas × 1/2/3 discos, 20–78 €.
 - **Pasteles con buttercream** (particulares): misma matriz, 22–82 €.
-- Ambos con 9 sabores de bizcocho y 9 rellenos incluidos.
+- Ambos con 9 sabores de bizcocho y 9 rellenos a elegir (tres de cada van incluidos; el resto llevan suplemento, ver tabla de reglas).
 - **Cheesecakes** (13 sabores): particulares 18–43 € según sabor y tamaño (4-6/10-12/14-16 porciones); empresas 19–45 € (8/10-12/14-16 porciones).
-- **Tres leches**: particulares 19/25/30/59 € (5-6/8-10/12-14/28-30 porciones); empresas 18/26/33 € (8/10-12/14-16).
+- **Tres leches**: particulares 19/25/35/59 € (5-6/8-10/12-14/28-30 porciones); empresas 18/26/33 € (8/10-12/14-16).
+
+Todos los importes de arriba son los **de carta**; lo que ve el cliente lleva además la caja (+0,99 €), por eso los precios publicados terminan en «,99».
 - **Solo empresas**: pudín casero 33 €, torta de chocolate 39 €, torta helada 38 €.
 
 ## Flujo del pedido
@@ -124,9 +135,13 @@ Cajas de desayuno y copas personalizadas: **sin precio automático** (`pricingTy
 3. Recogida (0 €) o entrega (tarifa por zona / consultar).
 4. Fecha y hora en calendario mensual: dentro de horario, con hasta 6 meses de antelación. Con menos de 3 días el slot se acepta pero el pedido queda **urgente** (aviso en el selector, en el resumen, en la confirmación y en el panel; el mensaje de WhatsApp lo encabeza).
 5. Datos de contacto (+ empresa si procede).
-6. Resumen con desglose (producto / toppings / extras / transporte / total / señal / pendiente).
+6. Resumen con desglose (producto / bizcocho / relleno / toppings / extras / transporte / urgencia / total / señal / pendiente). Desde cualquier paso se puede **editar** un artículo ya añadido: el configurador se reabre con todo lo elegido y el resto del pedido y los datos del cliente se conservan.
 7. **Se guarda el pedido primero** (idempotente vía `clientRequestId`), se genera `DF-AAAA-NNNN`, y después se abre WhatsApp con el mensaje preparado (deep link `wa.me`; el usuario lo envía manualmente — la web nunca afirma haber enviado el WhatsApp).
 
 ## Estados del pedido
 
-`pending → confirmed → in_preparation → ready → completed` (+ `cancelled`). Etiquetas en español en `ORDER_STATUS_LABELS`. Cambio de estado desde el panel admin.
+`pending → confirmed → completed` (+ `pending_quote` al nacer y `cancelled`). Etiquetas en español en `ORDER_STATUS_LABELS`: **Pendiente → Tramitado → Entregado**. Cambio de estado desde el panel admin.
+
+Dulce Flor pidió simplificarlos el 20/09/2026: los estados intermedios «En preparación» y «Listo» se retiraron porque nadie los mantenía al día. Lo único que necesita distinguir es si ya ha revisado y gestionado el pedido (**Tramitado**) y si el cliente ya se lo ha llevado (**Entregado**).
+
+Los identificadores `confirmed` y `completed` se conservan para no invalidar los pedidos ya guardados en el navegador y en Supabase: solo cambian las etiquetas. Un pedido escrito con `in_preparation` o `ready` se lee como **Tramitado** (`normalizeOrderStatus`), tanto desde localStorage como desde la base de datos.

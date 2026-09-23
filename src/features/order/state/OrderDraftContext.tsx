@@ -6,6 +6,7 @@ import * as React from "react";
 import { z } from "zod";
 import { resolveDeliveryZone } from "@/domain/delivery";
 import { newInternalId } from "@/domain/orderId";
+import { isRequestedSlotUrgent } from "@/domain/schedule";
 import {
   buildOrderItem,
   computeOrderPricing,
@@ -137,9 +138,14 @@ const draftStateSchema = z.object({
         customerType: z.enum(["individual", "business"]),
         sizeId: z.string(),
         flavorId: z.string().optional(),
+        fillingId: z.string().optional(),
         toppingIds: z.array(z.string()),
         extraIds: z.array(z.string()),
+        quantity: z.number().int().positive().optional(),
       }),
+      // Ojo: zod descarta lo que no esté declarado aquí. Cada campo nuevo de
+      // ItemCustomization tiene que aparecer o se pierde silenciosamente al
+      // restaurar el borrador (le pasó a las velas y las bengalas).
       customization: z.object({
         size: selectedOptionSchema,
         flavor: selectedOptionSchema.optional(),
@@ -149,6 +155,11 @@ const draftStateSchema = z.object({
         extras: z.array(selectedOptionSchema.extend({ priceCents: z.number() })),
         dedicationText: z.string().optional(),
         designDescription: z.string().optional(),
+        occasion: z.string().optional(),
+        candleQuantity: z.number().int().nonnegative().optional(),
+        candleDigits: z.string().optional(),
+        candleStyle: z.enum(["vela", "bengala"]).optional(),
+        sparklerQuantity: z.number().int().nonnegative().optional(),
         notes: z.string().optional(),
         referenceImageId: z.string().optional(),
       }),
@@ -196,6 +207,8 @@ export interface OrderDraftDerived {
   deliveryFeeCents: number | null;
   deliveryZoneLabel: string | null;
   needsDeliveryConsultation: boolean;
+  /** Fecha elegida con menos de 3 días de margen: el pedido lleva suplemento. */
+  urgent: boolean;
   pricing: OrderPricing;
 }
 
@@ -208,7 +221,17 @@ interface OrderDraftContextValue {
     customization: ItemCustomization,
     quantity: number
   ) => boolean;
-  updateConfiguredItem: (item: DraftItem) => void;
+  /**
+   * Reemplaza un artículo ya añadido por su versión reconfigurada, sin
+   * moverlo de sitio en el pedido. Devuelve false si la nueva combinación no
+   * existe en el catálogo, igual que addConfiguredItem.
+   */
+  updateConfiguredItem: (
+    itemId: string,
+    selection: ItemSelection,
+    customization: ItemCustomization,
+    quantity: number
+  ) => boolean;
   removeItem: (itemId: string) => void;
   setQuantity: (itemId: string, quantity: number) => void;
   setFulfillment: (t: FulfillmentType) => void;
@@ -308,18 +331,35 @@ export function OrderDraftProvider({
       }
     }
 
+    // La urgencia se mira contra el reloj de ahora, no contra el momento en
+    // que se eligió la fecha: si el borrador lleva días abierto, el margen
+    // real puede haber cambiado y con él el suplemento.
+    const urgent =
+      state.requestedDate !== null &&
+      state.requestedTime !== null &&
+      isRequestedSlotUrgent(state.requestedDate, state.requestedTime);
+
     const pricing = computeOrderPricing(
       orderItems,
-      state.fulfillmentType === "delivery" ? deliveryFeeCents : 0
+      state.fulfillmentType === "delivery" ? deliveryFeeCents : 0,
+      null,
+      urgent
     );
     return {
       orderItems,
       deliveryFeeCents,
       deliveryZoneLabel,
       needsDeliveryConsultation,
+      urgent,
       pricing,
     };
-  }, [state.items, state.fulfillmentType, state.address]);
+  }, [
+    state.items,
+    state.fulfillmentType,
+    state.address,
+    state.requestedDate,
+    state.requestedTime,
+  ]);
 
   const value = React.useMemo<OrderDraftContextValue>(
     () => ({
@@ -335,7 +375,22 @@ export function OrderDraftProvider({
         });
         return true;
       },
-      updateConfiguredItem: (item) => dispatch({ type: "updateItem", item }),
+      updateConfiguredItem: (itemId, selection, customization, quantity) => {
+        const rebuilt = buildOrderItem({ id: itemId, selection, customization, quantity });
+        if (!rebuilt) return false;
+        // Si la reconfiguración cambió la imagen de referencia, la anterior ya
+        // no la usa nadie: se borra aquí para que no quede ocupando espacio.
+        const previous = state.items.find((i) => i.id === itemId);
+        const previousImageId = previous?.customization.referenceImageId;
+        if (previousImageId && previousImageId !== customization.referenceImageId) {
+          deleteImage(previousImageId);
+        }
+        dispatch({
+          type: "updateItem",
+          item: { id: itemId, selection, customization, quantity: rebuilt.quantity },
+        });
+        return true;
+      },
       removeItem: (itemId) => {
         // Al quitar un artículo, su imagen de referencia deja de usarse.
         const item = state.items.find((i) => i.id === itemId);

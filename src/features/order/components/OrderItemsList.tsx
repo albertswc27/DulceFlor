@@ -1,20 +1,36 @@
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatEuros } from "@/domain/money";
-import { computeUnitPriceCents, describeCandleLines } from "@/domain/pricing";
+import {
+  computeUnitPriceCents,
+  describeCandleLines,
+  resolveItemSurcharges,
+} from "@/domain/pricing";
 import { useOrderDraft, type DraftItem } from "@/features/order/state/OrderDraftContext";
 import { getProduct } from "@/domain/catalog";
 import { getImage } from "@/services/imageStore";
 import { QuantityStepper } from "./QuantityStepper";
 import { ProductThumb } from "./ProductThumb";
 
-function DraftItemRow({ item }: { item: DraftItem }) {
+/** Sufijo « +2,50 €» para las opciones que llevan suplemento (vacío si no). */
+function surchargeSuffix(cents: number): string {
+  return cents > 0 ? ` +${formatEuros(cents)}` : "";
+}
+
+function DraftItemRow({
+  item,
+  onEdit,
+}: {
+  item: DraftItem;
+  onEdit?: (item: DraftItem) => void;
+}) {
   const { removeItem, setQuantity } = useOrderDraft();
   const product = getProduct(item.selection.productId);
   const isQuote = product?.pricingType === "quote";
   const unit = isQuote ? null : computeUnitPriceCents(item.selection);
   const c = item.customization;
   const referenceImage = c.referenceImageId ? getImage(c.referenceImageId) : null;
+  const surcharges = resolveItemSurcharges(item.selection.productId, c);
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
@@ -31,8 +47,18 @@ function DraftItemRow({ item }: { item: DraftItem }) {
           <ul className="mt-1 space-y-0.5 text-sm text-muted-foreground">
             <li>{c.size.label}</li>
             {c.occasion && <li>Ocasión: {c.occasion}</li>}
-            {c.flavor && <li>Sabor: {c.flavor.label}</li>}
-            {c.filling && <li>Relleno: {c.filling.label}</li>}
+            {c.flavor && (
+              <li>
+                Sabor: {c.flavor.label}
+                {surchargeSuffix(surcharges.flavorCents)}
+              </li>
+            )}
+            {c.filling && (
+              <li>
+                Relleno: {c.filling.label}
+                {surchargeSuffix(surcharges.fillingCents)}
+              </li>
+            )}
             {c.toppings.length > 0 && (
               <li>Toppings: {c.toppings.map((t) => t.label).join(", ")}</li>
             )}
@@ -100,27 +126,42 @@ function DraftItemRow({ item }: { item: DraftItem }) {
           )}
         </div>
       </div>
-      <div className="mt-3 flex items-center justify-between gap-3">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <QuantityStepper
           value={item.quantity}
           onChange={(q) => setQuantity(item.id, q)}
         />
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="text-destructive hover:bg-destructive/10"
-          onClick={() => removeItem(item.id)}
-        >
-          <Trash2 />
-          Quitar
-        </Button>
+        <div className="flex items-center gap-1">
+          {/* Cambiar de idea sobre el sabor no debería costar rehacer el
+              pedido: se reabre el configurador con todo lo ya elegido. */}
+          {onEdit && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => onEdit(item)}>
+              <Pencil />
+              Editar
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:bg-destructive/10"
+            onClick={() => removeItem(item.id)}
+          >
+            <Trash2 />
+            Quitar
+          </Button>
+        </div>
       </div>
     </div>
   );
 }
 
-export function OrderItemsList() {
+export function OrderItemsList({
+  onEdit,
+}: {
+  /** Sin esta función la lista no ofrece editar (p. ej. en el drawer móvil). */
+  onEdit?: (item: DraftItem) => void;
+} = {}) {
   const { state } = useOrderDraft();
   if (state.items.length === 0) {
     return (
@@ -132,7 +173,7 @@ export function OrderItemsList() {
   return (
     <div className="space-y-3">
       {state.items.map((item) => (
-        <DraftItemRow key={item.id} item={item} />
+        <DraftItemRow key={item.id} item={item} onEdit={onEdit} />
       ))}
     </div>
   );

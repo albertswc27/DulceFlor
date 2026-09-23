@@ -11,7 +11,6 @@ import {
   Cake,
   CalendarDays,
   CalendarRange,
-  ChefHat,
   CircleCheckBig,
   Coins,
   Hourglass,
@@ -121,8 +120,9 @@ export default function AdminDashboardPage() {
         o.requestedDate >= todayIso &&
         o.requestedDate <= weekEndIso
     ).length;
-    const inPreparation = orders.filter((o) => o.status === "in_preparation").length;
-    const ready = orders.filter((o) => o.status === "ready").length;
+    // Tramitados pendientes de recoger: ya revisados por Dulce Flor pero
+    // todavía en el obrador. Es la cola de trabajo real del día a día.
+    const tramitados = orders.filter((o) => o.status === "confirmed").length;
     // Urgentes aún vivos: registrados con menos de 3 días de margen y todavía
     // sin completar ni cancelar. Son los que piden atención inmediata.
     const urgentActive = orders.filter(
@@ -138,8 +138,7 @@ export default function AdminDashboardPage() {
       pendingQuote,
       forToday,
       next7Days,
-      inPreparation,
-      ready,
+      tramitados,
       urgentActive,
       expectedRevenueCents,
     };
@@ -218,11 +217,10 @@ export default function AdminDashboardPage() {
               value={String(metrics.next7Days)}
             />
             <MetricCard
-              icon={ChefHat}
-              label="En preparación"
-              value={String(metrics.inPreparation)}
+              icon={CircleCheckBig}
+              label="Tramitados"
+              value={String(metrics.tramitados)}
             />
-            <MetricCard icon={CircleCheckBig} label="Listos" value={String(metrics.ready)} />
             <MetricCard
               icon={Coins}
               label="Ingresos previstos"

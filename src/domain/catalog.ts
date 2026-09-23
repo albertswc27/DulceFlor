@@ -4,7 +4,12 @@
  * Precios en céntimos. No añadir productos o precios que no aparezcan en las cartas.
  */
 import type { CustomerType } from "./types";
-import { EXTRAS } from "@/config/business";
+import {
+  CAKE_BOX_PRICE_CENTS,
+  CAKE_FILLING_SURCHARGE_CENTS,
+  EXTRAS,
+  SPONGE_FLAVOR_SURCHARGE_CENTS,
+} from "@/config/business";
 
 export type CategoryId =
   | "pasteles"
@@ -43,6 +48,12 @@ export interface CatalogOption {
   id: string;
   label: string;
   description?: string;
+  /**
+   * Suplemento sobre el precio de la tarta. Ausente o 0 = incluido en el
+   * precio. Lo usan los sabores de bizcocho y los rellenos desde que Dulce
+   * Flor dejó solo unos pocos sin coste (20/09/2026).
+   */
+  surchargeCents?: number;
 }
 
 /**
@@ -129,33 +140,65 @@ export interface CatalogProduct {
 /* Opciones compartidas                                                */
 /* ------------------------------------------------------------------ */
 
-/** Sabores de bizcocho (cartas de pasteles, "biscochos"). */
-export const SPONGE_FLAVORS: CatalogOption[] = [
-  { id: "chocolate", label: "Chocolate" },
-  { id: "vainilla", label: "Vainilla" },
-  { id: "zanahoria", label: "Zanahoria" },
-  { id: "red-velvet", label: "Red Velvet" },
-  { id: "coco", label: "Coco" },
-  { id: "naranja", label: "Naranja" },
-  { id: "marmoleado", label: "Marmoleado" },
-  { id: "tres-leches", label: "3 Leches" },
-  { id: "limon", label: "Limón" },
-];
+/**
+ * Sabores de bizcocho (cartas de pasteles, "biscochos").
+ *
+ * Desde el 20/09/2026 solo tres van incluidos en el precio —Dulce Flor los
+ * marcó uno a uno sobre una captura del configurador—; el resto llevan
+ * suplemento. La lista de incluidos es la excepción, así que se escribe
+ * aparte y el suplemento se aplica a todo lo demás: si mañana añaden un
+ * sabor nuevo, nace con suplemento en vez de colarse gratis por olvido.
+ */
+const FREE_SPONGE_FLAVOR_IDS = ["chocolate", "vainilla", "tres-leches"];
 
-/** Rellenos de pasteles (carta de rellenos, incluidos en el precio). */
-export const CAKE_FILLINGS: CatalogOption[] = [
-  { id: "dulce-de-leche", label: "Dulce de leche", description: "Clásico y cremoso, con el auténtico sabor del dulce de leche." },
-  { id: "nata-con-frutas", label: "Nata con frutas", description: "Suave nata montada con trozos de frutas frescas." },
-  // El id se mantiene por compatibilidad con los pedidos ya guardados; solo
-  // cambia el nombre comercial (antes «Dulce de leche con chocolate»).
-  { id: "dulce-de-leche-chocolate", label: "Bariloche", description: "Dulce de leche combinado con suave crema de chocolate." },
-  { id: "chocolate", label: "Chocolate", description: "Relleno cremoso de chocolate." },
-  { id: "mus-oreo", label: "Mus de Oreo", description: "Mousse de queso con galletas Oreo." },
-  { id: "nutella", label: "Nutella", description: "Crema de avellanas con el inconfundible sabor Nutella." },
-  { id: "fresa", label: "Fresa", description: "Suave crema con trocitos de fresa natural." },
-  { id: "mus-lotus", label: "Mus de Lotus", description: "Mousse de queso con crema Lotus y crujiente de galleta." },
-  { id: "mus-cafe", label: "Mus de café", description: "Mousse de café con un toque suave y aromático." },
-];
+/** Rellenos sin suplemento (mismos criterios que los bizcochos). */
+const FREE_FILLING_IDS = ["dulce-de-leche", "chocolate", "dulce-de-leche-chocolate"];
+
+/** Marca con su suplemento las opciones que no están en la lista de incluidas. */
+function withSurcharge(
+  options: CatalogOption[],
+  freeIds: string[],
+  surchargeCents: number
+): CatalogOption[] {
+  return options.map((option) =>
+    freeIds.includes(option.id) ? option : { ...option, surchargeCents }
+  );
+}
+
+export const SPONGE_FLAVORS: CatalogOption[] = withSurcharge(
+  [
+    { id: "chocolate", label: "Chocolate" },
+    { id: "vainilla", label: "Vainilla" },
+    { id: "zanahoria", label: "Zanahoria" },
+    { id: "red-velvet", label: "Red Velvet" },
+    { id: "coco", label: "Coco" },
+    { id: "naranja", label: "Naranja" },
+    { id: "marmoleado", label: "Marmoleado" },
+    { id: "tres-leches", label: "3 Leches" },
+    { id: "limon", label: "Limón" },
+  ],
+  FREE_SPONGE_FLAVOR_IDS,
+  SPONGE_FLAVOR_SURCHARGE_CENTS
+);
+
+/** Rellenos de pasteles (carta de rellenos). */
+export const CAKE_FILLINGS: CatalogOption[] = withSurcharge(
+  [
+    { id: "dulce-de-leche", label: "Dulce de leche", description: "Clásico y cremoso, con el auténtico sabor del dulce de leche." },
+    { id: "nata-con-frutas", label: "Nata con frutas", description: "Suave nata montada con trozos de frutas frescas." },
+    // El id se mantiene por compatibilidad con los pedidos ya guardados; solo
+    // cambia el nombre comercial (antes «Dulce de leche con chocolate»).
+    { id: "dulce-de-leche-chocolate", label: "Bariloche", description: "Dulce de leche combinado con suave crema de chocolate." },
+    { id: "chocolate", label: "Chocolate", description: "Relleno cremoso de chocolate." },
+    { id: "mus-oreo", label: "Mus de Oreo", description: "Mousse de queso con galletas Oreo." },
+    { id: "nutella", label: "Nutella", description: "Crema de avellanas con el inconfundible sabor Nutella." },
+    { id: "fresa", label: "Fresa", description: "Suave crema con trocitos de fresa natural." },
+    { id: "mus-lotus", label: "Mus de Lotus", description: "Mousse de queso con crema Lotus y crujiente de galleta." },
+    { id: "mus-cafe", label: "Mus de café", description: "Mousse de café con un toque suave y aromático." },
+  ],
+  FREE_FILLING_IDS,
+  CAKE_FILLING_SURCHARGE_CENTS
+);
 
 /**
  * Lista de toppings confirmada (17/08/2026), derivada de los ingredientes de
@@ -187,6 +230,21 @@ const EDIBLE_PAPER_EXTRA: ExtraOption = {
   description: "Haz tu tarta aún más especial con una imagen impresa comestible.",
   priceCents: EXTRAS.EDIBLE_PAPER_PRICE_CENTS,
 };
+
+/** Extra nuevo pedido por Dulce Flor el 20/09/2026. */
+const CAKE_TOPPERS_EXTRA: ExtraOption = {
+  id: "toppers-6-figuras",
+  label: "Toppers de 6 figuras",
+  description: "Set de 6 figuras decorativas colocadas sobre la tarta.",
+  priceCents: EXTRAS.CAKE_TOPPERS_PRICE_CENTS,
+};
+
+/** Extras del acabado clásico: van juntos en todas las tartas con precio. */
+const CAKE_EXTRAS: ExtraOption[] = [
+  DEDICATION_EXTRA,
+  EDIBLE_PAPER_EXTRA,
+  CAKE_TOPPERS_EXTRA,
+];
 
 /* ------------------------------------------------------------------ */
 /* Pasteles (matriz personas × discos) — solo particulares en cartas   */
@@ -501,6 +559,31 @@ const SAVOURY_PRODUCTS: CatalogProduct[] = SAVOURY_SNACKS.map((snack) => ({
 }));
 
 /* ------------------------------------------------------------------ */
+/* Bocaditos dulces                                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Primer dulce con tarifa cerrada (confirmado por Dulce Flor el 20/09/2026):
+ * 25 unidades por 12,50 €, es decir 0,50 €/ud. Un único tramo, porque es la
+ * única cantidad que nos han pasado: no se inventan precios para otras.
+ * El resto de bocaditos dulces sigue sin carta y se consulta por WhatsApp.
+ */
+const SWEET_PRODUCTS: CatalogProduct[] = [
+  {
+    id: "mini-alfajores",
+    name: "Mini alfajores",
+    category: "aperitivos-dulces",
+    description:
+      "Mini alfajores caseros rellenos de dulce de leche. Se piden en caja de 25 unidades.",
+    availableFor: ["individual", "business"],
+    quantityTiers: buildTiers([25, 50]),
+    sizes: {},
+    allowsToppings: false,
+    extras: [],
+  },
+];
+
+/* ------------------------------------------------------------------ */
 /* Desayunos y regalos personalizados — sin precio automático          */
 /* ------------------------------------------------------------------ */
 
@@ -545,7 +628,7 @@ export const PRODUCTS: CatalogProduct[] = [
     flavors: SPONGE_FLAVORS,
     fillings: CAKE_FILLINGS,
     allowsToppings: true,
-    extras: [DEDICATION_EXTRA, EDIBLE_PAPER_EXTRA],
+    extras: CAKE_EXTRAS,
     menuImage: "carta-pasteles-clasicos-precios-particulares",
   },
   {
@@ -559,7 +642,7 @@ export const PRODUCTS: CatalogProduct[] = [
     flavors: SPONGE_FLAVORS,
     fillings: CAKE_FILLINGS,
     allowsToppings: true,
-    extras: [DEDICATION_EXTRA, EDIBLE_PAPER_EXTRA],
+    extras: CAKE_EXTRAS,
     menuImage: "carta-pasteles-buttercream-precios-particulares",
   },
   {
@@ -618,7 +701,7 @@ export const PRODUCTS: CatalogProduct[] = [
     flavors: CHEESECAKE_FLAVORS,
     allowsToppings: true,
     // El papel comestible también se hace sobre cheesecake (confirmado 24/08/2026).
-    extras: [DEDICATION_EXTRA, EDIBLE_PAPER_EXTRA],
+    extras: CAKE_EXTRAS,
     menuImage: "carta-cheesecake-precios-particulares",
   },
   {
@@ -643,7 +726,7 @@ export const PRODUCTS: CatalogProduct[] = [
     allowsToppings: true,
     // Carta: suplemento 2 € en todos los tamaños, 6 € en el de 28–30 porciones.
     toppingPriceOverridesBySizeId: { "28-30": 600 },
-    extras: [DEDICATION_EXTRA, EDIBLE_PAPER_EXTRA],
+    extras: CAKE_EXTRAS,
     menuImage: "carta-tres-leches-precios-particulares",
   },
   {
@@ -692,6 +775,7 @@ export const PRODUCTS: CatalogProduct[] = [
     menuImage: "carta-tres-leches-y-tortas-precios-empresas",
   },
   ...SAVOURY_PRODUCTS,
+  ...SWEET_PRODUCTS,
   ...GIFT_PRODUCTS,
 ];
 
@@ -759,12 +843,47 @@ export function getSizesFor(
 }
 
 /**
- * Precio base de una unidad (sin toppings ni extras).
- * En cheesecakes el precio depende de sabor + tamaño + tipo de cliente;
- * en el resto de productos, del tamaño + tipo de cliente.
- * Devuelve null si la combinación no existe en las cartas.
+ * Coste de la caja de transporte de un producto.
+ *
+ * Toda tarta con precio automático sale en caja y Dulce Flor pidió que ese
+ * coste fuese parte del precio, no un extra que el cliente elija ni una línea
+ * aparte del resumen. Por eso vive aquí, dentro del precio base: así el
+ * importe que se enseña en la carta, en el selector de tamaño, en el carrito
+ * y en el total es siempre el mismo número, sin desajustes de 0,99 €.
+ *
+ * No se aplica a los aperitivos (van en bandeja) ni a lo que se presupuesta
+ * a mano, donde la caja ya va dentro del presupuesto.
  */
-export function getUnitBasePriceCents(
+export function getPackagingCents(product: CatalogProduct): number {
+  if (product.pricingType === "quote") return 0;
+  if (product.quantityTiers) return 0;
+  return CATEGORY_FAMILY[product.category] === "tartas" ? CAKE_BOX_PRICE_CENTS : 0;
+}
+
+/** Suplemento del sabor de bizcocho elegido (0 si va incluido o no aplica). */
+export function getFlavorSurchargeCents(
+  product: CatalogProduct | undefined,
+  flavorId: string | undefined
+): number {
+  if (!product || !flavorId || product.pricingType === "quote") return 0;
+  return product.flavors?.find((f) => f.id === flavorId)?.surchargeCents ?? 0;
+}
+
+/** Suplemento del relleno elegido (0 si va incluido o no aplica). */
+export function getFillingSurchargeCents(
+  product: CatalogProduct | undefined,
+  fillingId: string | undefined
+): number {
+  if (!product || !fillingId || product.pricingType === "quote") return 0;
+  return product.fillings?.find((f) => f.id === fillingId)?.surchargeCents ?? 0;
+}
+
+/**
+ * Precio de catálogo de una unidad, tal cual está transcrito de las cartas y
+ * SIN la caja. Solo para documentar/verificar las cartas: lo que se enseña al
+ * cliente es getUnitBasePriceCents.
+ */
+export function getMenuBasePriceCents(
   productId: string,
   customerType: CustomerType,
   sizeId: string,
@@ -785,4 +904,23 @@ export function getUnitBasePriceCents(
   }
 
   return sizes[sizeIndex].priceCents;
+}
+
+/**
+ * Precio base de una unidad (sin toppings ni extras), ya con la caja incluida.
+ * En cheesecakes el precio depende de sabor + tamaño + tipo de cliente;
+ * en el resto de productos, del tamaño + tipo de cliente.
+ * Devuelve null si la combinación no existe en las cartas.
+ */
+export function getUnitBasePriceCents(
+  productId: string,
+  customerType: CustomerType,
+  sizeId: string,
+  flavorId?: string
+): number | null {
+  const product = getProduct(productId);
+  if (!product) return null;
+  const menuPrice = getMenuBasePriceCents(productId, customerType, sizeId, flavorId);
+  if (menuPrice === null) return null;
+  return menuPrice + getPackagingCents(product);
 }

@@ -7,7 +7,11 @@
 import { describe, expect, it } from "vitest";
 import { fromRow, toRow, type OrderRow } from "./orderRepository";
 import { newPublicOrderId } from "@/domain/orderId";
-import type { Order } from "@/domain/types";
+import {
+  normalizeOrderStatus,
+  ORDER_STATUS_LABELS,
+  type Order,
+} from "@/domain/types";
 
 const PEDIDO: Order = {
   id: "11111111-2222-3333-4444-555555555555",
@@ -151,5 +155,43 @@ describe("identificador público", () => {
   it("el año va por delante, así que el espacio se renueva cada enero", () => {
     expect(newPublicOrderId(2026).startsWith("DF-2026-")).toBe(true);
     expect(newPublicOrderId(2027).startsWith("DF-2027-")).toBe(true);
+  });
+});
+
+describe("estados retirados al simplificar el flujo (20/09/2026)", () => {
+  it("un pedido guardado «en preparación» o «listo» se lee como tramitado", () => {
+    expect(normalizeOrderStatus("in_preparation")).toBe("confirmed");
+    expect(normalizeOrderStatus("ready")).toBe("confirmed");
+  });
+
+  it("los estados vigentes no se tocan", () => {
+    for (const status of ["pending", "pending_quote", "confirmed", "completed", "cancelled"]) {
+      expect(normalizeOrderStatus(status)).toBe(status);
+    }
+  });
+
+  it("un estado desconocido cae en «pendiente», nunca deja el pedido sin etiqueta", () => {
+    expect(normalizeOrderStatus("cualquier-cosa")).toBe("pending");
+    expect(ORDER_STATUS_LABELS[normalizeOrderStatus("cualquier-cosa")]).toBe("Pendiente");
+  });
+
+  it("una fila antigua de la base de datos llega al panel ya traducida", () => {
+    const row = toRow(PEDIDO);
+    const legacy: OrderRow = { ...row, status: "ready" };
+    expect(fromRow(legacy)?.status).toBe("confirmed");
+  });
+
+  it("las etiquetas son las que pidió Dulce Flor", () => {
+    expect(ORDER_STATUS_LABELS.confirmed).toBe("Tramitado");
+    expect(ORDER_STATUS_LABELS.completed).toBe("Entregado");
+  });
+});
+
+describe("aviso al cliente", () => {
+  it("el momento del aviso viaja a la base de datos y vuelve", () => {
+    const avisado: Order = { ...PEDIDO, customerNotifiedAt: "2026-09-21T09:30:00.000Z" };
+    expect(fromRow(toRow(avisado))?.customerNotifiedAt).toBe(
+      "2026-09-21T09:30:00.000Z"
+    );
   });
 });

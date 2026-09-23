@@ -10,24 +10,31 @@ import {
   resolveCandleSelection,
   resolveCandleQuantity,
   computeDeposit,
+  computeOrderPackagingCents,
   computeOrderPricing,
   computeUnitPriceCents,
   getToppingPriceCents,
 } from "./pricing";
 import {
   CAKE_FILLINGS,
+  getMenuBasePriceCents,
+  getPackagingCents,
   getProduct,
   getProductsFor,
   getSizesFor,
   getUnitBasePriceCents,
 } from "./catalog";
 import {
+  CAKE_BOX_PRICE_CENTS,
+  CAKE_FILLING_SURCHARGE_CENTS,
   CANDLE_UNIT_PRICE_CENTS,
   EXTRAS,
   MAX_CANDLE_DIGITS,
   MAX_SPARKLERS,
   NUMBER_SPARKLER_PRICE_CENTS,
   PLAIN_SPARKLER_PRICE_CENTS,
+  SPONGE_FLAVOR_SURCHARGE_CENTS,
+  URGENT_ORDER_SURCHARGE_CENTS,
 } from "@/config/business";
 import { formatEuros } from "./money";
 import type { OrderItem } from "./types";
@@ -92,22 +99,27 @@ describe("toppings (precio actualizado: 2,50 €)", () => {
     });
   }
 
+  // 20 € de carta + la caja, que desde el 20/09/2026 va dentro del precio.
+  const BASE_4_6_1D = 2000 + CAKE_BOX_PRICE_CENTS;
+
   it("1 topping → +2,50 €", () => {
-    expect(priceWithToppings([])).toBe(2000);
-    expect(priceWithToppings(["oreo"])).toBe(2250);
+    expect(priceWithToppings([])).toBe(BASE_4_6_1D);
+    expect(priceWithToppings(["oreo"])).toBe(BASE_4_6_1D + 250);
   });
 
   it("2 toppings → +5,00 €", () => {
-    expect(priceWithToppings(["oreo", "kinder-bueno"])).toBe(2500);
+    expect(priceWithToppings(["oreo", "kinder-bueno"])).toBe(BASE_4_6_1D + 500);
   });
 
   it("3 toppings → +7,50 €", () => {
-    expect(priceWithToppings(["oreo", "kinder-bueno", "fresas"])).toBe(2750);
+    expect(priceWithToppings(["oreo", "kinder-bueno", "fresas"])).toBe(
+      BASE_4_6_1D + 750
+    );
   });
 
   it("los toppings a 2,50 € pueden hacer superar el umbral de señal de 40 €", () => {
-    // Pastel clásico 20-22 personas · 1 disco = 39 € → sin señal.
-    // Con 1 topping (2,50 €) el total pasa a 41,50 € → señal del 30 %.
+    // Pastel clásico 20-22 personas · 1 disco = 39 € + caja → sin señal.
+    // Con 1 topping (2,50 €) el total pasa de 40 € → señal del 30 %.
     const base = computeUnitPriceCents({
       productId: "pastel-clasico",
       customerType: "individual",
@@ -125,7 +137,7 @@ describe("toppings (precio actualizado: 2,50 €)", () => {
       toppingIds: ["fresas"],
       extraIds: [],
     })!;
-    expect(conTopping).toBe(4150);
+    expect(conTopping).toBe(3900 + CAKE_BOX_PRICE_CENTS + 250);
     expect(computeDeposit(conTopping).depositRequired).toBe(true);
   });
 
@@ -137,27 +149,220 @@ describe("toppings (precio actualizado: 2,50 €)", () => {
 
 describe("precios de catálogo (transcritos de las cartas)", () => {
   it("pastel clásico 4–6 personas / 1 disco = 20 €", () => {
-    expect(getUnitBasePriceCents("pastel-clasico", "individual", "4-6-1d")).toBe(2000);
+    expect(getMenuBasePriceCents("pastel-clasico", "individual", "4-6-1d")).toBe(2000);
   });
 
   it("pastel buttercream 20–22 personas / 3 discos = 82 €", () => {
-    expect(getUnitBasePriceCents("pastel-buttercream", "individual", "20-22-3d")).toBe(8200);
+    expect(getMenuBasePriceCents("pastel-buttercream", "individual", "20-22-3d")).toBe(8200);
   });
 
   it("cheesecake pistacho particular grande = 43 €, empresa grande = 45 €", () => {
-    expect(getUnitBasePriceCents("cheesecake", "individual", "14-16", "pistacho")).toBe(4300);
-    expect(getUnitBasePriceCents("cheesecake", "business", "14-16", "pistacho")).toBe(4500);
+    expect(getMenuBasePriceCents("cheesecake", "individual", "14-16", "pistacho")).toBe(4300);
+    expect(getMenuBasePriceCents("cheesecake", "business", "14-16", "pistacho")).toBe(4500);
   });
 
   it("tres leches particular 28–30 porciones = 59 €, empresa 8 porciones = 18 €", () => {
-    expect(getUnitBasePriceCents("tres-leches", "individual", "28-30")).toBe(5900);
-    expect(getUnitBasePriceCents("tres-leches", "business", "8")).toBe(1800);
+    expect(getMenuBasePriceCents("tres-leches", "individual", "28-30")).toBe(5900);
+    expect(getMenuBasePriceCents("tres-leches", "business", "8")).toBe(1800);
   });
 
   it("combinaciones inexistentes devuelven null", () => {
     expect(getUnitBasePriceCents("pastel-clasico", "business", "4-6-1d")).toBeNull();
     expect(getUnitBasePriceCents("cheesecake", "individual", "4-6")).toBeNull(); // sin sabor
     expect(getUnitBasePriceCents("cheesecake", "individual", "4-6", "inexistente")).toBeNull();
+  });
+});
+
+describe("caja de transporte (confirmada 20/09/2026)", () => {
+  it("toda tarta con precio automático la lleva dentro del precio", () => {
+    expect(getUnitBasePriceCents("pastel-clasico", "individual", "4-6-1d")).toBe(
+      2000 + CAKE_BOX_PRICE_CENTS
+    );
+    expect(getUnitBasePriceCents("cheesecake", "individual", "14-16", "pistacho")).toBe(
+      4300 + CAKE_BOX_PRICE_CENTS
+    );
+    expect(getUnitBasePriceCents("tres-leches", "business", "8")).toBe(
+      1800 + CAKE_BOX_PRICE_CENTS
+    );
+  });
+
+  it("los aperitivos no la llevan: van en bandeja", () => {
+    const alfajores = getProduct("mini-alfajores")!;
+    expect(getPackagingCents(alfajores)).toBe(0);
+    const sandwich = getProduct("mini-sandwich-huevo")!;
+    expect(getPackagingCents(sandwich)).toBe(0);
+  });
+
+  it("las tartas a presupuestar tampoco: la caja va dentro del presupuesto", () => {
+    expect(getPackagingCents(getProduct("pastel-fondant")!)).toBe(0);
+    expect(getPackagingCents(getProduct("pastel-personalizado")!)).toBe(0);
+  });
+
+  it("se cobra una caja por tarta, no una por pedido", () => {
+    const item = buildOrderItem({
+      id: "i",
+      selection: {
+        productId: "pastel-clasico",
+        customerType: "individual",
+        sizeId: "4-6-1d",
+        flavorId: "chocolate",
+        toppingIds: [],
+        extraIds: [],
+      },
+      customization: {
+        size: { id: "4-6-1d", label: "4–6 personas · 1 disco" },
+        toppings: [],
+        extras: [],
+      },
+      quantity: 3,
+    })!;
+    expect(computeOrderPackagingCents([item])).toBe(CAKE_BOX_PRICE_CENTS * 3);
+  });
+});
+
+describe("suplementos de bizcocho y relleno (confirmados 20/09/2026)", () => {
+  const BASE = 2000 + CAKE_BOX_PRICE_CENTS;
+
+  function price(flavorId: string, fillingId?: string): number | null {
+    return computeUnitPriceCents({
+      productId: "pastel-clasico",
+      customerType: "individual",
+      sizeId: "4-6-1d",
+      flavorId,
+      fillingId,
+      toppingIds: [],
+      extraIds: [],
+    });
+  }
+
+  it("los tres bizcochos marcados por Dulce Flor no suman nada", () => {
+    for (const id of ["chocolate", "vainilla", "tres-leches"]) {
+      expect(price(id)).toBe(BASE);
+    }
+  });
+
+  it("el resto de bizcochos suma 2,90 €", () => {
+    for (const id of ["zanahoria", "red-velvet", "coco", "naranja", "marmoleado", "limon"]) {
+      expect(price(id)).toBe(BASE + SPONGE_FLAVOR_SURCHARGE_CENTS);
+    }
+  });
+
+  it("los tres rellenos marcados no suman nada", () => {
+    for (const id of ["dulce-de-leche", "chocolate", "dulce-de-leche-chocolate"]) {
+      expect(price("chocolate", id)).toBe(BASE);
+    }
+  });
+
+  it("el resto de rellenos suma 2,50 €", () => {
+    for (const id of ["nata-con-frutas", "mus-oreo", "nutella", "fresa", "mus-lotus", "mus-cafe"]) {
+      expect(price("chocolate", id)).toBe(BASE + CAKE_FILLING_SURCHARGE_CENTS);
+    }
+  });
+
+  it("bizcocho y relleno con suplemento se acumulan", () => {
+    expect(price("limon", "nutella")).toBe(
+      BASE + SPONGE_FLAVOR_SURCHARGE_CENTS + CAKE_FILLING_SURCHARGE_CENTS
+    );
+  });
+
+  it("el sabor del cheesecake NO lleva suplemento: ya determina el precio", () => {
+    const conSabor = computeUnitPriceCents({
+      productId: "cheesecake",
+      customerType: "individual",
+      sizeId: "14-16",
+      flavorId: "pistacho",
+      toppingIds: [],
+      extraIds: [],
+    });
+    expect(conSabor).toBe(4300 + CAKE_BOX_PRICE_CENTS);
+  });
+
+  it("las tartas a presupuestar no cobran suplementos: el precio va aparte", () => {
+    const item = buildOrderItem({
+      id: "i",
+      selection: {
+        productId: "pastel-fondant",
+        customerType: "individual",
+        sizeId: "4-6-1d",
+        flavorId: "limon",
+        fillingId: "nutella",
+        toppingIds: [],
+        extraIds: [],
+      },
+      customization: {
+        size: { id: "4-6-1d", label: "4–6 personas · 1 disco" },
+        flavor: { id: "limon", label: "Limón" },
+        filling: { id: "nutella", label: "Nutella" },
+        toppings: [],
+        extras: [],
+      },
+      quantity: 1,
+    })!;
+    expect(item.requiresQuote).toBe(true);
+    expect(item.unitPriceCents).toBe(0);
+  });
+
+  it("un borrador antiguo sin fillingId en la selección sigue cobrando el relleno", () => {
+    // Los borradores guardados antes de que los rellenos tuvieran suplemento
+    // solo llevan el relleno en la personalización: buildOrderItem lo rescata.
+    const item = buildOrderItem({
+      id: "i",
+      selection: {
+        productId: "pastel-clasico",
+        customerType: "individual",
+        sizeId: "4-6-1d",
+        flavorId: "chocolate",
+        toppingIds: [],
+        extraIds: [],
+      },
+      customization: {
+        size: { id: "4-6-1d", label: "4–6 personas · 1 disco" },
+        flavor: { id: "chocolate", label: "Chocolate" },
+        filling: { id: "nutella", label: "Nutella" },
+        toppings: [],
+        extras: [],
+      },
+      quantity: 1,
+    })!;
+    expect(item.unitPriceCents).toBe(BASE + CAKE_FILLING_SURCHARGE_CENTS);
+  });
+});
+
+describe("suplemento por pedido urgente (confirmado 20/09/2026: 5 €)", () => {
+  it("un pedido con margen normal no lo lleva", () => {
+    const pricing = computeOrderPricing([makeItem(2000)], 0, null, false);
+    expect(pricing.urgencySurchargeCents).toBeUndefined();
+    expect(pricing.totalCents).toBe(2000);
+  });
+
+  it("un pedido urgente suma 5 € al total, una sola vez", () => {
+    const pricing = computeOrderPricing([makeItem(2000, 3)], 0, null, true);
+    expect(pricing.urgencySurchargeCents).toBe(URGENT_ORDER_SURCHARGE_CENTS);
+    expect(pricing.subtotalCents).toBe(6000);
+    expect(pricing.totalCents).toBe(6000 + URGENT_ORDER_SURCHARGE_CENTS);
+  });
+
+  it("el suplemento cuenta para el umbral y el cálculo de la señal", () => {
+    // 38 € de tarta no llegan al umbral de 40 €; con la urgencia, sí.
+    const normal = computeOrderPricing([makeItem(3800)], 0, null, false);
+    expect(normal.depositRequired).toBe(false);
+    const urgente = computeOrderPricing([makeItem(3800)], 0, null, true);
+    expect(urgente.totalCents).toBe(4300);
+    expect(urgente.depositRequired).toBe(true);
+    expect(urgente.depositCents).toBe(1290);
+  });
+
+  it("con tarta a presupuestar se suma igual, pero sigue sin calcularse señal", () => {
+    const fondant: OrderItem = {
+      ...makeItem(0),
+      productId: "pastel-fondant",
+      requiresQuote: true,
+      totalCents: 0,
+    };
+    const pricing = computeOrderPricing([fondant], 0, null, true);
+    expect(pricing.pendingQuote).toBe(true);
+    expect(pricing.totalCents).toBe(URGENT_ORDER_SURCHARGE_CENTS);
+    expect(pricing.depositRequired).toBe(false);
   });
 });
 
@@ -205,9 +410,10 @@ describe("buildOrderItem", () => {
       },
       quantity: 2,
     });
-    // 2900 (kinder bueno mediano) + 250 topping + 200 dedicatoria = 3350
-    expect(item?.unitPriceCents).toBe(3350);
-    expect(item?.totalCents).toBe(6700);
+    // 2900 (kinder bueno mediano) + caja + 250 topping + 250 dedicatoria
+    const unit = 2900 + CAKE_BOX_PRICE_CENTS + 250 + EXTRAS.DEDICATION_PRICE_CENTS;
+    expect(item?.unitPriceCents).toBe(unit);
+    expect(item?.totalCents).toBe(unit * 2);
   });
 
   it("conserva el topping personalizado y la imagen de referencia en el artículo", () => {
@@ -234,7 +440,7 @@ describe("buildOrderItem", () => {
     expect(item?.customization.customToppingRequest).toBe("Ferrero Rocher");
     expect(item?.customization.referenceImageId).toBe("img-123");
     // El topping personalizado NO se cobra automáticamente.
-    expect(item?.unitPriceCents).toBe(2000);
+    expect(item?.unitPriceCents).toBe(2000 + CAKE_BOX_PRICE_CENTS);
   });
 });
 
@@ -264,9 +470,10 @@ describe("topping fuera de catálogo y extras pendientes", () => {
   it("un topping solicitado NO suma importe automáticamente", () => {
     const sinPeticion = itemWith({});
     const conPeticion = itemWith({ customToppingRequest: "Ferrero Rocher" });
-    // 2000 base + 250 del topping de catálogo, en ambos casos.
-    expect(sinPeticion.unitPriceCents).toBe(2250);
-    expect(conPeticion.unitPriceCents).toBe(2250);
+    // 2000 base + caja + 250 del topping de catálogo, en ambos casos.
+    const unit = 2000 + CAKE_BOX_PRICE_CENTS + 250;
+    expect(sinPeticion.unitPriceCents).toBe(unit);
+    expect(conPeticion.unitPriceCents).toBe(unit);
   });
 
   it("marca el pedido como pendiente de confirmar extras", () => {
@@ -430,7 +637,7 @@ describe("velas (1 € por unidad, confirmado 23/08/2026)", () => {
     expect(computeCandlesCents({ candleQuantity: 0 })).toBe(0);
     expect(computeCandlesCents({})).toBe(0);
     expect(cakeWithCandles(0).candlesCents).toBeUndefined();
-    expect(cakeWithCandles(0).totalCents).toBe(2000);
+    expect(cakeWithCandles(0).totalCents).toBe(2000 + CAKE_BOX_PRICE_CENTS);
   });
 
   it("1, 3 y 10 velas cuestan 1, 3 y 10 €", () => {
@@ -468,11 +675,13 @@ describe("velas (1 € por unidad, confirmado 23/08/2026)", () => {
       },
       quantity: 1,
     })!;
-    expect(item.unitPriceCents).toBe(4400); // 3900 + 500 de toppings
+    // 3900 de carta + caja + 500 de toppings
+    const unit = 3900 + CAKE_BOX_PRICE_CENTS + 500;
+    expect(item.unitPriceCents).toBe(unit);
     expect(item.candlesCents).toBe(300);
-    expect(item.totalCents).toBe(4700);
+    expect(item.totalCents).toBe(unit + 300);
     const pricing = computeOrderPricing([item], 0);
-    expect(pricing.subtotalCents).toBe(4700);
+    expect(pricing.subtotalCents).toBe(unit + 300);
     expect(pricing.candlesCents).toBe(300);
   });
 
@@ -499,9 +708,9 @@ describe("velas (1 € por unidad, confirmado 23/08/2026)", () => {
       quantity: 1,
     })!;
     const pricing = computeOrderPricing([item], 0);
-    expect(pricing.totalCents).toBe(4100);
+    expect(pricing.totalCents).toBe(3900 + CAKE_BOX_PRICE_CENTS + 200);
     expect(pricing.depositRequired).toBe(true);
-    expect(pricing.depositCents).toBe(1230);
+    expect(pricing.depositCents).toBe(1260);
   });
 
   it("en tartas a presupuestar las velas se cobran pero la tarta sigue pendiente", () => {
@@ -904,5 +1113,70 @@ describe("resto por cobrar con señal (paga y señal flexible del kiosk)", () =>
 
   it("mientras el total no sea firme (pendingQuote) no se declara sobrepago", () => {
     expect(computeOverpaidCents({ totalCents: 300, pendingQuote: true }, 9000)).toBe(0);
+  });
+});
+
+describe("extras actualizados el 20/09/2026", () => {
+  it("dedicatoria 2,50 €, papel comestible 8 € y toppers 5 €", () => {
+    const extras = getProduct("pastel-clasico")!.extras;
+    const byId = Object.fromEntries(extras.map((e) => [e.id, e.priceCents]));
+    expect(byId["dedicatoria"]).toBe(250);
+    expect(byId["papel-comestible"]).toBe(800);
+    expect(byId["toppers-6-figuras"]).toBe(500);
+  });
+
+  it("los toppers están en las tartas con precio, no en las de empresa a granel", () => {
+    for (const id of ["pastel-clasico", "pastel-buttercream", "cheesecake", "tres-leches"]) {
+      const ids = getProduct(id)!.extras.map((e) => e.id);
+      expect(ids).toContain("toppers-6-figuras");
+    }
+  });
+
+  it("elegir los tres extras suma 15,50 € al precio de la tarta", () => {
+    const base = getUnitBasePriceCents("pastel-clasico", "individual", "4-6-1d")!;
+    const conExtras = computeUnitPriceCents({
+      productId: "pastel-clasico",
+      customerType: "individual",
+      sizeId: "4-6-1d",
+      flavorId: "chocolate",
+      toppingIds: [],
+      extraIds: ["dedicatoria", "papel-comestible", "toppers-6-figuras"],
+    });
+    expect(conExtras).toBe(base + 250 + 800 + 500);
+  });
+});
+
+describe("mini alfajores (confirmados 20/09/2026)", () => {
+  const alfajores = getProduct("mini-alfajores")!;
+
+  it("están en bocaditos dulces y para particulares y empresas", () => {
+    expect(alfajores.category).toBe("aperitivos-dulces");
+    expect(alfajores.availableFor).toEqual(["individual", "business"]);
+  });
+
+  it("25 unidades cuestan 12,50 € (0,50 €/ud)", () => {
+    const unit = computeUnitPriceCents({
+      productId: "mini-alfajores",
+      customerType: "individual",
+      sizeId: "25",
+      toppingIds: [],
+      extraIds: [],
+      quantity: 25,
+    });
+    expect(unit).toBe(50);
+    expect(unit! * 25).toBe(1250);
+  });
+
+  it("por debajo de 25 no hay tarifa: no se inventa un precio", () => {
+    expect(
+      computeUnitPriceCents({
+        productId: "mini-alfajores",
+        customerType: "individual",
+        sizeId: "24",
+        toppingIds: [],
+        extraIds: [],
+        quantity: 24,
+      })
+    ).toBeNull();
   });
 });

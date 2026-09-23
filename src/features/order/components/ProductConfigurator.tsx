@@ -15,6 +15,7 @@ import { formatEuros } from "@/domain/money";
 import {
   getSizesFor,
   TOPPINGS,
+  type CatalogOption,
   type CatalogProduct,
 } from "@/domain/catalog";
 import {
@@ -34,7 +35,7 @@ import type {
   CustomerType,
   ItemCustomization,
 } from "@/domain/types";
-import { saveImage, IMAGE_ERROR_MESSAGES } from "@/services/imageStore";
+import { getImage, saveImage, IMAGE_ERROR_MESSAGES } from "@/services/imageStore";
 import {
   CHEESECAKE_PHOTOS,
   CUSTOM_CAKE_PHOTOS,
@@ -56,6 +57,56 @@ export interface ConfiguratorResult {
   quantity: number;
 }
 
+/**
+ * Estado de partida del configurador. Al editar un artículo que ya está en el
+ * pedido se rellena con TODO lo que el cliente había elegido: volver atrás a
+ * cambiar el sabor no puede costarle rehacer las velas, la dedicatoria ni la
+ * imagen de referencia.
+ */
+export interface ConfiguratorInitial {
+  sizeId?: string;
+  flavorId?: string;
+  fillingId?: string;
+  toppingIds?: string[];
+  extraIds?: string[];
+  customToppingRequest?: string;
+  dedicationText?: string;
+  designDescription?: string;
+  occasion?: string;
+  notes?: string;
+  quantity?: number;
+  candleDigits?: string;
+  candleStyle?: CandleStyle;
+  sparklerQuantity?: number;
+  referenceImageId?: string;
+}
+
+/** Traduce un artículo del borrador al estado de partida del configurador. */
+export function draftItemToInitial(item: {
+  selection: ItemSelection;
+  customization: ItemCustomization;
+  quantity: number;
+}): ConfiguratorInitial {
+  const c = item.customization;
+  return {
+    sizeId: item.selection.sizeId,
+    flavorId: item.selection.flavorId ?? c.flavor?.id,
+    fillingId: item.selection.fillingId ?? c.filling?.id,
+    toppingIds: c.toppings.map((t) => t.id),
+    extraIds: c.extras.map((e) => e.id),
+    customToppingRequest: c.customToppingRequest,
+    dedicationText: c.dedicationText,
+    designDescription: c.designDescription,
+    occasion: c.occasion,
+    notes: c.notes,
+    quantity: item.quantity,
+    candleDigits: c.candleDigits,
+    candleStyle: c.candleStyle,
+    sparklerQuantity: c.sparklerQuantity,
+    referenceImageId: c.referenceImageId,
+  };
+}
+
 interface ProductConfiguratorProps {
   product: CatalogProduct;
   customerType: CustomerType;
@@ -63,16 +114,7 @@ interface ProductConfiguratorProps {
   confirmLabel?: string;
   /** Diseño más denso para pantallas de kiosk. */
   compact?: boolean;
-  initial?: Partial<{
-    sizeId: string;
-    flavorId: string;
-    fillingId: string;
-    toppingIds: string[];
-    extraIds: string[];
-    dedicationText: string;
-    notes: string;
-    quantity: number;
-  }>;
+  initial?: ConfiguratorInitial;
 }
 
 /**
@@ -89,6 +131,7 @@ export function ProductConfigurator(props: ProductConfiguratorProps) {
         onConfirm={props.onConfirm}
         confirmLabel={props.confirmLabel}
         compact={props.compact}
+        initial={props.initial}
       />
     );
   }
@@ -98,7 +141,9 @@ export function ProductConfigurator(props: ProductConfiguratorProps) {
         product={props.product}
         customerType={props.customerType}
         onConfirm={props.onConfirm}
+        confirmLabel={props.confirmLabel}
         compact={props.compact}
+        initial={props.initial}
       />
     );
   }
@@ -124,19 +169,41 @@ function CakeConfigurator({
   const [dedicationText, setDedicationText] = React.useState(initial?.dedicationText ?? "");
   const [notes, setNotes] = React.useState(initial?.notes ?? "");
   const [quantity, setQuantity] = React.useState(initial?.quantity ?? 1);
-  const [customToppingOpen, setCustomToppingOpen] = React.useState(false);
-  const [customToppingText, setCustomToppingText] = React.useState("");
-  const [designDescription, setDesignDescription] = React.useState("");
-  const [referenceImage, setReferenceImage] = React.useState<string | null>(null);
+  const [customToppingOpen, setCustomToppingOpen] = React.useState(
+    Boolean(initial?.customToppingRequest)
+  );
+  const [customToppingText, setCustomToppingText] = React.useState(
+    initial?.customToppingRequest ?? ""
+  );
+  const [designDescription, setDesignDescription] = React.useState(
+    initial?.designDescription ?? ""
+  );
+  const [referenceImage, setReferenceImage] = React.useState<string | null>(() =>
+    initial?.referenceImageId ? getImage(initial.referenceImageId) : null
+  );
+  /**
+   * Id de la imagen que YA estaba guardada al abrir el configurador. Mientras
+   * el cliente no cambie la foto se reutiliza tal cual: volver a guardarla
+   * crearía una copia y dejaría la anterior huérfana en el almacén.
+   */
+  const [savedImageId, setSavedImageId] = React.useState<string | null>(
+    initial?.referenceImageId ?? null
+  );
   // Las velas son de números: se guarda la cifra, y la cantidad de velas es
   // simplemente cuántos dígitos tiene. El acabado (vela o bengala) cambia el
   // precio por unidad, y las bengalas sueltas van aparte.
-  const [candleDigits, setCandleDigits] = React.useState("");
-  const [candleStyle, setCandleStyle] = React.useState<CandleStyle>("vela");
-  const [sparklerQuantity, setSparklerQuantity] = React.useState(0);
+  const [candleDigits, setCandleDigits] = React.useState(initial?.candleDigits ?? "");
+  const [candleStyle, setCandleStyle] = React.useState<CandleStyle>(
+    initial?.candleStyle ?? "vela"
+  );
+  const [sparklerQuantity, setSparklerQuantity] = React.useState(
+    initial?.sparklerQuantity ?? 0
+  );
   const [error, setError] = React.useState<string | null>(null);
 
-  // Al cambiar de producto se reinicia la selección (salvo edición inicial).
+  // Al cambiar de producto se reinicia la selección. Con `initial` (edición de
+  // un artículo ya añadido) se restaura TODO lo que el cliente había elegido,
+  // no solo las primeras opciones.
   React.useEffect(() => {
     setSizeId(initial?.sizeId ?? "");
     setFlavorId(initial?.flavorId ?? "");
@@ -146,13 +213,16 @@ function CakeConfigurator({
     setDedicationText(initial?.dedicationText ?? "");
     setNotes(initial?.notes ?? "");
     setQuantity(initial?.quantity ?? 1);
-    setCustomToppingOpen(false);
-    setCustomToppingText("");
-    setDesignDescription("");
-    setReferenceImage(null);
-    setCandleDigits("");
-    setCandleStyle("vela");
-    setSparklerQuantity(0);
+    setCustomToppingOpen(Boolean(initial?.customToppingRequest));
+    setCustomToppingText(initial?.customToppingRequest ?? "");
+    setDesignDescription(initial?.designDescription ?? "");
+    setReferenceImage(
+      initial?.referenceImageId ? getImage(initial.referenceImageId) : null
+    );
+    setSavedImageId(initial?.referenceImageId ?? null);
+    setCandleDigits(initial?.candleDigits ?? "");
+    setCandleStyle(initial?.candleStyle ?? "vela");
+    setSparklerQuantity(initial?.sparklerQuantity ?? 0);
     setError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.id, customerType]);
@@ -172,6 +242,7 @@ function CakeConfigurator({
     customerType,
     sizeId,
     flavorId: flavorId || undefined,
+    fillingId: fillingId || undefined,
     toppingIds,
     extraIds,
   };
@@ -186,6 +257,22 @@ function CakeConfigurator({
     : null;
 
   const dedicationSelected = extraIds.includes("dedicatoria");
+
+  /**
+   * Los sabores y rellenos sin suplemento son pocos, así que nombrarlos en el
+   * encabezado ahorra recorrer las quince tarjetas para averiguar cuáles no
+   * cuestan nada. Solo tiene sentido donde alguno SÍ lleva suplemento: en el
+   * cheesecake (el sabor va en el precio) o en las tartas a presupuestar, la
+   * lista sería «todos» y no diría nada.
+   */
+  function freeOptionLabels(options: CatalogOption[] | undefined): string[] {
+    if (isQuote || !options?.some((o) => o.surchargeCents)) return [];
+    return options.filter((o) => !o.surchargeCents).map((o) => o.label);
+  }
+  const freeFlavorLabels = freeOptionLabels(product.flavors);
+  const freeFillingLabels = freeOptionLabels(product.fillings);
+  const selectedFlavorLabel = product.flavors?.find((f) => f.id === flavorId)?.label;
+  const selectedFillingLabel = product.fillings?.find((f) => f.id === fillingId)?.label;
 
   /** Velas y bengalas: precio conocido, también en las tartas a presupuestar. */
   const candles = { candleDigits, candleStyle, sparklerQuantity };
@@ -253,15 +340,20 @@ function CakeConfigurator({
     }
 
     // La imagen se guarda en el almacén al confirmar; el artículo solo
-    // referencia el id (nunca base64 dentro del pedido).
+    // referencia el id (nunca base64 dentro del pedido). Si es la misma que ya
+    // estaba guardada (edición sin tocar la foto), se reutiliza su id.
     let referenceImageId: string | undefined;
     if (referenceImage) {
-      const saved = saveImage(referenceImage);
-      if (!saved.ok) {
-        setError(IMAGE_ERROR_MESSAGES[saved.error]);
-        return;
+      if (savedImageId && getImage(savedImageId) === referenceImage) {
+        referenceImageId = savedImageId;
+      } else {
+        const saved = saveImage(referenceImage);
+        if (!saved.ok) {
+          setError(IMAGE_ERROR_MESSAGES[saved.error]);
+          return;
+        }
+        referenceImageId = saved.id;
       }
-      referenceImageId = saved.id;
     }
 
     const size = sizes.find((s) => s.id === sizeId)!;
@@ -364,14 +456,19 @@ function CakeConfigurator({
         />
       </fieldset>
 
-      {/* Sabor */}
+      {/* Sabor. En las tartas a presupuestar no se cobran suplementos: el
+          precio entero se valora a mano, así que no se enseñan importes. */}
       {needsFlavor && (
         <fieldset>
           <legend className="mb-2 flex w-full items-baseline justify-between gap-2">
             <span className="font-display text-base font-semibold text-primary">
               {isCheesecake ? "Sabor" : "Sabor del bizcocho"}
             </span>
-            <span className="text-xs text-muted-foreground">Obligatorio</span>
+            <span className="text-xs text-muted-foreground">
+              {freeFlavorLabels.length > 0
+                ? `${freeFlavorLabels.join(", ")} sin suplemento`
+                : "Obligatorio"}
+            </span>
           </legend>
           <div role="group" aria-label="Sabor" className={gridCols}>
             {product.flavors!.map((flavor) => (
@@ -380,6 +477,11 @@ function CakeConfigurator({
                 selected={flavorId === flavor.id}
                 onSelect={() => setFlavorId(flavor.id)}
                 title={flavor.label}
+                price={
+                  !isQuote && flavor.surchargeCents
+                    ? `+${formatEuros(flavor.surchargeCents)}`
+                    : undefined
+                }
               />
             ))}
           </div>
@@ -391,7 +493,11 @@ function CakeConfigurator({
         <fieldset>
           <legend className="mb-2 flex w-full items-baseline justify-between gap-2">
             <span className="font-display text-base font-semibold text-primary">Relleno</span>
-            <span className="text-xs text-muted-foreground">Incluido en el precio</span>
+            <span className="text-xs text-muted-foreground">
+              {freeFillingLabels.length > 0
+                ? `${freeFillingLabels.join(", ")} sin suplemento`
+                : "Incluido en el precio"}
+            </span>
           </legend>
           <div role="group" aria-label="Relleno" className={gridCols}>
             {product.fillings!.map((filling) => (
@@ -401,6 +507,11 @@ function CakeConfigurator({
                 onSelect={() => setFillingId(filling.id === fillingId ? "" : filling.id)}
                 title={filling.label}
                 subtitle={compact ? undefined : filling.description}
+                price={
+                  !isQuote && filling.surchargeCents
+                    ? `+${formatEuros(filling.surchargeCents)}`
+                    : undefined
+                }
               />
             ))}
           </div>
@@ -607,7 +718,14 @@ function CakeConfigurator({
               )}
             </div>
           ) : breakdown ? (
-            <AnimatedPrice cents={cakeCents! + candlesCents} className="text-2xl" />
+            <>
+              <AnimatedPrice cents={cakeCents! + candlesCents} className="text-2xl" />
+              {/* La caja va dentro del precio, no como cargo aparte: se
+                  menciona para que nadie crea que se la cobran al recoger. */}
+              {breakdown.packagingCents > 0 && (
+                <p className="text-xs text-muted-foreground">Caja incluida</p>
+              )}
+            </>
           ) : (
             <p className="max-w-[13rem] text-sm text-muted-foreground">
               {isCheesecake && !flavorId
@@ -620,12 +738,28 @@ function CakeConfigurator({
 
       {!isQuote &&
         breakdown &&
-        (breakdown.toppingsCents > 0 || breakdown.extrasCents > 0 || candlesCents > 0) && (
+        (breakdown.flavorCents > 0 ||
+          breakdown.fillingCents > 0 ||
+          breakdown.toppingsCents > 0 ||
+          breakdown.extrasCents > 0 ||
+          candlesCents > 0) && (
         <div className="rounded-lg bg-background-soft px-4 py-3 text-sm">
           <div className="flex justify-between">
             <span>Base</span>
             <span>{formatEuros(breakdown.baseCents)}</span>
           </div>
+          {breakdown.flavorCents > 0 && (
+            <div className="flex justify-between">
+              <span>Bizcocho ({selectedFlavorLabel})</span>
+              <span>+{formatEuros(breakdown.flavorCents)}</span>
+            </div>
+          )}
+          {breakdown.fillingCents > 0 && (
+            <div className="flex justify-between">
+              <span>Relleno ({selectedFillingLabel})</span>
+              <span>+{formatEuros(breakdown.fillingCents)}</span>
+            </div>
+          )}
           {breakdown.toppingsCents > 0 && (
             <div className="flex justify-between">
               <span>Toppings ({toppingIds.length})</span>

@@ -11,6 +11,7 @@ import {
   MessageCircle,
   PackageSearch,
   Phone,
+  Send,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,12 +37,18 @@ import {
   computeBalanceDueCents,
   computeOverpaidCents,
   resolveCandleSelection,
+  resolveItemSurcharges,
 } from "@/domain/pricing";
 import { formatEuros } from "@/domain/money";
 import { getImage, getRemoteImageUrl } from "@/services/imageStore";
 import { isSupabaseConfigured } from "@/services/supabase";
-import { buildOrderWhatsAppMessage } from "@/domain/whatsapp";
 import {
+  buildCustomerNotificationMessage,
+  buildOrderWhatsAppMessage,
+  buildWhatsAppUrlForPhone,
+} from "@/domain/whatsapp";
+import {
+  getPackagingCents,
   getProduct,
   resolveQuantityTier,
   type CatalogProduct,
@@ -252,16 +259,41 @@ function GiftItemDetails({ item }: { item: OrderItem }) {
   );
 }
 
+/** «+2,50 €» o «incluido», según lleve suplemento o no. */
+function surchargeNote(cents: number): React.ReactNode {
+  return cents > 0 ? (
+    <span className="text-xs">(+{formatEuros(cents)})</span>
+  ) : (
+    <span className="text-xs">(incluido)</span>
+  );
+}
+
 /** Tarta (clásica, personalizada o de fondant): ficha completa de siempre. */
 function CakeItemDetails({ item }: { item: OrderItem }) {
   const c = item.customization;
+  const surcharges = resolveItemSurcharges(item.productId, c);
+  const product = getProduct(item.productId);
+  const packagingCents = product ? getPackagingCents(product) : 0;
   return (
     <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
       <ItemLine label="Tamaño">{c.size.label}</ItemLine>
-      {c.flavor && <ItemLine label="Sabor">{c.flavor.label}</ItemLine>}
+      {c.flavor && (
+        <ItemLine label="Sabor">
+          {c.flavor.label} {surchargeNote(surcharges.flavorCents)}
+        </ItemLine>
+      )}
       {c.filling && (
         <ItemLine label="Relleno">
-          {c.filling.label} <span className="text-xs">(incluido)</span>
+          {c.filling.label} {surchargeNote(surcharges.fillingCents)}
+        </ItemLine>
+      )}
+      {/* La caja no se le cobra aparte al cliente, va dentro del precio: aquí
+          se indica para poder cuadrar el gasto de cajas del obrador. */}
+      {packagingCents > 0 && !item.requiresQuote && (
+        <ItemLine label="Caja">
+          {item.quantity > 1 ? `${item.quantity} uds · ` : ""}
+          {formatEuros(packagingCents * item.quantity)}{" "}
+          <span className="text-xs">(ya dentro del precio)</span>
         </ItemLine>
       )}
       {c.toppings.length > 0 && (
@@ -445,6 +477,15 @@ export default function AdminOrderDetailPage() {
       return;
     }
     setOrder(updated);
+    // Tramitar es justo el momento en que el cliente espera noticias, así que
+    // el aviso se ofrece aquí mismo en vez de confiar en que alguien se acuerde.
+    if (status === "confirmed" && !updated.customerNotifiedAt) {
+      toast.success("Pedido tramitado", {
+        description: "Avisa al cliente con los datos de recogida.",
+        action: { label: "Avisar", onClick: notifyCustomer },
+      });
+      return;
+    }
     toast.success(`Estado actualizado: ${ORDER_STATUS_LABELS[status]}`);
   }
 
@@ -455,6 +496,43 @@ export default function AdminOrderDetailPage() {
       toast.success("Resumen copiado al portapapeles");
     } catch {
       toast.error("No se pudo copiar el resumen en este navegador.");
+    }
+  }
+
+  /**
+   * Abre WhatsApp con el aviso ya escrito y deja constancia de que se avisó.
+   * La ventana se abre DENTRO del gesto del usuario (sin `await` antes) o el
+   * navegador la bloquearía como emergente.
+   */
+  function notifyCustomer() {
+    if (!order) return;
+    const url = buildWhatsAppUrlForPhone(
+      order.customer.phone,
+      buildCustomerNotificationMessage(order)
+    );
+    let opened: Window | null = null;
+    try {
+      opened = window.open(url, "_blank");
+      if (opened) opened.opener = null;
+    } catch {
+      opened = null;
+    }
+    const updated = orderRepository.markCustomerNotified(order.id);
+    if (updated) setOrder(updated);
+    if (!opened) {
+      toast.warning("El navegador ha bloqueado WhatsApp", {
+        description: "Usa «Copiar aviso» y pégalo en el chat del cliente.",
+      });
+    }
+  }
+
+  async function copyCustomerNotification() {
+    if (!order) return;
+    try {
+      await navigator.clipboard.writeText(buildCustomerNotificationMessage(order));
+      toast.success("Aviso copiado al portapapeles");
+    } catch {
+      toast.error("No se pudo copiar el aviso en este navegador.");
     }
   }
 
@@ -497,6 +575,7 @@ export default function AdminOrderDetailPage() {
   const depositPaidCents = order.depositPaidCents ?? 0;
   const balanceDueCents = computeBalanceDueCents(pricing, order.depositPaidCents);
   const overpaidCents = computeOverpaidCents(pricing, order.depositPaidCents);
+  const customerNotification = buildCustomerNotificationMessage(order);
 
   return (
     <div className="space-y-6">
@@ -520,6 +599,7 @@ export default function AdminOrderDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           {order.urgent && <Badge variant="destructive">Urgente</Badge>}
+          {order.customerNotifiedAt && <Badge variant="success">Cliente avisado</Badge>}
           <Badge variant="outline">{order.source === "kiosk" ? "Kiosk" : "Web"}</Badge>
           <Badge variant={STATUS_BADGE_VARIANT[order.status]}>
             {ORDER_STATUS_LABELS[order.status]}
@@ -741,6 +821,16 @@ export default function AdminOrderDetailPage() {
                     <dd className="font-medium text-success">Gratis</dd>
                   </div>
                 )}
+                {(pricing.urgencySurchargeCents ?? 0) > 0 && (
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">
+                      Suplemento por urgencia
+                    </dt>
+                    <dd className="font-medium">
+                      {formatEuros(pricing.urgencySurchargeCents ?? 0)}
+                    </dd>
+                  </div>
+                )}
               </dl>
               <Separator />
               <div className="flex items-center justify-between gap-3">
@@ -882,7 +972,10 @@ export default function AdminOrderDetailPage() {
                       key={status}
                       type="button"
                       variant={isCurrent ? "default" : "outline"}
-                      className="w-full"
+                      /* Etiquetas como «Pendiente de presupuesto» no caben en
+                         una línea dentro de la columna del panel: se deja que
+                         el texto fluya en vez de desbordar la tarjeta. */
+                      className="h-auto min-h-[2.75rem] w-full whitespace-normal px-3 py-2 text-center leading-snug"
                       aria-pressed={isCurrent}
                       disabled={isCurrent}
                       onClick={() => changeStatus(status)}
@@ -898,6 +991,54 @@ export default function AdminOrderDetailPage() {
             </CardContent>
           </Card>
 
+          {/* Aviso al cliente: la web NO lo envía sola. Prepara el mensaje y
+              abre WhatsApp; el envío lo remata quien está en el mostrador.
+              Así no hace falta ninguna pasarela ni cuota mensual. */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Avisar al cliente</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {order.customerNotifiedAt ? (
+                <p className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success">
+                  Aviso enviado el {formatCreatedAt(order.customerNotifiedAt)}. Puedes
+                  volver a enviarlo si hace falta.
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Prepara el mensaje de «pedido tramitado» con el número, la fecha, la
+                  hora, el importe y las condiciones de recogida. Se abre WhatsApp con
+                  el texto escrito: solo tienes que pulsar Enviar.
+                </p>
+              )}
+              <div className="grid gap-2">
+                <Button type="button" className="w-full" onClick={notifyCustomer}>
+                  <Send />
+                  {order.customerNotifiedAt
+                    ? "Volver a avisar por WhatsApp"
+                    : "Avisar por WhatsApp"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={copyCustomerNotification}
+                >
+                  <Copy />
+                  Copiar aviso
+                </Button>
+              </div>
+              <details className="rounded-lg border border-border bg-background-soft/50 p-3 text-sm">
+                <summary className="cursor-pointer font-medium text-primary">
+                  Ver el mensaje
+                </summary>
+                <pre className="mt-2 whitespace-pre-wrap font-sans text-muted-foreground">
+                  {customerNotification}
+                </pre>
+              </details>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Acciones</CardTitle>
@@ -905,7 +1046,7 @@ export default function AdminOrderDetailPage() {
             <CardContent className="grid gap-2">
               <Button type="button" variant="outline" className="w-full" onClick={copySummary}>
                 <Copy />
-                Copiar resumen
+                Copiar resumen interno
               </Button>
             </CardContent>
           </Card>

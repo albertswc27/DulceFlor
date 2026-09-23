@@ -24,6 +24,7 @@ import {
   getProductsFor,
   getSizesFor,
   getUnitBasePriceCents,
+  type CatalogOption,
   type CatalogProduct,
   type QuantityTier,
 } from "@/domain/catalog";
@@ -52,10 +53,30 @@ import {
   getGiftProducts,
   getSnackMinQuantity,
   getSnackProducts,
+  getSweetSnackProducts,
 } from "../lib/catalogView";
 import { Reveal } from "../components/Reveal";
 import { SectionHeading } from "../components/SectionHeading";
 import { PhotoGrid } from "../components/PhotoGrid";
+
+/**
+ * «Chocolate, Vainilla y 3 Leches van incluidos; el resto suman 2,90 €.»
+ * Se construye desde el catálogo para que la carta no pueda contradecir al
+ * configurador si mañana cambian qué opciones son gratis.
+ */
+function describeFreeOptions(options: CatalogOption[]): string {
+  const surcharge = options.find((o) => o.surchargeCents)?.surchargeCents;
+  if (!surcharge) return "Todos incluidos en el precio.";
+  const free = options.filter((o) => !o.surchargeCents).map((o) => o.label);
+  if (free.length === 0) return `Cada opción suma ${formatEuros(surcharge)}.`;
+  const freeList =
+    free.length === 1
+      ? free[0]
+      : `${free.slice(0, -1).join(", ")} y ${free[free.length - 1]}`;
+  return `${freeList} van incluidos en el precio; el resto suman ${formatEuros(
+    surcharge
+  )}.`;
+}
 
 function priceOrDash(cents: number | null): string {
   return cents === null ? "—" : formatEuros(cents);
@@ -447,13 +468,26 @@ function SavourySnacksPanel({ customerType }: { customerType: CustomerType }) {
   );
 }
 
-function SweetSnacksPanel() {
+function SweetSnacksPanel({ customerType }: { customerType: CustomerType }) {
+  // Los dulces con tarifa cerrada (de momento, los mini alfajores) se enseñan
+  // igual que los salados; el resto sigue siendo «consúltanos».
+  const sweetProducts = getSweetSnackProducts(customerType);
+
   return (
     <div className="space-y-4">
+      {sweetProducts.length > 0 && (
+        <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {sweetProducts.map((product) => (
+            <li key={product.id}>
+              <SnackCard product={product} />
+            </li>
+          ))}
+        </ul>
+      )}
       <PhotoGrid photos={SWEET_SNACK_PHOTOS} columns={2} />
       <div className="rounded-2xl border border-secondary/40 bg-background-soft/50 p-4 sm:p-5">
         <p className="text-sm text-foreground/90">
-          Preparamos también bocaditos dulces: vasitos individuales, cupcakes
+          Preparamos también otros bocaditos dulces: vasitos individuales, cupcakes
           personalizados… Todavía no tenemos cerrada su carta, así que no
           aparecen aquí con precio.
         </p>
@@ -501,7 +535,7 @@ function AperitivosSection({ customerType }: { customerType: CustomerType }) {
         {tab === "salados" ? (
           <SavourySnacksPanel customerType={customerType} />
         ) : (
-          <SweetSnacksPanel />
+          <SweetSnacksPanel customerType={customerType} />
         )}
       </div>
     </section>
@@ -587,7 +621,7 @@ function IndividualMenu() {
           align="left"
           eyebrow="Para compartir"
           title="Tartas clásicas"
-          subtitle={`Elige tamaño y número de discos. El bizcocho (${SPONGE_FLAVORS.length} sabores) y el relleno (${CAKE_FILLINGS.length} opciones) van incluidos en el precio.`}
+          subtitle={`Elige tamaño y número de discos. Después eliges bizcocho (${SPONGE_FLAVORS.length} sabores) y relleno (${CAKE_FILLINGS.length} opciones): algunos van incluidos y otros suman un pequeño suplemento.`}
         />
         <div className="grid gap-6 xl:grid-cols-2">
           <CakePriceCard productId="pastel-clasico" />
@@ -659,16 +693,28 @@ function IndividualMenu() {
       <section className="space-y-6">
         <SectionHeading
           align="left"
-          eyebrow="Incluidos en el precio"
+          eyebrow="Elige el tuyo"
           title="Rellenos de pasteles"
-          subtitle={`Elige uno de nuestros ${CAKE_FILLINGS.length} rellenos, sin coste adicional.`}
+          subtitle={`${CAKE_FILLINGS.length} rellenos a elegir. ${describeFreeOptions(
+            CAKE_FILLINGS
+          )}`}
         />
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {CAKE_FILLINGS.map((filling) => (
             <li key={filling.id}>
               <Card className="h-full">
                 <CardHeader className="p-4">
-                  <CardTitle className="text-base">{filling.label}</CardTitle>
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="text-base">{filling.label}</CardTitle>
+                    <Badge
+                      variant={filling.surchargeCents ? "accent" : "success"}
+                      className="shrink-0"
+                    >
+                      {filling.surchargeCents
+                        ? `+${formatEuros(filling.surchargeCents)}`
+                        : "Incluido"}
+                    </Badge>
+                  </div>
                   {filling.description && (
                     <CardDescription>{filling.description}</CardDescription>
                   )}
@@ -693,13 +739,18 @@ function IndividualMenu() {
               <CardTitle className="text-lg">
                 Sabores de bizcocho ({SPONGE_FLAVORS.length})
               </CardTitle>
-              <CardDescription>Incluidos en el precio del pastel.</CardDescription>
+              <CardDescription>{describeFreeOptions(SPONGE_FLAVORS)}</CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="flex flex-wrap gap-2">
                 {SPONGE_FLAVORS.map((flavor) => (
                   <li key={flavor.id}>
-                    <Badge variant="secondary">{flavor.label}</Badge>
+                    <Badge variant={flavor.surchargeCents ? "accent" : "secondary"}>
+                      {flavor.label}
+                      {flavor.surchargeCents
+                        ? ` +${formatEuros(flavor.surchargeCents)}`
+                        : ""}
+                    </Badge>
                   </li>
                 ))}
               </ul>

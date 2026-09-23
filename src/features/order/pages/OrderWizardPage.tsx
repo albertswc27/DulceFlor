@@ -32,7 +32,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { DELIVERY_ZONES, WHATSAPP_PHONE } from "@/config/business";
+import {
+  DELIVERY_ZONES,
+  URGENT_ORDER_SURCHARGE_CENTS,
+  WHATSAPP_PHONE,
+} from "@/config/business";
 import { FAMILY_COVER_PHOTOS, SWEET_SNACK_PHOTOS } from "@/assets/photos";
 import { FamilyCover } from "../components/FamilyCover";
 import { CakeReferences } from "@/features/order/components/CakeReferences";
@@ -41,6 +45,7 @@ import {
   CATEGORY_FAMILY,
   CATEGORY_LABELS,
   FAMILY_LABELS,
+  getProduct,
   getProductsFor,
   type CatalogProduct,
   type FamilyId,
@@ -52,8 +57,14 @@ import { formatEuros } from "@/domain/money";
 import { buildOrderWhatsAppMessage, buildWhatsAppUrl } from "@/domain/whatsapp";
 import { addressSchema, customerSchema } from "@/domain/validation";
 import type { CustomerType, FulfillmentType } from "@/domain/types";
-import { useOrderDraft } from "@/features/order/state/OrderDraftContext";
-import { ProductConfigurator } from "@/features/order/components/ProductConfigurator";
+import {
+  useOrderDraft,
+  type DraftItem,
+} from "@/features/order/state/OrderDraftContext";
+import {
+  draftItemToInitial,
+  ProductConfigurator,
+} from "@/features/order/components/ProductConfigurator";
 import { OrderItemsList } from "@/features/order/components/OrderItemsList";
 import { OrderSummary } from "@/features/order/components/OrderSummary";
 import { SlotPicker } from "@/features/order/components/SlotPicker";
@@ -145,6 +156,13 @@ export default function OrderWizardPage() {
   const [configuringProduct, setConfiguringProduct] = React.useState<CatalogProduct | null>(
     null
   );
+  /**
+   * Artículo que se está reconfigurando, si lo hay. Editar no es añadir: el
+   * configurador arranca con lo que el cliente ya había elegido y al terminar
+   * se vuelve al paso desde el que se entró, no al catálogo.
+   */
+  const [editingItem, setEditingItem] = React.useState<DraftItem | null>(null);
+  const [stepBeforeConfigure, setStepBeforeConfigure] = React.useState<StepId>("product");
   const [contactErrors, setContactErrors] = React.useState<string[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
   /** Último producto añadido: aviso visible sin scroll al volver al catálogo. */
@@ -186,6 +204,21 @@ export default function OrderWizardPage() {
   const headingRef = React.useRef<HTMLHeadingElement>(null);
 
   function openConfigurator(product: CatalogProduct) {
+    setEditingItem(null);
+    setStepBeforeConfigure("product");
+    setConfiguringProduct(product);
+    goTo("configure");
+  }
+
+  /** Reabre el configurador de un artículo ya añadido, con todo lo elegido. */
+  function openEditor(item: DraftItem) {
+    const product = getProduct(item.selection.productId);
+    if (!product) {
+      toast.error("Este producto ya no está disponible: quítalo y vuelve a añadirlo.");
+      return;
+    }
+    setEditingItem(item);
+    setStepBeforeConfigure(step);
     setConfiguringProduct(product);
     goTo("configure");
   }
@@ -333,7 +366,8 @@ export default function OrderWizardPage() {
         break;
       case "configure":
         setConfiguringProduct(null);
-        goTo("product");
+        setEditingItem(null);
+        goTo(stepBeforeConfigure);
         break;
       case "fulfillment":
         goTo("product");
@@ -471,7 +505,7 @@ export default function OrderWizardPage() {
                         <h2 className="font-display text-lg font-semibold text-primary">
                           Tu pedido hasta ahora
                         </h2>
-                        <OrderItemsList />
+                        <OrderItemsList onEdit={openEditor} />
                         <Button size="lg" className="w-full" onClick={() => goTo("fulfillment")}>
                           Continuar
                           {derived.pricing.pendingQuote && derived.pricing.subtotalCents === 0
@@ -586,11 +620,11 @@ export default function OrderWizardPage() {
                   {family === "aperitivos" && (
                     <div className="rounded-2xl border border-secondary/50 bg-background-soft/60 p-4 sm:p-5">
                       <h2 className="font-display text-lg font-semibold text-primary">
-                        ¿Buscas bocaditos dulces?
+                        ¿Buscas otros bocaditos dulces?
                       </h2>
                       <p className="mt-1 text-sm text-muted-foreground">
                         También preparamos vasitos individuales, cupcakes personalizados y
-                        otros bocaditos dulces. Todavía no tenemos su carta publicada:
+                        otros bocaditos dulces. Esos todavía no tienen carta publicada:
                         escríbenos por WhatsApp y te contamos opciones y precios.
                       </p>
                       <CakeReferences
@@ -665,16 +699,45 @@ export default function OrderWizardPage() {
               {step === "configure" && configuringProduct && state.customerType && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-xl">{configuringProduct.name}</CardTitle>
+                    <CardTitle className="text-xl">
+                      {editingItem ? `Editar: ${configuringProduct.name}` : configuringProduct.name}
+                    </CardTitle>
                     <p className="text-sm text-muted-foreground">
-                      {configuringProduct.description}
+                      {editingItem
+                        ? "Cambia lo que quieras; el resto de tu pedido y tus datos se conservan."
+                        : configuringProduct.description}
                     </p>
                   </CardHeader>
                   <CardContent>
                     <ProductConfigurator
+                      // La clave fuerza un configurador limpio al pasar de
+                      // «añadir» a «editar» el mismo producto: si no, React
+                      // reutilizaría el estado del anterior.
+                      key={editingItem?.id ?? `nuevo-${configuringProduct.id}`}
                       product={configuringProduct}
                       customerType={state.customerType}
+                      confirmLabel={editingItem ? "Guardar cambios" : undefined}
+                      initial={editingItem ? draftItemToInitial(editingItem) : undefined}
                       onConfirm={({ selection, customization, quantity }) => {
+                        if (editingItem) {
+                          const ok = draft.updateConfiguredItem(
+                            editingItem.id,
+                            selection,
+                            customization,
+                            quantity
+                          );
+                          if (!ok) {
+                            toast.error(
+                              "No se pudo guardar: revisa la combinación elegida."
+                            );
+                            return;
+                          }
+                          toast.success(`${configuringProduct.name} actualizado`);
+                          setEditingItem(null);
+                          setConfiguringProduct(null);
+                          goTo(stepBeforeConfigure);
+                          return;
+                        }
                         const ok = draft.addConfiguredItem(selection, customization, quantity);
                         if (ok) {
                           toast.success(`${configuringProduct.name} añadido al pedido`);
@@ -928,14 +991,18 @@ export default function OrderWizardPage() {
                         className="rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-foreground"
                       >
                         <strong>Pedido urgente:</strong> lo quieres para dentro de
-                        menos de 3 días. Lo registramos igualmente, pero{" "}
+                        menos de 3 días, así que lleva un{" "}
+                        <strong>
+                          suplemento de {formatEuros(URGENT_ORDER_SURCHARGE_CENTS)}
+                        </strong>{" "}
+                        ya incluido en el total. Lo registramos igualmente, pero{" "}
                         <strong>
                           necesitamos que nos envíes el WhatsApp al terminar
                         </strong>{" "}
                         para confirmarte cuanto antes si llegamos a tiempo.
                       </p>
                     )}
-                  <OrderItemsList />
+                  <OrderItemsList onEdit={openEditor} />
 
                   <Card>
                     <CardHeader>

@@ -21,6 +21,34 @@
 /** Precio de cada topping añadido. Actualizado por el cliente (2ª revisión): +2,50 €. */
 export const TOPPING_PRICE_CENTS = 250;
 
+/**
+ * Suplemento de los sabores de bizcocho que NO van incluidos en el precio
+ * (confirmado por Dulce Flor el 20/09/2026). Qué sabores son los incluidos se
+ * define en el catálogo, no aquí: ver SPONGE_FLAVORS.
+ */
+export const SPONGE_FLAVOR_SURCHARGE_CENTS = 290;
+
+/**
+ * Suplemento de los rellenos que NO van incluidos en el precio (confirmado el
+ * 20/09/2026). Los incluidos se marcan en CAKE_FILLINGS.
+ */
+export const CAKE_FILLING_SURCHARGE_CENTS = 250;
+
+/**
+ * Caja de transporte de las tartas. Dulce Flor pidió que TODA tarta salga en
+ * caja y que su coste vaya «dentro del precio»: no es un extra que el cliente
+ * elija ni una línea suelta en el resumen, sino parte del importe de la tarta
+ * (ver getUnitBasePriceCents). Los aperitivos no la llevan.
+ */
+export const CAKE_BOX_PRICE_CENTS = 99;
+
+/**
+ * Suplemento por pedido urgente: menos de STANDARD_ORDER_LEAD_TIME_HOURS de
+ * margen obliga a reorganizar el obrador (confirmado el 20/09/2026: 5 €).
+ * Se aplica UNA vez por pedido, no por artículo.
+ */
+export const URGENT_ORDER_SURCHARGE_CENTS = 500;
+
 /** Precio por vela (confirmado 23/08/2026): 1 € cada una. */
 export const CANDLE_UNIT_PRICE_CENTS = 100;
 
@@ -189,8 +217,21 @@ export const DELIVERY_ZONES: DeliveryZone[] = [
  * La disponibilidad por producto se define en el catálogo.
  */
 export const EXTRAS = {
-  /** "¿Quieres añadir una dedicatoria o mensaje especial? Se cobrará 2 € más" */
-  DEDICATION_PRICE_CENTS: 200,
-  /** "Imágenes con papel comestible — 7 €" (carta de tres leches) */
-  EDIBLE_PAPER_PRICE_CENTS: 700,
+  /** Dedicatoria sobre la tarta. Actualizado por Dulce Flor (20/09/2026): 2,50 €. */
+  DEDICATION_PRICE_CENTS: 250,
+  /** Imagen impresa en papel comestible. Actualizado (20/09/2026): 8 €. */
+  EDIBLE_PAPER_PRICE_CENTS: 800,
+  /** Set de 6 figuras decorativas sobre la tarta. Nuevo extra (20/09/2026): 5 €. */
+  CAKE_TOPPERS_PRICE_CENTS: 500,
 } as const;
+
+/**
+ * Condiciones de recogida que Dulce Flor entrega hoy en papel al cliente.
+ * Van en la confirmación digital y en el aviso que se envía al tramitar el
+ * pedido, para que quede constancia de lo mismo que se dice en el mostrador.
+ */
+export const PICKUP_CONDITIONS: readonly string[] = [
+  "Revisa el pedido antes de salir de la tienda: si algo no está como esperabas, lo solucionamos en el momento.",
+  "Una vez retirado el pedido del establecimiento, Dulce Flor no se responsabiliza de los daños causados por el transporte, golpes o manipulación.",
+  "Transporta la tarta en plano, en el suelo del coche y evitando el calor directo.",
+];

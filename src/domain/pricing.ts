@@ -13,8 +13,12 @@ import {
   NUMBER_SPARKLER_PRICE_CENTS,
   PLAIN_SPARKLER_PRICE_CENTS,
   TOPPING_PRICE_CENTS,
+  URGENT_ORDER_SURCHARGE_CENTS,
 } from "@/config/business";
 import {
+  getFillingSurchargeCents,
+  getFlavorSurchargeCents,
+  getPackagingCents,
   getProduct,
   getUnitBasePriceCents,
   resolveQuantityTier,
@@ -205,6 +209,12 @@ export interface ItemSelection {
   customerType: CustomerType;
   sizeId: string;
   flavorId?: string;
+  /**
+   * Relleno elegido. Antes solo vivía en la personalización porque iba
+   * incluido en el precio; desde que algunos rellenos llevan suplemento
+   * forma parte del cálculo y tiene que viajar en la selección.
+   */
+  fillingId?: string;
   toppingIds: string[];
   extraIds: string[];
   /**
@@ -215,65 +225,60 @@ export interface ItemSelection {
 }
 
 /**
- * Precio unitario de un artículo configurado (base + toppings + extras).
- * Devuelve null si la combinación no existe en el catálogo.
+ * Desglose del precio de una unidad. `baseCents` ya lleva dentro la caja de
+ * transporte (ver getPackagingCents): es lo que el cliente ve como precio de
+ * la tarta, y `packagingCents` se expone aparte solo para el panel.
  */
-export function computeUnitPriceCents(selection: ItemSelection): number | null {
+export interface UnitPriceBreakdown {
+  baseCents: number;
+  /** Parte de `baseCents` que corresponde a la caja. Informativo. */
+  packagingCents: number;
+  /** Suplemento del sabor de bizcocho elegido (0 si va incluido). */
+  flavorCents: number;
+  /** Suplemento del relleno elegido (0 si va incluido). */
+  fillingCents: number;
+  toppingsCents: number;
+  extrasCents: number;
+  unitTotalCents: number;
+}
+
+/**
+ * Desglose reutilizable del precio unitario (base + sabor + relleno +
+ * toppings + extras). Devuelve null si la combinación no existe en el
+ * catálogo. Único sitio donde se suma un precio unitario: todo lo demás
+ * (configurador, carrito, resumen, panel) deriva de aquí.
+ */
+export function computeUnitPriceBreakdown(
+  selection: ItemSelection
+): UnitPriceBreakdown | null {
   const product = getProduct(selection.productId);
   if (!product) return null;
 
   // Precio por volumen (aperitivos): el unitario sale del tramo de cantidad.
   if (product.quantityTiers) {
     const tier = resolveQuantityTier(product, selection.quantity ?? 0);
-    return tier ? tier.unitPriceCents : null;
+    if (!tier) return null;
+    return {
+      baseCents: tier.unitPriceCents,
+      packagingCents: 0,
+      flavorCents: 0,
+      fillingCents: 0,
+      toppingsCents: 0,
+      extrasCents: 0,
+      unitTotalCents: tier.unitPriceCents,
+    };
   }
 
-  const base = getUnitBasePriceCents(
+  const baseCents = getUnitBasePriceCents(
     selection.productId,
     selection.customerType,
     selection.sizeId,
     selection.flavorId
   );
-  if (base === null) return null;
+  if (baseCents === null) return null;
 
-  const toppingPrice = getToppingPriceCents(selection.productId, selection.sizeId);
-  const toppingsTotal = product.allowsToppings
-    ? countValidToppings(selection.toppingIds) * toppingPrice
-    : 0;
-
-  const extrasTotal = selection.extraIds.reduce((sum, extraId) => {
-    const extra = product.extras.find((e) => e.id === extraId);
-    return sum + (extra?.priceCents ?? 0);
-  }, 0);
-
-  return base + toppingsTotal + extrasTotal;
-}
-
-/** Desglose reutilizable para pintar el resumen (base / toppings / extras). */
-export interface UnitPriceBreakdown {
-  baseCents: number;
-  toppingsCents: number;
-  extrasCents: number;
-  unitTotalCents: number;
-}
-
-export function computeUnitPriceBreakdown(
-  selection: ItemSelection
-): UnitPriceBreakdown | null {
-  const product = getProduct(selection.productId);
-  if (!product) return null;
-  if (product.quantityTiers) {
-    const unit = computeUnitPriceCents(selection);
-    if (unit === null) return null;
-    return { baseCents: unit, toppingsCents: 0, extrasCents: 0, unitTotalCents: unit };
-  }
-  const base = getUnitBasePriceCents(
-    selection.productId,
-    selection.customerType,
-    selection.sizeId,
-    selection.flavorId
-  );
-  if (base === null) return null;
+  const flavorCents = getFlavorSurchargeCents(product, selection.flavorId);
+  const fillingCents = getFillingSurchargeCents(product, selection.fillingId);
   const toppingsCents = product.allowsToppings
     ? countValidToppings(selection.toppingIds) *
       getToppingPriceCents(selection.productId, selection.sizeId)
@@ -282,11 +287,40 @@ export function computeUnitPriceBreakdown(
     const extra = product.extras.find((e) => e.id === extraId);
     return sum + (extra?.priceCents ?? 0);
   }, 0);
+
   return {
-    baseCents: base,
+    baseCents,
+    packagingCents: getPackagingCents(product),
+    flavorCents,
+    fillingCents,
     toppingsCents,
     extrasCents,
-    unitTotalCents: base + toppingsCents + extrasCents,
+    unitTotalCents:
+      baseCents + flavorCents + fillingCents + toppingsCents + extrasCents,
+  };
+}
+
+/**
+ * Precio unitario de un artículo configurado.
+ * Devuelve null si la combinación no existe en el catálogo.
+ */
+export function computeUnitPriceCents(selection: ItemSelection): number | null {
+  return computeUnitPriceBreakdown(selection)?.unitTotalCents ?? null;
+}
+
+/**
+ * Suplementos del sabor y el relleno de un artículo ya guardado, para poder
+ * enseñarlos junto a su nombre («Vainilla», «Nutella +2,50 €») en el
+ * carrito, el WhatsApp y el panel sin que cada superficie los recalcule.
+ */
+export function resolveItemSurcharges(
+  productId: string,
+  customization: Pick<ItemCustomization, "flavor" | "filling">
+): { flavorCents: number; fillingCents: number } {
+  const product = getProduct(productId);
+  return {
+    flavorCents: getFlavorSurchargeCents(product, customization.flavor?.id),
+    fillingCents: getFillingSurchargeCents(product, customization.filling?.id),
   };
 }
 
@@ -307,6 +341,28 @@ export function computeItemsSubtotalCents(items: OrderItem[]): number {
 /** Importe total de las velas del pedido. */
 export function computeOrderCandlesCents(items: OrderItem[]): number {
   return items.reduce((sum, item) => sum + (item.candlesCents ?? 0), 0);
+}
+
+/**
+ * Cuánto del pedido corresponde a cajas de transporte. No se enseña al
+ * cliente (va dentro del precio de cada tarta): es para que Dulce Flor sepa
+ * cuántas cajas gasta un pedido cuando mire el detalle en el panel.
+ */
+export function computeOrderPackagingCents(items: OrderItem[]): number {
+  return items.reduce((sum, item) => {
+    if (item.requiresQuote) return sum;
+    const product = getProduct(item.productId);
+    if (!product) return sum;
+    return sum + getPackagingCents(product) * item.quantity;
+  }, 0);
+}
+
+/**
+ * Suplemento por urgencia de un pedido. Se cobra una sola vez, no por
+ * artículo: lo que cuesta es reorganizar el obrador, no cada tarta.
+ */
+export function computeUrgencySurchargeCents(urgent: boolean): number {
+  return urgent ? URGENT_ORDER_SURCHARGE_CENTS : 0;
 }
 
 /**
@@ -366,18 +422,23 @@ export function computeOverpaidCents(
  *   pedido queda pendingQuote (total parcial, SIN señal). Cuando
  *   administración introduce el presupuesto, se suma al total y la señal se
  *   calcula con normalidad.
+ * - `urgent`: pedido para dentro de menos de 3 días. Suma el suplemento de
+ *   urgencia al total, como línea propia y visible.
  */
 export function computeOrderPricing(
   items: OrderItem[],
   deliveryFeeCents: number | null,
-  quotedPriceCents?: number | null
+  quotedPriceCents?: number | null,
+  urgent = false
 ): OrderPricing {
   const subtotalCents = computeItemsSubtotalCents(items);
   const hasQuoteItems = items.some((item) => item.requiresQuote);
   const quoted = hasQuoteItems ? (quotedPriceCents ?? null) : null;
   const pendingQuote = hasQuoteItems && quoted === null;
+  const urgencySurchargeCents = computeUrgencySurchargeCents(urgent);
 
-  const totalCents = subtotalCents + (deliveryFeeCents ?? 0) + (quoted ?? 0);
+  const totalCents =
+    subtotalCents + (deliveryFeeCents ?? 0) + (quoted ?? 0) + urgencySurchargeCents;
   const deposit = pendingQuote
     ? { depositRequired: false, depositCents: 0, remainingCents: totalCents }
     : computeDeposit(totalCents);
@@ -385,6 +446,7 @@ export function computeOrderPricing(
   return {
     subtotalCents,
     deliveryFeeCents,
+    urgencySurchargeCents: urgencySurchargeCents || undefined,
     totalCents,
     depositRequired: deposit.depositRequired,
     depositCents: deposit.depositCents,
@@ -429,10 +491,14 @@ export function buildOrderItem(params: {
   }
 
   // En productos por volumen la cantidad determina el precio unitario, así
-  // que la selección debe llevarla siempre sincronizada.
-  const selection = product.quantityTiers
-    ? { ...params.selection, quantity }
-    : params.selection;
+  // que la selección debe llevarla siempre sincronizada. El relleno se toma
+  // de la personalización cuando falta en la selección: los borradores
+  // guardados antes de que los rellenos tuvieran suplemento no lo llevan.
+  const selection: ItemSelection = {
+    ...params.selection,
+    fillingId: params.selection.fillingId ?? params.customization.filling?.id,
+    ...(product.quantityTiers ? { quantity } : {}),
+  };
   const unitPriceCents = computeUnitPriceCents(selection);
   if (unitPriceCents === null) return null;
   return {

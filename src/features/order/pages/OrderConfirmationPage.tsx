@@ -13,6 +13,7 @@ import {
   DEPOSIT_PERCENTAGE,
   PHONE_CALLS,
   PHONE_CALLS_DISPLAY,
+  PICKUP_CONDITIONS,
 } from "@/config/business";
 import { formatEuros } from "@/domain/money";
 import { buildOrderWhatsAppMessage, buildWhatsAppUrl } from "@/domain/whatsapp";
@@ -90,7 +91,9 @@ export default function OrderConfirmationPage() {
           role="alert"
           className="mt-6 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-foreground"
         >
-          <strong>Tu pedido es urgente</strong> (quedan menos de 3 días).{" "}
+          <strong>Tu pedido es urgente</strong> (quedan menos de 3 días), así que
+          incluye el suplemento de urgencia de{" "}
+          {formatEuros(order.pricing.urgencySurchargeCents ?? 0)}.{" "}
           <strong>Envíanos el WhatsApp ahora</strong> para que podamos decirte
           cuanto antes si llegamos a tiempo: hasta que lo recibamos no podemos
           confirmarlo.
@@ -184,6 +187,12 @@ export default function OrderConfirmationPage() {
               </span>
             </div>
           )}
+          {(order.pricing.urgencySurchargeCents ?? 0) > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Suplemento por urgencia</span>
+              <span>{formatEuros(order.pricing.urgencySurchargeCents ?? 0)}</span>
+            </div>
+          )}
           <div className="flex justify-between border-t border-border pt-2 font-display text-base font-bold text-primary">
             <span>
               {order.pricing.pendingQuote
@@ -237,6 +246,30 @@ export default function OrderConfirmationPage() {
               El importe se abonará al recoger el pedido o recibir la entrega.
             </p>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Las mismas condiciones que Dulce Flor entrega en papel al recoger.
+          Aquí llegan antes, cuando todavía se pueden tener en cuenta. */}
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>
+            {order.fulfillmentType === "delivery"
+              ? "Condiciones de entrega"
+              : "Condiciones de recogida"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-2 text-sm text-muted-foreground">
+            {PICKUP_CONDITIONS.map((condition) => (
+              <li key={condition} className="flex gap-2">
+                <span aria-hidden="true" className="text-accent">
+                  •
+                </span>
+                <span>{condition}</span>
+              </li>
+            ))}
+          </ul>
         </CardContent>
       </Card>
 

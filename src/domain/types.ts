@@ -4,24 +4,47 @@ export type CustomerType = "individual" | "business";
 
 export type FulfillmentType = "pickup" | "delivery";
 
+/**
+ * Estados de un pedido. Dulce Flor pidió simplificarlos (20/09/2026): lo
+ * único que necesita distinguir es si ya ha revisado y gestionado el pedido
+ * ("Tramitado") y si el cliente ya se lo ha llevado ("Entregado"). Los
+ * estados intermedios «en preparación» y «listo» se retiraron porque nadie
+ * los mantenía al día.
+ *
+ * Los identificadores se conservan (confirmed/completed) para no invalidar
+ * los pedidos ya guardados en el navegador y en Supabase: solo cambian las
+ * etiquetas. Los estados retirados se traducen al leer, ver normalizeOrderStatus.
+ */
 export type OrderStatus =
   | "pending"
   | "pending_quote"
   | "confirmed"
-  | "in_preparation"
-  | "ready"
   | "completed"
   | "cancelled";
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   pending: "Pendiente",
   pending_quote: "Pendiente de presupuesto",
-  confirmed: "Confirmado",
-  in_preparation: "En preparación",
-  ready: "Listo",
-  completed: "Completado",
+  confirmed: "Tramitado",
+  completed: "Entregado",
   cancelled: "Cancelado",
 };
+
+/** Estados que existieron antes de la simplificación y a qué equivalen hoy. */
+const LEGACY_ORDER_STATUS: Record<string, OrderStatus> = {
+  in_preparation: "confirmed",
+  ready: "confirmed",
+};
+
+/**
+ * Traduce el estado guardado a uno de los vigentes. Un pedido escrito por una
+ * versión anterior de la web (o por otra pestaña que aún no se ha recargado)
+ * no debe aparecer sin etiqueta ni tumbar el panel.
+ */
+export function normalizeOrderStatus(status: string): OrderStatus {
+  if (status in ORDER_STATUS_LABELS) return status as OrderStatus;
+  return LEGACY_ORDER_STATUS[status] ?? "pending";
+}
 
 export const CUSTOMER_TYPE_LABELS: Record<CustomerType, string> = {
   individual: "Particular",
@@ -132,6 +155,12 @@ export interface OrderPricing {
   subtotalCents: number;
   /** null = zona fuera de cobertura automática ("consultar"). */
   deliveryFeeCents: number | null;
+  /**
+   * Suplemento por pedido urgente (menos de 3 días de margen). Se cobra una
+   * vez por pedido y se muestra como línea propia: el cliente tiene que ver
+   * por qué paga más. Ausente cuando el pedido llega con margen normal.
+   */
+  urgencySurchargeCents?: number;
   totalCents: number;
   depositRequired: boolean;
   depositCents: number;
@@ -208,4 +237,12 @@ export interface Order {
   status: OrderStatus;
   /** Origen del pedido: web pública o kiosk de tienda. */
   source: "web" | "kiosk";
+
+  /**
+   * Momento (ISO) en que se preparó el aviso de «pedido tramitado» para el
+   * cliente. El envío lo remata la persona del mostrador desde WhatsApp, así
+   * que esto registra que el aviso se generó, no que el cliente lo haya
+   * leído. Ausente mientras no se haya avisado.
+   */
+  customerNotifiedAt?: string;
 }

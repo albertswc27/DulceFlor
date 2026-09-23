@@ -4,7 +4,13 @@
  * manda sobre la sugerencia del 30 % (no aparecen dos "pendiente" a la vez).
  */
 import { describe, expect, it } from "vitest";
-import { buildOrderWhatsAppMessage } from "./whatsapp";
+import {
+  buildCustomerNotificationMessage,
+  buildOrderWhatsAppMessage,
+  buildWhatsAppUrlForPhone,
+} from "./whatsapp";
+import { PICKUP_CONDITIONS } from "@/config/business";
+import { formatEuros } from "./money";
 import type { Order } from "./types";
 
 function orderWith(overrides: Partial<Order>): Order {
@@ -104,5 +110,92 @@ describe("buildOrderWhatsAppMessage y la señal", () => {
     );
     expect(msg).toContain("Señal recibida: 60,00");
     expect(msg).toContain("Devolver al cliente: 20,00");
+  });
+});
+
+describe("buildCustomerNotificationMessage (aviso al cliente al tramitar)", () => {
+  it("lleva número, día, hora, total y condiciones de recogida", () => {
+    const msg = buildCustomerNotificationMessage(orderWith({}));
+    expect(msg).toContain("DF-2026-TEST1");
+    expect(msg).toContain("Hola Ana");
+    expect(msg).toContain("tramitado correctamente");
+    expect(msg).toContain("Fecha de recogida: 05/09/2026");
+    expect(msg).toContain("Hora: 11:00");
+    expect(msg).toContain(`Total: ${formatEuros(10000)}`);
+    expect(msg).toContain("CONDICIONES DE RECOGIDA");
+    for (const condition of PICKUP_CONDITIONS) {
+      expect(msg).toContain(condition);
+    }
+  });
+
+  it("no promete un total cuando la tarta está a presupuesto", () => {
+    const msg = buildCustomerNotificationMessage(
+      orderWith({
+        pricing: {
+          subtotalCents: 0,
+          deliveryFeeCents: 0,
+          totalCents: 0,
+          depositRequired: false,
+          depositCents: 0,
+          remainingCents: 0,
+          pendingQuote: true,
+        },
+      })
+    );
+    expect(msg).toContain("pendiente de presupuesto");
+    expect(msg).not.toContain(`Total: ${formatEuros(0)}`);
+  });
+
+  it("con señal cobrada dice cuánto queda por pagar al recoger", () => {
+    const msg = buildCustomerNotificationMessage(
+      orderWith({ depositPaidCents: 3000 })
+    );
+    expect(msg).toContain(`Señal ya pagada: ${formatEuros(3000)}`);
+    expect(msg).toContain(`Pendiente al recoger: ${formatEuros(7000)}`);
+  });
+
+  it("en entrega a domicilio habla de entrega, no de recogida", () => {
+    const msg = buildCustomerNotificationMessage(
+      orderWith({
+        fulfillmentType: "delivery",
+        address: {
+          street: "C. Mayor 1",
+          postalCode: "08921",
+          municipality: "Santa Coloma de Gramenet",
+        },
+      })
+    );
+    expect(msg).toContain("Fecha de entrega:");
+    expect(msg).toContain("CONDICIONES DE ENTREGA");
+    expect(msg).toContain("C. Mayor 1");
+  });
+
+  it("el enlace de WhatsApp apunta al móvil del cliente, no al de la tienda", () => {
+    const url = buildWhatsAppUrlForPhone("600 000 000", "hola");
+    expect(url).toBe("https://wa.me/34600000000?text=hola");
+    expect(buildWhatsAppUrlForPhone("0034600000000")).toBe(
+      "https://wa.me/34600000000"
+    );
+  });
+});
+
+describe("el suplemento de urgencia aparece en el resumen interno", () => {
+  it("se lista junto al resto de importes", () => {
+    const msg = buildOrderWhatsAppMessage(
+      orderWith({
+        urgent: true,
+        pricing: {
+          subtotalCents: 10000,
+          deliveryFeeCents: 0,
+          urgencySurchargeCents: 500,
+          totalCents: 10500,
+          depositRequired: true,
+          depositCents: 3150,
+          remainingCents: 7350,
+        },
+      })
+    );
+    expect(msg).toContain(`Suplemento por urgencia: ${formatEuros(500)}`);
+    expect(msg).toContain(`TOTAL: ${formatEuros(10500)}`);
   });
 });

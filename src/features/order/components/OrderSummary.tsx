@@ -4,9 +4,14 @@
  */
 import { Separator } from "@/components/ui/separator";
 import { formatEuros } from "@/domain/money";
-import { DEPOSIT_PERCENTAGE } from "@/config/business";
+import {
+  DEPOSIT_PERCENTAGE,
+  STANDARD_ORDER_LEAD_TIME_HOURS,
+} from "@/config/business";
 import { useOrderDraft } from "@/features/order/state/OrderDraftContext";
 import { AnimatedPrice } from "./AnimatedPrice";
+
+const STANDARD_LEAD_DAYS = STANDARD_ORDER_LEAD_TIME_HOURS / 24;
 
 export function OrderSummary({ showDepositInfo = true }: { showDepositInfo?: boolean }) {
   const { state, derived } = useOrderDraft();
@@ -16,6 +21,7 @@ export function OrderSummary({ showDepositInfo = true }: { showDepositInfo?: boo
   // veces al pintarlas en su propia línea.
   const candlesCents = pricing.candlesCents ?? 0;
   const productsCents = pricing.subtotalCents - candlesCents;
+  const urgencyCents = pricing.urgencySurchargeCents ?? 0;
 
   return (
     <div className="space-y-3">
@@ -51,6 +57,20 @@ export function OrderSummary({ showDepositInfo = true }: { showDepositInfo?: boo
           <div className="flex items-center justify-between">
             <dt className="text-muted-foreground">Recogida en tienda</dt>
             <dd className="font-medium text-success">Gratis</dd>
+          </div>
+        )}
+        {/* El suplemento de urgencia va con su motivo al lado: es un cargo que
+            el cliente puede evitar eligiendo otra fecha, así que tiene que
+            entender de dónde sale. */}
+        {urgencyCents > 0 && (
+          <div className="flex items-center justify-between">
+            <dt className="text-muted-foreground">
+              Suplemento por urgencia
+              <span className="block text-xs">
+                Menos de {STANDARD_LEAD_DAYS} días de antelación
+              </span>
+            </dt>
+            <dd className="font-medium">{formatEuros(urgencyCents)}</dd>
           </div>
         )}
       </dl>

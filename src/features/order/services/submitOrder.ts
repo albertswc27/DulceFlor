@@ -77,9 +77,16 @@ export function submitOrder(
         })
       : null;
 
+  // La urgencia se decide AQUÍ, no al elegir la fecha: si el cliente dejó el
+  // borrador a medias unos días, cuenta el margen real que queda al enviar.
+  // El mismo valor manda en el suplemento y en la marca del pedido.
+  const urgent = isRequestedSlotUrgent(state.requestedDate!, state.requestedTime!);
+
   const pricing = computeOrderPricing(
     orderItems,
-    state.fulfillmentType === "delivery" ? (zoneResolution?.feeCents ?? null) : 0
+    state.fulfillmentType === "delivery" ? (zoneResolution?.feeCents ?? null) : 0,
+    null,
+    urgent
   );
 
   // La señal se guarda solo si es un importe positivo; nunca por encima del
@@ -112,11 +119,7 @@ export function submitOrder(
     deliveryZoneLabel: zoneResolution?.zone?.label,
     requestedDate: state.requestedDate!,
     requestedTime: state.requestedTime!,
-    // La urgencia se fija AQUÍ, no al elegir la fecha: si el cliente dejó el
-    // borrador a medias unos días, cuenta el margen real que queda al enviar.
-    urgent: isRequestedSlotUrgent(state.requestedDate!, state.requestedTime!)
-      ? true
-      : undefined,
+    urgent: urgent ? true : undefined,
     pricing,
     depositPaidCents,
     reusableTray:

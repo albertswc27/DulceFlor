@@ -7,6 +7,7 @@ import {
   CATEGORY_FAMILY,
   CHEESECAKE_PRICES,
   getMinimumQuantity,
+  getPackagingCents,
   getProduct,
   getProductsFor,
   getSizesFor,
@@ -40,6 +41,18 @@ export function getSnackProducts(customerType: CustomerType): CatalogProduct[] {
   );
 }
 
+/**
+ * Bocaditos dulces con tarifa confirmada (hoy, los mini alfajores). El resto
+ * de dulces sigue sin carta y se consulta por WhatsApp, igual que antes.
+ */
+export function getSweetSnackProducts(customerType: CustomerType): CatalogProduct[] {
+  return getProductsFor(customerType).filter(
+    (product) =>
+      product.category === "aperitivos-dulces" &&
+      (product.quantityTiers?.length ?? 0) > 0
+  );
+}
+
 /** Pedido mínimo de los aperitivos, derivado de los tramos del catálogo. */
 export function getSnackMinQuantity(customerType: CustomerType): number | null {
   const quantities = getSnackProducts(customerType).map(getMinimumQuantity);
@@ -51,7 +64,12 @@ export function getGiftProducts(customerType: CustomerType): CatalogProduct[] {
   return getFamilyProducts("regalos", customerType);
 }
 
-/** Precio mínimo real de un producto para un tipo de cliente ("desde X"). */
+/**
+ * Precio mínimo real de un producto para un tipo de cliente ("desde X"),
+ * con la caja ya incluida igual que en el resto de la web: si aquí se
+ * enseñara el precio de carta pelado, el «desde» no coincidiría con lo que
+ * luego marca el configurador.
+ */
 export function getMinPriceCents(
   productId: string,
   customerType: CustomerType
@@ -63,12 +81,13 @@ export function getMinPriceCents(
     const allPrices = Object.values(CHEESECAKE_PRICES).flatMap((entry) =>
       customerType === "business" ? entry.business : entry.individual
     );
-    return allPrices.length > 0 ? Math.min(...allPrices) : null;
+    if (allPrices.length === 0) return null;
+    return Math.min(...allPrices) + getPackagingCents(product);
   }
 
   const sizes = getSizesFor(product, customerType);
   if (sizes.length === 0) return null;
-  return Math.min(...sizes.map((size) => size.priceCents));
+  return Math.min(...sizes.map((size) => size.priceCents)) + getPackagingCents(product);
 }
 
 export interface CakeMatrixCell {

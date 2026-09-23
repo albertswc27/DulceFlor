@@ -6,6 +6,7 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import type { BadgeProps } from "@/components/ui/badge";
 import type { OrderStatus } from "@/domain/types";
+import { buildWhatsAppUrlForPhone } from "@/domain/whatsapp";
 
 /** Color del badge por estado del pedido. */
 export const STATUS_BADGE_VARIANT: Record<
@@ -14,20 +15,19 @@ export const STATUS_BADGE_VARIANT: Record<
 > = {
   pending: "warning",
   pending_quote: "destructive",
-  confirmed: "secondary",
-  in_preparation: "accent",
-  ready: "success",
+  confirmed: "success",
   completed: "outline",
   cancelled: "destructive",
 };
 
-/** Orden natural de los estados para selects y botoneras. */
+/**
+ * Orden natural de los estados para selects y botoneras: el recorrido real de
+ * un pedido es pendiente → tramitado → entregado (ver ORDER_STATUS_LABELS).
+ */
 export const ORDER_STATUS_SEQUENCE: OrderStatus[] = [
   "pending_quote",
   "pending",
   "confirmed",
-  "in_preparation",
-  "ready",
   "completed",
   "cancelled",
 ];
@@ -48,15 +48,11 @@ export function formatCreatedAt(createdAtIso: string): string {
 }
 
 /**
- * Enlace wa.me hacia el teléfono de un cliente. Se normaliza el número:
- * solo dígitos, sin el prefijo internacional "00" (wa.me no lo admite) y,
- * si quedan 9 dígitos, se asume prefijo de España (+34).
+ * Enlace wa.me hacia el teléfono de un cliente. La normalización del número
+ * vive en el dominio para que el panel y los mensajes no diverjan.
  */
 export function waUrlForPhone(phone: string): string {
-  let digits = phone.replace(/\D/g, "");
-  if (digits.startsWith("00")) digits = digits.slice(2);
-  if (digits.length === 9) digits = `34${digits}`;
-  return `https://wa.me/${digits}`;
+  return buildWhatsAppUrlForPhone(phone);
 }
 
 /** Clases para <select> nativos coherentes con el componente Input. */
