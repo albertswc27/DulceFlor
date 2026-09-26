@@ -100,16 +100,22 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
 function ReferenceImageThumb({
   imageId,
   productName,
+  generatedByAi = false,
 }: {
   imageId: string;
   productName: string;
+  /** La imagen la generó la IA a partir de lo que describió el cliente. */
+  generatedByAi?: boolean;
 }) {
   const [src, setSrc] = React.useState<string | null>(() => getImage(imageId));
   // Solo hay que ir al servidor si no está en local y hay Storage configurado.
   const [loading, setLoading] = React.useState(
     () => getImage(imageId) === null && isSupabaseConfigured()
   );
-  const alt = `Imagen de referencia de ${productName}`;
+  const alt = generatedByAi
+    ? `Imagen orientativa generada con IA para ${productName}`
+    : `Imagen de referencia de ${productName}`;
+  const etiqueta = generatedByAi ? "Imagen generada con IA" : "Imagen de referencia";
 
   React.useEffect(() => {
     if (src || !isSupabaseConfigured()) return;
@@ -128,7 +134,7 @@ function ReferenceImageThumb({
   if (!src) {
     return (
       <li>
-        <span className="text-foreground">Imagen de referencia:</span>{" "}
+        <span className="text-foreground">{etiqueta}:</span>{" "}
         {loading ? "cargando imagen…" : "imagen no disponible"}
       </li>
     );
@@ -136,7 +142,15 @@ function ReferenceImageThumb({
 
   return (
     <li>
-      <span className="text-foreground">Imagen de referencia:</span>
+      <span className="text-foreground">{etiqueta}:</span>
+      {/* Aviso explícito para quien va a hacer la tarta: esto no es la foto de
+          una tarta que exista, es lo que una máquina imaginó con la
+          descripción del cliente. */}
+      {generatedByAi && (
+        <span className="ml-1 text-xs text-warning">
+          (no es una foto real; orientativa)
+        </span>
+      )}
       <Dialog>
         <DialogTrigger asChild>
           <button
@@ -149,7 +163,7 @@ function ReferenceImageThumb({
         </DialogTrigger>
         <DialogContent className="max-w-3xl p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>Imagen de referencia</DialogTitle>
+            <DialogTitle>{etiqueta}</DialogTitle>
             <DialogDescription className="sr-only">{alt}</DialogDescription>
           </DialogHeader>
           <img
@@ -196,10 +210,14 @@ function ItemNotesLines({ item }: { item: OrderItem }) {
           <span className="not-italic text-foreground">Notas:</span> “{c.notes}”
         </li>
       )}
+      {c.aiPrompt && (
+        <ItemLine label="Descripción para la IA">“{c.aiPrompt}”</ItemLine>
+      )}
       {c.referenceImageId && (
         <ReferenceImageThumb
           imageId={c.referenceImageId}
           productName={item.productName}
+          generatedByAi={c.referenceImageSource === "ia"}
         />
       )}
     </>

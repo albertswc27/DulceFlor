@@ -92,11 +92,25 @@ function DraftItemRow({
             )}
           </ul>
           {referenceImage && (
-            <img
-              src={referenceImage}
-              alt={`Imagen de referencia de ${product?.name ?? "la tarta"}`}
-              className="mt-2 h-16 w-16 rounded-lg border border-border object-cover"
-            />
+            <div className="mt-2">
+              <img
+                src={referenceImage}
+                alt={
+                  c.referenceImageSource === "ia"
+                    ? `Imagen orientativa generada con inteligencia artificial para ${product?.name ?? "la tarta"}`
+                    : `Imagen de referencia de ${product?.name ?? "la tarta"}`
+                }
+                className="h-16 w-16 rounded-lg border border-border object-cover"
+              />
+              {/* Una imagen generada por una máquina tiene que decir que lo es
+                  allí donde se enseñe: lo exige la normativa europea de IA y,
+                  sobre todo, evita que nadie la confunda con una foto real. */}
+              {c.referenceImageSource === "ia" && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Imagen orientativa generada con IA
+                </p>
+              )}
+            </div>
           )}
           </div>
         </div>

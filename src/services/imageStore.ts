@@ -52,22 +52,22 @@ export const IMAGE_ERROR_MESSAGES: Record<ImageError, string> = {
     "No queda espacio para guardar la imagen en este dispositivo. Puedes enviar el pedido sin imagen y mandárnosla por WhatsApp.",
 };
 
+export type ProcessedImage =
+  | { ok: true; dataUrl: string }
+  | { ok: false; error: ImageError };
+
 /**
- * Redimensiona y comprime un archivo de imagen a un data URL JPEG razonable.
+ * Redimensiona y comprime cualquier imagen ya cargable por el navegador a un
+ * data URL JPEG razonable.
+ *
+ * Trabaja sobre un `src` en vez de sobre un `File` porque las imágenes no
+ * siempre llegan de un archivo: las que genera la IA vienen como data URL
+ * desde el servidor y tienen que pasar exactamente por el mismo aro —mismo
+ * tamaño máximo, misma calidad, mismo límite de espacio— que las que sube el
+ * cliente. `cleanup` libera el object URL cuando el origen era un archivo.
  */
-export function processImageFile(
-  file: File
-): Promise<{ ok: true; dataUrl: string } | { ok: false; error: ImageError }> {
+function processImageSource(src: string, cleanup?: () => void): Promise<ProcessedImage> {
   return new Promise((resolve) => {
-    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      resolve({ ok: false, error: "unsupported-type" });
-      return;
-    }
-    if (file.size > MAX_SOURCE_IMAGE_BYTES) {
-      resolve({ ok: false, error: "file-too-large" });
-      return;
-    }
-    const objectUrl = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
       try {
@@ -92,15 +92,42 @@ export function processImageFile(
       } catch {
         resolve({ ok: false, error: "processing-failed" });
       } finally {
-        URL.revokeObjectURL(objectUrl);
+        cleanup?.();
       }
     };
     img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
+      cleanup?.();
       resolve({ ok: false, error: "processing-failed" });
     };
-    img.src = objectUrl;
+    img.src = src;
   });
+}
+
+/**
+ * Redimensiona y comprime un archivo de imagen a un data URL JPEG razonable.
+ */
+export function processImageFile(file: File): Promise<ProcessedImage> {
+  if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+    return Promise.resolve({ ok: false, error: "unsupported-type" });
+  }
+  if (file.size > MAX_SOURCE_IMAGE_BYTES) {
+    return Promise.resolve({ ok: false, error: "file-too-large" });
+  }
+  const objectUrl = URL.createObjectURL(file);
+  return processImageSource(objectUrl, () => URL.revokeObjectURL(objectUrl));
+}
+
+/**
+ * Lo mismo, pero para una imagen que ya viene como data URL: es el caso de las
+ * que genera la IA. Pasarlas por aquí no es una formalidad — llegan a 1024 px
+ * en PNG y sin comprimir, y guardarlas tal cual llenaría el almacenamiento del
+ * navegador en tres pedidos.
+ */
+export function processImageDataUrl(dataUrl: string): Promise<ProcessedImage> {
+  if (!dataUrl.startsWith("data:image/")) {
+    return Promise.resolve({ ok: false, error: "unsupported-type" });
+  }
+  return processImageSource(dataUrl);
 }
 
 /** Guarda un data URL ya procesado. Devuelve el id o un error de espacio. */

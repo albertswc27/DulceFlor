@@ -110,6 +110,20 @@ export interface ItemCustomization {
   notes?: string;
   /** Imagen de referencia adjuntada por el cliente (id en el almacén de imágenes). */
   referenceImageId?: string;
+  /**
+   * De dónde salió esa imagen. Importa por dos motivos: al obrador no le da
+   * igual estar mirando la foto de una tarta que existe o una imagen inventada
+   * por una máquina, y la normativa europea de IA obliga a que una imagen
+   * generada artificialmente se identifique como tal allí donde se enseñe.
+   * Ausente en los pedidos anteriores al generador: se asumen subidas.
+   */
+  referenceImageSource?: "cliente" | "ia";
+  /**
+   * Lo que el cliente escribió para generar la imagen. Se guarda porque es la
+   * descripción de lo que de verdad quiere —más útil para el obrador que la
+   * propia imagen— y porque ante una reclamación documenta qué se pidió.
+   */
+  aiPrompt?: string;
 }
 
 export interface OrderItem {

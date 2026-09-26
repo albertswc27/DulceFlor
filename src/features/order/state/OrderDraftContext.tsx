@@ -162,6 +162,8 @@ const draftStateSchema = z.object({
         sparklerQuantity: z.number().int().nonnegative().optional(),
         notes: z.string().optional(),
         referenceImageId: z.string().optional(),
+        referenceImageSource: z.enum(["cliente", "ia"]).optional(),
+        aiPrompt: z.string().optional(),
       }),
       quantity: z.number().int().min(1),
     })

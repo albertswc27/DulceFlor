@@ -125,8 +125,13 @@ export function buildOrderWhatsAppMessage(order: Order): string {
     if (c.designDescription) lines.push(`Diseño: ${c.designDescription}`);
     if (c.notes) lines.push(`Indicaciones: ${c.notes}`);
     if (item.requiresQuote) lines.push("Precio tarta: pendiente de presupuesto");
+    if (c.aiPrompt) lines.push(`Descripción para la IA: ${c.aiPrompt}`);
     if (c.referenceImageId) {
-      lines.push(`Imagen de referencia adjunta al pedido ${order.publicId} (visible en el panel)`);
+      lines.push(
+        c.referenceImageSource === "ia"
+          ? `Imagen ORIENTATIVA generada con IA, adjunta al pedido ${order.publicId} (visible en el panel). No es la foto de una tarta real.`
+          : `Imagen de referencia adjunta al pedido ${order.publicId} (visible en el panel)`
+      );
     }
     lines.push("");
   }
