@@ -27,6 +27,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    // api/ también se prueba: su configuración es lo que más fácilmente se
+    // queda a medias, y un fallo ahí solo se ve cuando un SMS no sale.
+    include: ["src/**/*.test.ts", "api/**/*.test.ts"],
   },
 });

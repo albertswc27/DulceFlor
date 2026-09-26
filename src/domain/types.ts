@@ -239,10 +239,20 @@ export interface Order {
   source: "web" | "kiosk";
 
   /**
-   * Momento (ISO) en que se preparó el aviso de «pedido tramitado» para el
-   * cliente. El envío lo remata la persona del mostrador desde WhatsApp, así
-   * que esto registra que el aviso se generó, no que el cliente lo haya
-   * leído. Ausente mientras no se haya avisado.
+   * Momento (ISO) en que se avisó al cliente de que su pedido está tramitado.
+   * Con SMS se escribe SOLO cuando la pasarela ha confirmado el envío; con
+   * WhatsApp, cuando se abrió la conversación con el mensaje preparado.
+   * Ausente mientras no se haya avisado.
    */
   customerNotifiedAt?: string;
+
+  /** Por dónde se le avisó. Ausente en pedidos avisados antes de existir el SMS. */
+  customerNotifiedBy?: "sms" | "whatsapp";
+
+  /**
+   * El cliente ha pedido que no se le avise por SMS. Lo marca el equipo desde
+   * el panel cuando alguien lo dice por teléfono o en el mostrador: el aviso
+   * automático lo respeta y no envía nada.
+   */
+  smsOptOut?: boolean;
 }

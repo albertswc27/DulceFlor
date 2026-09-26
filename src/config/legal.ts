@@ -29,7 +29,7 @@ export const LEGAL = {
   /** Teléfono de llamadas, distinto del de WhatsApp. */
   contactPhoneCalls: PHONE_CALLS_DISPLAY,
   /** Última revisión de los textos legales. */
-  lastUpdated: "22 de agosto de 2026",
+  lastUpdated: "26 de septiembre de 2026",
 } as const;
 
 /**

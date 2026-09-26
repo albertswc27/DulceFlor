@@ -131,8 +131,9 @@ export default function LegalPage() {
         </p>
         <ul className="list-disc space-y-1 pl-5">
           <li>
-            <strong>Nombre y teléfono:</strong> para identificar el pedido y
-            poder contactar contigo.
+            <strong>Nombre y teléfono:</strong> para identificar el pedido,
+            poder contactar contigo y enviarte el aviso de que está tramitado
+            (por SMS o WhatsApp).
           </li>
           <li>
             <strong>Email</strong> (opcional): como vía de contacto alternativa.
@@ -150,7 +151,10 @@ export default function LegalPage() {
           </li>
         </ul>
         <p>
-          No se recogen datos con fines publicitarios ni se ceden a terceros. La
+          No se recogen datos con fines publicitarios ni se venden ni se ceden a
+          nadie para sus propios fines. Sí intervienen proveedores que trabajan
+          por cuenta de Dulce Flor y siguiendo sus instrucciones (alojamiento de
+          los pedidos y envío de los SMS), que se detallan más abajo. La
           conversación posterior se realiza a través de WhatsApp, cuyo uso se
           rige por las condiciones de su propio proveedor.
         </p>
@@ -174,9 +178,10 @@ export default function LegalPage() {
               que no venga de una sesión autorizada.
             </p>
             <p>
-              <strong>Las imágenes de referencia que adjuntes no se suben</strong>:
-              se quedan en el almacenamiento local de tu navegador y puedes
-              borrarlas en cualquier momento limpiando los datos de navegación.
+              Las <strong>imágenes de referencia</strong> que adjuntes se guardan
+              en un almacén privado del mismo proveedor, para que el obrador
+              pueda verlas al preparar tu encargo. No son públicas: solo se
+              pueden abrir desde una sesión del equipo y con un enlace temporal.
             </p>
             <p>
               Los pedidos se conservan mientras sean necesarios para gestionar
@@ -200,6 +205,47 @@ export default function LegalPage() {
             </p>
           </>
         )}
+      </Section>
+
+      <Section title="Avisos por SMS sobre tu pedido">
+        <p>
+          Cuando damos tu pedido por tramitado, el sistema te envía un SMS al
+          teléfono que nos indicaste. El mensaje lleva el nombre de la tienda, el
+          número de pedido, el día y la hora de recogida o entrega, y un enlace a
+          una ficha donde puedes consultar el detalle y las condiciones.
+        </p>
+        <p>
+          <strong>Ese SMS no es publicidad</strong>: es una comunicación de
+          servicio necesaria para gestionar el encargo que nos has hecho. Su base
+          jurídica es el artículo 6.1.b del Reglamento (UE) 2016/679 —ejecución
+          del contrato en el que eres parte—, así que no necesitamos tu
+          consentimiento previo, y tampoco le resulta aplicable la prohibición
+          del artículo 21 de la Ley 34/2002, que se refiere solo a las
+          comunicaciones publicitarias o promocionales.
+        </p>
+        <p>
+          No te enviaremos por SMS ofertas, promociones ni novedades. Si algún
+          día quisiéramos hacerlo, te lo pediríamos antes y podrías negarte.
+        </p>
+        <p>
+          El envío material lo realiza una empresa de mensajería SMS que actúa
+          como <strong>encargada del tratamiento</strong> por cuenta de Dulce
+          Flor, con contrato conforme al artículo 28 del Reglamento, y que solo
+          recibe tu número y el texto del mensaje.
+        </p>
+        <p>
+          <strong>El enlace de la ficha es privado y temporal.</strong> Solo
+          funciona con la dirección exacta que recibes en el SMS, muestra
+          únicamente lo necesario para recoger el pedido —nunca tu teléfono, tu
+          dirección, tu dedicatoria ni las imágenes que hayas adjuntado— y deja
+          de funcionar pasadas unas semanas. No está indexado en buscadores.
+        </p>
+        <p>
+          Si prefieres que no te avisemos por SMS, dínoslo al hacer el pedido o
+          por WhatsApp al {WHATSAPP_PHONE_DISPLAY}: lo anotamos y te avisaremos
+          solo por WhatsApp o por teléfono. No recibir el SMS no afecta en nada a
+          tu pedido.
+        </p>
       </Section>
 
       <Section title="Cookies y almacenamiento">

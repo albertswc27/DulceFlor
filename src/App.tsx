@@ -7,6 +7,9 @@ import HomePage from "@/features/marketing/pages/HomePage";
 import MenusPage from "@/features/marketing/pages/MenusPage";
 import OrderWizardPage from "@/features/order/pages/OrderWizardPage";
 import OrderConfirmationPage from "@/features/order/pages/OrderConfirmationPage";
+// La ficha pública del pedido la abre el cliente desde el SMS, normalmente una
+// sola vez y desde el móvil: se carga aparte para no engordar la home.
+const PublicOrderPage = lazy(() => import("@/features/order/pages/PublicOrderPage"));
 import { AdminAuthProvider } from "@/features/admin/state/AdminAuthContext";
 import RequireAdmin from "@/features/admin/components/RequireAdmin";
 import LegalPage from "@/features/marketing/pages/LegalPage";
@@ -45,6 +48,10 @@ export default function App() {
                 path="/pedido/confirmacion/:orderId"
                 element={<OrderConfirmationPage />}
               />
+              {/* Ficha privada del pedido, la que se abre desde el SMS. Cuelga de su
+                  propia raíz y no de /pedido para poder excluirla de los buscadores
+                  sin tapar el configurador. */}
+              <Route path="/mi-pedido/:token" element={<PublicOrderPage />} />
             </Route>
 
             <Route path="/admin" element={<AdminLoginPage />} />

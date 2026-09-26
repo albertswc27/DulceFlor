@@ -38,9 +38,12 @@ export interface OrderRepository {
   setQuotedPrice(id: string, quotedPriceCents: number): Order | undefined;
   /**
    * Deja constancia de que se ha avisado al cliente de que su pedido está
-   * tramitado. El envío lo remata la persona del mostrador desde WhatsApp.
+   * tramitado, y por qué vía. Se llama SOLO cuando el aviso ha salido de
+   * verdad: con SMS, tras el acuse de la pasarela.
    */
-  markCustomerNotified(id: string): Order | undefined;
+  markCustomerNotified(id: string, channel: "sms" | "whatsapp"): Order | undefined;
+  /** El cliente ha pedido que no se le avise por SMS (o se desmarca). */
+  setSmsOptOut(id: string, optOut: boolean): Order | undefined;
   /**
    * Sube lo que quedó pendiente y baja lo que hay en la base compartida.
    * Devuelve el listado ya combinado. Sin Supabase, devuelve lo local.
@@ -290,10 +293,18 @@ class OrderRepositoryImpl implements OrderRepository {
     }));
   }
 
-  markCustomerNotified(id: string): Order | undefined {
+  markCustomerNotified(id: string, channel: "sms" | "whatsapp"): Order | undefined {
     return this.mutate(id, (order) => ({
       ...order,
       customerNotifiedAt: new Date().toISOString(),
+      customerNotifiedBy: channel,
+    }));
+  }
+
+  setSmsOptOut(id: string, optOut: boolean): Order | undefined {
+    return this.mutate(id, (order) => ({
+      ...order,
+      smsOptOut: optOut ? true : undefined,
     }));
   }
 

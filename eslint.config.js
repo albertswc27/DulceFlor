@@ -7,6 +7,12 @@ import tseslint from "typescript-eslint";
 export default tseslint.config(
   { ignores: ["dist", "node_modules"] },
   {
+    // Las funciones de api/ se ejecutan en Node, no en el navegador: sin esto
+    // ESLint las lintaría con los globales equivocados.
+    files: ["api/**/*.ts"],
+    languageOptions: { globals: globals.node },
+  },
+  {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
     languageOptions: {

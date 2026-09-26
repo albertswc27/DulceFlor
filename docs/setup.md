@@ -33,6 +33,7 @@ node scripts/admin-credentials.cjs  # genera las credenciales del panel (ver má
 | `/aviso-legal` | Aviso legal y política de privacidad |
 | `/pedido` | Configurador y wizard de pedido |
 | `/pedido/confirmacion/:id` | Confirmación + WhatsApp |
+| `/mi-pedido/:token` | Ficha privada del pedido, la que abre el cliente desde el SMS (sin login, excluida de buscadores) |
 | `/admin` | Login administración |
 | `/admin/panel` | Dashboard |
 | `/admin/pedidos` | Lista de pedidos con filtros |
@@ -216,12 +217,28 @@ esfuerzo:
 2. Mover la verificación y los pedidos a un backend o proveedor de identidad
    (ver `architecture.md`).
 
+## Avisos por SMS
+
+El aviso automático al cliente cuando se tramita un pedido tiene su propio
+documento: **[sms.md](sms.md)**. Léelo antes de activarlo — hay un trámite en la
+CNMC que puede tardar un mes y sin el cual los SMS no llegan.
+
+Resumen: `supabase/ficha-sms.sql` en Supabase, las variables `SMS_*`,
+`SUPABASE_URL`, `SUPABASE_ANON_KEY` y `PUBLIC_SITE_URL` en Vercel, y
+`SMS_PROVIDER=pruebas` mientras se tramita el alias.
+
 ## Configuración pendiente de Dulce Flor
 
 Casi todo está confirmado (horario 10:00–22:00 todos los días, antelación estándar de 3 días — desde el 29/08/2026 los pedidos con menos margen se aceptan como URGENTES a confirmar por WhatsApp —, zonas de entrega, dirección, toppings y extras). Queda pendiente:
 
 - Nombre completo del titular (autónomo) para el aviso legal — el NIF ya se recibió por WhatsApp y, por privacidad, no se guarda en este repositorio público.
 - Días de cierre semanales, si los hubiera (`BUSINESS_HOURS` en `src/config/business.ts`).
+- **Dominio definitivo**: el repositorio se contradice (`index.html` y el sitemap
+  usan `dulceflor.es`; este documento y los correos del panel, `dulceflorbcn.es`).
+  Hay que cerrarlo antes de enviar el primer SMS: la dirección viaja dentro de
+  cada mensaje y cambiarla después deja muertos los enlaces ya enviados.
+- **Registro del alias «DulceFlor» en la CNMC** (ver [sms.md](sms.md)): hace
+  falta el certificado digital de la titular y puede tardar un mes.
 
 ## Nota sobre datos
 

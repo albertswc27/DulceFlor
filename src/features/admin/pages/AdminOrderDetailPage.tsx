@@ -8,10 +8,13 @@ import { toast } from "sonner";
 import {
   ArrowLeft,
   Copy,
+  BellOff,
+  Loader2,
   MessageCircle,
   PackageSearch,
   Phone,
   Send,
+  TriangleAlert,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,6 +45,13 @@ import {
 import { formatEuros } from "@/domain/money";
 import { getImage, getRemoteImageUrl } from "@/services/imageStore";
 import { isSupabaseConfigured } from "@/services/supabase";
+import { isSmsAvailable, sendOrderSms } from "@/services/smsNotifier";
+import {
+  buildOrderStatusSms,
+  measureSms,
+  PHONE_PROBLEM_MESSAGES,
+  toE164,
+} from "@/domain/sms";
 import {
   buildCustomerNotificationMessage,
   buildOrderWhatsAppMessage,
@@ -420,6 +430,9 @@ export default function AdminOrderDetailPage() {
     orderId ? (orderRepository.getById(orderId) ?? null) : null
   );
   const [quoteInput, setQuoteInput] = React.useState("");
+  const [sendingSms, setSendingSms] = React.useState(false);
+  /** Este despliegue puede enviar SMS (hay servidor y sesión que validar). */
+  const smsAvailable = isSmsAvailable();
   // Se puede llegar aquí por enlace directo a un pedido que todavía no está
   // en este dispositivo (lo hizo un cliente desde su móvil): sincronizamos
   // antes de decir que no existe.
@@ -477,9 +490,19 @@ export default function AdminOrderDetailPage() {
       return;
     }
     setOrder(updated);
-    // Tramitar es justo el momento en que el cliente espera noticias, así que
-    // el aviso se ofrece aquí mismo en vez de confiar en que alguien se acuerde.
-    if (status === "confirmed" && !updated.customerNotifiedAt) {
+
+    // Tramitar es el momento en que el cliente espera noticias: el aviso sale
+    // solo, sin depender de que alguien se acuerde de pulsar nada. Si no se
+    // puede enviar (sin SMS configurado, cliente excluido, teléfono fijo), se
+    // dice y queda el botón de WhatsApp de siempre.
+    const debeAvisar =
+      status === "confirmed" && !updated.customerNotifiedAt && !updated.smsOptOut;
+    if (debeAvisar && smsAvailable) {
+      toast.success("Pedido tramitado", { description: "Enviando el aviso por SMS…" });
+      void enviarSms({ force: false });
+      return;
+    }
+    if (debeAvisar) {
       toast.success("Pedido tramitado", {
         description: "Avisa al cliente con los datos de recogida.",
         action: { label: "Avisar", onClick: notifyCustomer },
@@ -487,6 +510,59 @@ export default function AdminOrderDetailPage() {
       return;
     }
     toast.success(`Estado actualizado: ${ORDER_STATUS_LABELS[status]}`);
+  }
+
+  /**
+   * Pide a la función serverless que envíe el SMS.
+   *
+   * El pedido se marca como avisado SOLO si la pasarela confirma el envío: es
+   * la diferencia entre que el panel diga la verdad y que diga «avisado»
+   * mientras el cliente sigue sin saber nada.
+   */
+  async function enviarSms({ force }: { force: boolean }) {
+    if (!order || sendingSms) return;
+    setSendingSms(true);
+    try {
+      const resultado = await sendOrderSms(order.id, { force });
+      if (resultado.ok) {
+        const updated = orderRepository.markCustomerNotified(order.id, "sms");
+        if (updated) setOrder(updated);
+        toast.success("SMS enviado al cliente", {
+          description:
+            resultado.segments > 1
+              ? `Se han facturado ${resultado.segments} SMS por la longitud del mensaje.`
+              : "Ya puede consultar su ficha desde el enlace.",
+        });
+        return;
+      }
+      if (resultado.alreadySent) {
+        toast.info("A este cliente ya se le avisó", {
+          description: "Usa «volver a avisar» si de verdad quieres repetirlo.",
+        });
+        return;
+      }
+      toast.error("No se ha enviado el SMS", {
+        description: `${resultado.message} Puedes avisar por WhatsApp.`,
+        duration: 10000,
+      });
+    } finally {
+      setSendingSms(false);
+    }
+  }
+
+  function toggleSmsOptOut() {
+    if (!order) return;
+    const updated = orderRepository.setSmsOptOut(order.id, !order.smsOptOut);
+    if (!updated) {
+      toast.error("No se pudo guardar la preferencia del cliente.");
+      return;
+    }
+    setOrder(updated);
+    toast.success(
+      updated.smsOptOut
+        ? "Marcado: a este cliente no se le avisará por SMS."
+        : "A este cliente se le volverá a avisar por SMS."
+    );
   }
 
   async function copySummary() {
@@ -517,13 +593,17 @@ export default function AdminOrderDetailPage() {
     } catch {
       opened = null;
     }
-    const updated = orderRepository.markCustomerNotified(order.id);
-    if (updated) setOrder(updated);
+    // Solo se da por avisado si WhatsApp llegó a abrirse. Marcarlo antes
+    // hacía que el panel dijera «Cliente avisado» con el emergente bloqueado
+    // y el cliente sin enterarse de nada.
     if (!opened) {
       toast.warning("El navegador ha bloqueado WhatsApp", {
         description: "Usa «Copiar aviso» y pégalo en el chat del cliente.",
       });
+      return;
     }
+    const updated = orderRepository.markCustomerNotified(order.id, "whatsapp");
+    if (updated) setOrder(updated);
   }
 
   async function copyCustomerNotification() {
@@ -576,6 +656,22 @@ export default function AdminOrderDetailPage() {
   const balanceDueCents = computeBalanceDueCents(pricing, order.depositPaidCents);
   const overpaidCents = computeOverpaidCents(pricing, order.depositPaidCents);
   const customerNotification = buildCustomerNotificationMessage(order);
+  // Se comprueba aquí, no al pulsar: si el cliente dejó un fijo hay que verlo
+  // ANTES de tramitar, no descubrirlo cuando el envío ya ha fallado.
+  const telefonoParaSms = toE164(order.customer.phone);
+  const smsCost = measureSms(
+    buildOrderStatusSms(
+      {
+        publicId: order.publicId,
+        customerName: order.customer.name,
+        requestedDate: order.requestedDate,
+        requestedTime: order.requestedTime,
+        fulfillmentType: order.fulfillmentType,
+      },
+      // Longitud representativa del enlace real: el token son 22 caracteres.
+      `${window.location.origin}/mi-pedido/${"x".repeat(22)}`
+    )
+  );
 
   return (
     <div className="space-y-6">
@@ -991,9 +1087,9 @@ export default function AdminOrderDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Aviso al cliente: la web NO lo envía sola. Prepara el mensaje y
-              abre WhatsApp; el envío lo remata quien está en el mostrador.
-              Así no hace falta ninguna pasarela ni cuota mensual. */}
+          {/* Aviso al cliente. El SMS sale solo al tramitar el pedido; esta
+              tarjeta sirve para ver qué pasó, repetirlo y, si el SMS no es
+              posible, recurrir a WhatsApp. */}
           <Card>
             <CardHeader>
               <CardTitle>Avisar al cliente</CardTitle>
@@ -1001,26 +1097,69 @@ export default function AdminOrderDetailPage() {
             <CardContent className="space-y-3">
               {order.customerNotifiedAt ? (
                 <p className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success">
-                  Aviso enviado el {formatCreatedAt(order.customerNotifiedAt)}. Puedes
-                  volver a enviarlo si hace falta.
+                  Avisado el {formatCreatedAt(order.customerNotifiedAt)}
+                  {order.customerNotifiedBy === "sms"
+                    ? " por SMS"
+                    : order.customerNotifiedBy === "whatsapp"
+                      ? " por WhatsApp"
+                      : ""}
+                  .
                 </p>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Prepara el mensaje de «pedido tramitado» con el número, la fecha, la
-                  hora, el importe y las condiciones de recogida. Se abre WhatsApp con
-                  el texto escrito: solo tienes que pulsar Enviar.
+                  {smsAvailable && !order.smsOptOut
+                    ? "Al marcar el pedido como Tramitado se envía solo un SMS con el enlace a su ficha. También puedes enviarlo desde aquí."
+                    : "Prepara el mensaje de «pedido tramitado» con el número, la fecha, la hora, el importe y las condiciones de recogida."}
                 </p>
               )}
+
+              {/* Un teléfono fijo no recibe SMS. Mejor decirlo aquí que pagar
+                  un envío que no llega y darlo por bueno. */}
+              {!telefonoParaSms.ok && (
+                <p className="flex items-start gap-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
+                  <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>{PHONE_PROBLEM_MESSAGES[telefonoParaSms.problem]}</span>
+                </p>
+              )}
+
+              {order.smsOptOut && (
+                <p className="flex items-start gap-2 rounded-lg bg-background-soft px-3 py-2 text-sm text-muted-foreground">
+                  <BellOff className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>
+                    Este cliente ha pedido que no se le avise por SMS. El aviso
+                    automático lo respeta.
+                  </span>
+                </p>
+              )}
+
               <div className="grid gap-2">
-                <Button type="button" className="w-full" onClick={notifyCustomer}>
-                  <Send />
-                  {order.customerNotifiedAt
-                    ? "Volver a avisar por WhatsApp"
-                    : "Avisar por WhatsApp"}
+                {smsAvailable && (
+                  <Button
+                    type="button"
+                    className="w-full"
+                    disabled={sendingSms || !telefonoParaSms.ok || order.smsOptOut}
+                    onClick={() => void enviarSms({ force: Boolean(order.customerNotifiedAt) })}
+                  >
+                    {sendingSms ? <Loader2 className="animate-spin" /> : <Send />}
+                    {sendingSms
+                      ? "Enviando…"
+                      : order.customerNotifiedAt
+                        ? "Volver a enviar el SMS"
+                        : "Enviar SMS ahora"}
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant={smsAvailable ? "outline" : "default"}
+                  className="w-full"
+                  onClick={notifyCustomer}
+                >
+                  <MessageCircle />
+                  {smsAvailable ? "Avisar por WhatsApp" : "Avisar por WhatsApp"}
                 </Button>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   className="w-full"
                   onClick={copyCustomerNotification}
                 >
@@ -1028,9 +1167,31 @@ export default function AdminOrderDetailPage() {
                   Copiar aviso
                 </Button>
               </div>
+
+              {smsAvailable && (
+                <>
+                  <p className="text-xs text-muted-foreground">
+                    El SMS son {smsCost.segments === 1 ? "unos" : ""}{" "}
+                    {smsCost.segments === 1
+                      ? "160 caracteres y se factura como 1 envío"
+                      : `${smsCost.segments} envíos facturados (el texto no cabe en uno)`}
+                    . El detalle completo va en el enlace, no en el mensaje.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={toggleSmsOptOut}
+                    className="text-left text-xs font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                  >
+                    {order.smsOptOut
+                      ? "Volver a avisar por SMS a este cliente"
+                      : "Este cliente no quiere SMS"}
+                  </button>
+                </>
+              )}
+
               <details className="rounded-lg border border-border bg-background-soft/50 p-3 text-sm">
                 <summary className="cursor-pointer font-medium text-primary">
-                  Ver el mensaje
+                  Ver el mensaje de WhatsApp
                 </summary>
                 <pre className="mt-2 whitespace-pre-wrap font-sans text-muted-foreground">
                   {customerNotification}

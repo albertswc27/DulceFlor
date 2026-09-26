@@ -39,3 +39,39 @@ export function newInternalId(): string {
   // Fallback muy improbable (navegadores sin Web Crypto).
   return `id-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
 }
+
+/**
+ * Token secreto del pedido: lo que va en el enlace del SMS
+ * (`/pedido/estado/<token>`) y lo único que hace falta para ver la ficha.
+ *
+ * Como sustituye a una contraseña, se genera con el generador criptográfico
+ * del navegador y NO con Math.random. 22 caracteres sobre un alfabeto de 28
+ * son unos 105 bits de entropía: adivinar uno exigiría del orden de 10^31
+ * intentos, y cada intento es una petición al servidor. La longitud está
+ * ajustada además al presupuesto del SMS, donde el enlace es lo que más ocupa
+ * (ver buildOrderStatusSms en domain/sms.ts).
+ *
+ * Alfabeto sin vocales ni parejas confundibles (0/O, 1/l/I): así el enlace no
+ * compone palabras por accidente y se puede dictar por teléfono si hace falta.
+ */
+const TOKEN_ALPHABET = "23456789bcdfghjkmnpqrstvwxyz";
+const TOKEN_LENGTH = 22;
+
+export function newOrderToken(): string {
+  const bytes = new Uint8Array(TOKEN_LENGTH);
+  if (typeof crypto !== "undefined" && "getRandomValues" in crypto) {
+    crypto.getRandomValues(bytes);
+  } else {
+    // Sin Web Crypto no hay token seguro: es preferible no generar uno que
+    // dar por bueno un enlace adivinable.
+    throw new Error("Este navegador no puede generar un enlace seguro de pedido.");
+  }
+  let out = "";
+  for (const byte of bytes) out += TOKEN_ALPHABET[byte % TOKEN_ALPHABET.length];
+  return out;
+}
+
+/** ¿Tiene forma de token? Filtra basura antes de consultar a la base de datos. */
+export function isOrderToken(value: string | undefined): boolean {
+  return typeof value === "string" && new RegExp(`^[${TOKEN_ALPHABET}]{${TOKEN_LENGTH}}$`).test(value);
+}

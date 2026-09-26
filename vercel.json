@@ -1,3 +1,13 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/*.ts": { "maxDuration": 15 }
+  },
+  "rewrites": [
+    {
+      "_comentario": "Todo lo que no sea /api va al index.html porque el enrutado lo hace React. Vercel resuelve el sistema de ficheros ANTES que los rewrites, así que /api funcionaría igualmente, pero dejarlo explícito evita que un cambio futuro se trague las funciones sin que nadie lo note.",
+      "source": "/((?!api(/|$)).*)",
+      "destination": "/index.html"
+    }
+  ]
 }

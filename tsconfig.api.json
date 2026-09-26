@@ -1,0 +1,27 @@
+{
+  // Las funciones de api/ NO pueden ir en el tsconfig principal: aquel declara
+  // `types: ["vite/client"]`, que deja fuera los tipos de Node y hace que
+  // `process.env` no compile. Y si no se comprueban en ningún sitio, sus
+  // errores de tipos llegan a producción sin que nadie se entere, porque Vite
+  // ni siquiera mira esta carpeta.
+  //
+  // Se incluye también src/domain, que es el código que comparten navegador y
+  // servidor: así se verifica que de verdad no depende de nada del navegador.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["api", "src/domain/sms.ts", "src/domain/orderId.ts"]
+}

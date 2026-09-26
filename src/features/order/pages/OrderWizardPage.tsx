@@ -6,7 +6,7 @@
  * barra inferior + drawer en móvil).
  */
 import * as React from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -36,7 +36,9 @@ import {
   DELIVERY_ZONES,
   URGENT_ORDER_SURCHARGE_CENTS,
   WHATSAPP_PHONE,
+  WHATSAPP_PHONE_DISPLAY,
 } from "@/config/business";
+import { LEGAL } from "@/config/legal";
 import { FAMILY_COVER_PHOTOS, SWEET_SNACK_PHOTOS } from "@/assets/photos";
 import { FamilyCover } from "../components/FamilyCover";
 import { CakeReferences } from "@/features/order/components/CakeReferences";
@@ -956,6 +958,28 @@ export default function OrderWizardPage() {
                           autoComplete="email"
                         />
                       </div>
+
+                      {/* Información básica de protección de datos.
+                          El art. 13 del RGPD obliga a darla EN EL MOMENTO en
+                          que se recogen los datos, no solo en un enlace del
+                          pie de página: por eso va aquí, pegada a los campos.
+                          El resto de la información está en el aviso legal
+                          (sistema por capas del art. 11 LOPDGDD). */}
+                      <p className="rounded-lg bg-background-soft/70 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+                        <strong className="text-foreground">Tus datos.</strong> Los
+                        trata {LEGAL.tradeName} para preparar tu pedido, avisarte
+                        de su estado —incluso por SMS— y poder contactar contigo
+                        sobre él. No se usan para publicidad. Puedes acceder,
+                        rectificar o suprimir tus datos escribiendo al{" "}
+                        {WHATSAPP_PHONE_DISPLAY}.{" "}
+                        <Link
+                          to="/aviso-legal"
+                          className="font-medium text-accent underline underline-offset-4"
+                        >
+                          Más información
+                        </Link>
+                        .
+                      </p>
                     </CardContent>
                   </Card>
 

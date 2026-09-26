@@ -393,6 +393,21 @@ export function getSession(): AdminSession | null {
   }
 }
 
+/**
+ * Token de acceso de la sesión de Supabase, para que la función serverless
+ * pueda comprobar que quien pide enviar un SMS es de verdad el equipo.
+ *
+ * No se guarda en ningún sitio nuestro: se pide al cliente de Supabase en el
+ * momento, que ya se encarga de refrescarlo si ha caducado. Devuelve null en
+ * modo local (sin Supabase), donde no hay servidor al que autenticarse.
+ */
+export async function getAccessToken(): Promise<string | null> {
+  const supabase = await getSupabase();
+  if (!supabase) return null;
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? null;
+}
+
 export function logout(): void {
   sessionStorage.removeItem(SESSION_KEY);
   // No se espera: cerrar sesión en la interfaz debe ser inmediato aunque la
