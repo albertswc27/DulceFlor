@@ -233,10 +233,6 @@ Casi todo está confirmado (horario 10:00–22:00 todos los días, antelación e
 
 - Nombre completo del titular (autónomo) para el aviso legal — el NIF ya se recibió por WhatsApp y, por privacidad, no se guarda en este repositorio público.
 - Días de cierre semanales, si los hubiera (`BUSINESS_HOURS` en `src/config/business.ts`).
-- **Dominio definitivo**: el repositorio se contradice (`index.html` y el sitemap
-  usan `dulceflor.es`; este documento y los correos del panel, `dulceflorbcn.es`).
-  Hay que cerrarlo antes de enviar el primer SMS: la dirección viaja dentro de
-  cada mensaje y cambiarla después deja muertos los enlaces ya enviados.
 - **Registro del alias «DulceFlor» en la CNMC** (ver [sms.md](sms.md)): hace
   falta el certificado digital de la titular y puede tardar un mes.
 

@@ -142,7 +142,7 @@ describe("buildOrderStatusSms", () => {
     requestedTime: "18:00",
     fulfillmentType: "pickup" as const,
   };
-  const URL = "https://dulceflor.es/mi-pedido/bcdfghjkmnpqrstvwxyz2";
+  const URL = "https://dulceflorbcn.es/mi-pedido/bcdfghjkmnpqrstvwxyz2";
 
   it("dice lo imprescindible: quién, qué pedido, cuándo y dónde mirar", () => {
     const texto = buildOrderStatusSms(PEDIDO, URL);
@@ -199,11 +199,12 @@ describe("buildOrderStatusSms", () => {
 });
 
 describe("margen del SMS frente a cambios de dominio", () => {
-  // El enlace es la parte más larga y todavía no está cerrado qué dominio se
-  // usará (dulceflor.es o dulceflorbcn.es). El mensaje debe seguir cabiendo en
-  // un SMS con el dominio más largo Y el nombre de pila más largo que
-  // admitimos: si algún día deja de caber, que lo diga este test.
-  it("cabe en un SMS con el dominio largo y un nombre de pila de 12 caracteres", () => {
+  // El enlace es la parte más larga del mensaje. El dominio es dulceflorbcn.es
+  // (confirmado el 26/09/2026), pero aquí se prueba con el prefijo «www.»
+  // incluido y con el nombre de pila más largo que admitimos: así queda margen
+  // por si algún día se sirve desde el subdominio. Si deja de caber, que lo
+  // diga este test y no la factura.
+  it("cabe en un SMS con el dominio completo y un nombre de pila de 12 caracteres", () => {
     const texto = buildOrderStatusSms(
       {
         publicId: "DF-2026-A1B2C",
