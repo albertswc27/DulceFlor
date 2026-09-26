@@ -98,26 +98,36 @@ as $$
     coalesce((o.payload -> 'urgent')::boolean, false) as urgent,
     -- Resumen de artículos construido campo a campo: tamaño, sabor y
     -- relleno. Deliberadamente NO se incluyen notas ni dedicatoria.
-    coalesce(
-      (
-        select jsonb_agg(
-          jsonb_build_object(
-            'name', item ->> 'productName',
-            'quantity', coalesce((item ->> 'quantity')::int, 1),
-            'detail', btrim(
-              concat_ws(
-                ' · ',
-                nullif(item -> 'customization' -> 'size' ->> 'label', ''),
-                nullif(item -> 'customization' -> 'flavor' ->> 'label', ''),
-                nullif(item -> 'customization' -> 'filling' ->> 'label', '')
+    --
+    -- El `case` no es decorativo: jsonb_array_elements REVIENTA si lo que
+    -- recibe no es un array (un pedido antiguo, un cambio de formato). Tiene
+    -- que envolver la subconsulta entera, porque un `where` dentro no serviría
+    -- de nada: el FROM se evalúa antes. Sin esto, el cliente vería un error de
+    -- servidor al abrir su enlace en vez de su ficha.
+    case
+      when jsonb_typeof(o.payload -> 'items') = 'array' then
+        coalesce(
+          (
+            select jsonb_agg(
+              jsonb_build_object(
+                'name', item ->> 'productName',
+                'quantity', coalesce((item ->> 'quantity')::int, 1),
+                'detail', btrim(
+                  concat_ws(
+                    ' · ',
+                    nullif(item -> 'customization' -> 'size' ->> 'label', ''),
+                    nullif(item -> 'customization' -> 'flavor' ->> 'label', ''),
+                    nullif(item -> 'customization' -> 'filling' ->> 'label', '')
+                  )
+                )
               )
             )
-          )
+            from jsonb_array_elements(o.payload -> 'items') as item
+          ),
+          '[]'::jsonb
         )
-        from jsonb_array_elements(o.payload -> 'items') as item
-      ),
-      '[]'::jsonb
-    ) as items,
+      else '[]'::jsonb
+    end as items,
     -- Con tarta a presupuestar el total todavía no es firme: se devuelve
     -- null y la ficha lo explica, en vez de enseñar un importe falso.
     case
