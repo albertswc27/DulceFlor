@@ -56,7 +56,12 @@ create unique index if not exists orders_card_token_hash_idx
 --  una página abierta con un enlace.
 -- ---------------------------------------------------------------------
 
-create or replace function public.get_order_card(p_token text)
+-- `create or replace` falla si algún día cambian las columnas devueltas, y este
+-- fichero promete que se puede volver a ejecutar. Se borra primero para que
+-- cambiar la ficha sea reejecutar esto, no depurar un error de tipos.
+drop function if exists public.get_order_card(text);
+
+create function public.get_order_card(p_token text)
 returns table (
   public_id text,
   status text,

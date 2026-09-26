@@ -3,6 +3,8 @@ dist
 *.local
 .env
 .env.*
+# La plantilla sí se sube: documenta qué variables hacen falta, sin valores.
+!.env.example
 
 # Capturas de QA visual
 .screenshots
