@@ -65,6 +65,26 @@ with resultado as (
 
   union all
 
+  -- Que la función exista no basta: hay que poder llamarla. El
+  -- `revoke ... from public` de imagen-ia.sql deja sin permiso a TODOS los
+  -- roles, service_role incluido, porque PUBLIC es un grupo al que pertenecen
+  -- todos. Sin el grant explícito, el generador no produce ni una imagen.
+  select 6, 'service_role puede ejecutar ' || g.nombre,
+         case when g.existe and has_function_privilege('service_role', g.firma, 'execute')
+              then 'OK' else 'FALTA' end
+  from (values
+    ('ai_quota_gate',      'public.ai_quota_gate(text,text,text,integer,integer,integer)'),
+    ('ai_quota_refund',    'public.ai_quota_refund(text)'),
+    ('ai_quota_prune',     'public.ai_quota_prune()'),
+    ('ai_session_previous','public.ai_session_previous(text)'),
+    ('ai_session_remember','public.ai_session_remember(text,text)')
+  ) as f(nombre, firma)
+  cross join lateral (
+    select f.nombre, f.firma, to_regprocedure(f.firma) is not null as existe
+  ) as g
+
+  union all
+
   -- El agujero de verdad: la política original decía `using (true)`, así que
   -- cualquiera que se registrase en Supabase leía TODOS los pedidos con
   -- nombres, teléfonos y direcciones. Si esto sale PRESENTE, es urgente.

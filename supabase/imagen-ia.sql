@@ -180,6 +180,23 @@ revoke all on function public.ai_quota_prune() from public, anon, authenticated;
 revoke all on function public.ai_session_previous(text) from public, anon, authenticated;
 revoke all on function public.ai_session_remember(text, text) from public, anon, authenticated;
 
+-- Y ahora hay que devolvérselo a service_role, que si no NO PUEDE LLAMARLAS.
+--
+-- Esto no es un detalle: `revoke ... from public` se lo lleva por delante
+-- también. PUBLIC no es «los de fuera», es un grupo al que pertenecen TODOS
+-- los roles, y de ahí venía el permiso de ejecución que trae por defecto
+-- cualquier función. Sin un permiso explícito, la función serverless recibe
+-- «permission denied for function ai_quota_gate» y no genera ni una imagen.
+--
+-- Solo las cinco que llama el endpoint. `ai_quota_consume` se queda fuera a
+-- propósito: la llaman las otras por dentro, y como son `security definer`
+-- se ejecutan con los permisos de quien las creó, no de quien las invoca.
+grant execute on function public.ai_quota_gate(text, text, text, integer, integer, integer) to service_role;
+grant execute on function public.ai_quota_refund(text) to service_role;
+grant execute on function public.ai_quota_prune() to service_role;
+grant execute on function public.ai_session_previous(text) to service_role;
+grant execute on function public.ai_session_remember(text, text) to service_role;
+
 -- ---------------------------------------------------------------------
 --  3. Que el formulario público no pueda llenar el almacén
 --

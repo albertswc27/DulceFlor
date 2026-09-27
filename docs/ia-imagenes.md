@@ -183,6 +183,29 @@ Para comprobar en qué nivel está una clave: <https://aistudio.google.com/usage
 
 ---
 
+## Comprobar que los topes funcionan de verdad
+
+```
+node scripts/comprobar-ia.cjs
+```
+
+No gasta nada —no llama a Gemini— y comprueba contra la base REAL que la clave
+pública no llega a los contadores, que los tres topes cortan, que el cupo se
+devuelve cuando la generación falla y que la sesión recuerda la interacción.
+
+Salió de ahí un segundo bloqueante: **`revoke ... from public` deja sin permiso
+también a `service_role`**, porque PUBLIC no es «los de fuera», es un grupo al
+que pertenecen todos los roles. Sin el `grant execute ... to service_role` la
+función devolvía `permission denied for function ai_quota_gate` y no se
+generaba ni una imagen. `supabase/comprobar.sql` ahora lo vigila.
+
+Una cosa que sorprende y es deliberada: **un intento rechazado también
+incrementa el contador**, así que `session_used` puede pasarse del tope.
+`ai_quota_consume` incrementa y después mira, en una sola sentencia atómica;
+comprobar antes de incrementar abriría una carrera entre dos peticiones
+simultáneas, que es justo lo que no puede pasar cuando cada una cuesta dinero.
+El tope nunca se supera: lo único que se infla es el número que se enseña.
+
 ## Comprobado contra la API real (27/09/2026)
 
 Se verificó con una clave de verdad, y **apareció un fallo que habría tumbado el
