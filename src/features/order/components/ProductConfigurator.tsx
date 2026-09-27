@@ -35,7 +35,13 @@ import type {
   CustomerType,
   ItemCustomization,
 } from "@/domain/types";
-import { getImage, saveImage, IMAGE_ERROR_MESSAGES } from "@/services/imageStore";
+import {
+  getImage,
+  processImageDataUrl,
+  saveImage,
+  IMAGE_ERROR_MESSAGES,
+} from "@/services/imageStore";
+import type { CakeFinish } from "@/domain/aiPreview";
 import {
   CHEESECAKE_PHOTOS,
   CUSTOM_CAKE_PHOTOS,
@@ -47,6 +53,7 @@ import { AnimatedPrice } from "./AnimatedPrice";
 import { SizePicker } from "./SizePicker";
 import { ReferenceImagePicker } from "./ReferenceImagePicker";
 import { CakeReferences } from "./CakeReferences";
+import { AiCakePreview } from "./AiCakePreview";
 import { CandlePicker } from "./CandlePicker";
 import { SnackConfigurator } from "./SnackConfigurator";
 import { GiftRequestConfigurator } from "./GiftRequestConfigurator";
@@ -79,6 +86,8 @@ export interface ConfiguratorInitial {
   candleStyle?: CandleStyle;
   sparklerQuantity?: number;
   referenceImageId?: string;
+  referenceImageSource?: "cliente" | "ia";
+  aiPrompt?: string;
 }
 
 /** Traduce un artículo del borrador al estado de partida del configurador. */
@@ -104,6 +113,8 @@ export function draftItemToInitial(item: {
     candleStyle: c.candleStyle,
     sparklerQuantity: c.sparklerQuantity,
     referenceImageId: c.referenceImageId,
+    referenceImageSource: c.referenceImageSource,
+    aiPrompt: c.aiPrompt,
   };
 }
 
@@ -189,6 +200,15 @@ function CakeConfigurator({
   const [savedImageId, setSavedImageId] = React.useState<string | null>(
     initial?.referenceImageId ?? null
   );
+  /**
+   * De dónde salió la imagen. No es un detalle: una imagen generada por una
+   * máquina tiene que identificarse como tal donde se enseñe, y el obrador
+   * necesita saber si mira la foto de una tarta que existe o una idea.
+   */
+  const [imageSource, setImageSource] = React.useState<"cliente" | "ia">(
+    initial?.referenceImageSource ?? "cliente"
+  );
+  const [aiPrompt, setAiPrompt] = React.useState(initial?.aiPrompt ?? "");
   // Las velas son de números: se guarda la cifra, y la cantidad de velas es
   // simplemente cuántos dígitos tiene. El acabado (vela o bengala) cambia el
   // precio por unidad, y las bengalas sueltas van aparte.
@@ -220,6 +240,8 @@ function CakeConfigurator({
       initial?.referenceImageId ? getImage(initial.referenceImageId) : null
     );
     setSavedImageId(initial?.referenceImageId ?? null);
+    setImageSource(initial?.referenceImageSource ?? "cliente");
+    setAiPrompt(initial?.aiPrompt ?? "");
     setCandleDigits(initial?.candleDigits ?? "");
     setCandleStyle(initial?.candleStyle ?? "vela");
     setSparklerQuantity(initial?.sparklerQuantity ?? 0);
@@ -257,6 +279,20 @@ function CakeConfigurator({
     : null;
 
   const dedicationSelected = extraIds.includes("dedicatoria");
+
+  /**
+   * El generador solo aparece donde tiene sentido: tartas por capas y de
+   * fondant. En un cheesecake el aspecto lo decide el sabor, y en una caja
+   * de desayuno no hay nada que imaginar.
+   */
+  const ACABADO_POR_PRODUCTO: Record<string, CakeFinish> = {
+    "pastel-clasico": "nata",
+    "pastel-buttercream": "buttercream",
+    "pastel-fondant": "fondant",
+    "pastel-personalizado": "buttercream",
+  };
+  const suggestedFinish = ACABADO_POR_PRODUCTO[product.id];
+  const showAiPreview = suggestedFinish !== undefined;
 
   /**
    * Los sabores y rellenos sin suplemento son pocos, así que nombrarlos en el
@@ -374,6 +410,8 @@ function CakeConfigurator({
       dedicationText: dedicationSelected ? dedicationText.trim() : undefined,
       designDescription: isQuote ? designDescription.trim() : undefined,
       notes: notes.trim() || undefined,
+      referenceImageSource: referenceImageId ? imageSource : undefined,
+      aiPrompt: referenceImageId && imageSource === "ia" ? aiPrompt : undefined,
       candleDigits: candleDigits || undefined,
       candleStyle: candleDigits ? candleStyle : undefined,
       candleQuantity: candleDigits ? candleDigits.length : undefined,
@@ -639,6 +677,29 @@ function CakeConfigurator({
         </div>
       )}
 
+      {/* Previsualización con IA. Solo en las tartas que se configuran con
+          acabado: en un aperitivo o una caja de desayuno no pinta nada. */}
+      {showAiPreview && (
+        <AiCakePreview
+          suggestedFinish={suggestedFinish}
+          onAccept={async ({ image, summary }) => {
+            // Pasa por el mismo aro que una foto subida: llega a 1024 px sin
+            // comprimir y guardarla tal cual llenaría el almacenamiento del
+            // navegador en tres pedidos.
+            const procesada = await processImageDataUrl(image);
+            if (!procesada.ok) {
+              setError(IMAGE_ERROR_MESSAGES[procesada.error]);
+              return;
+            }
+            setReferenceImage(procesada.dataUrl);
+            setSavedImageId(null);
+            setImageSource("ia");
+            setAiPrompt(summary);
+            setError(null);
+          }}
+        />
+      )}
+
       {/* Imagen de referencia */}
       <div className="space-y-1.5">
         <p className="flex items-baseline justify-between gap-2 font-display text-base font-semibold text-primary">
@@ -652,7 +713,21 @@ function CakeConfigurator({
             ? "Adjunta una fotografía del diseño que tienes en mente: es lo que nos permite valorar el trabajo y prepararte el presupuesto."
             : "¿Tienes una idea concreta? Adjunta una imagen de referencia y la utilizaremos para entender mejor cómo quieres tu tarta."}
         </p>
-        <ReferenceImagePicker value={referenceImage} onChange={setReferenceImage} />
+        <ReferenceImagePicker
+          value={referenceImage}
+          onChange={(valor) => {
+            setReferenceImage(valor);
+            setImageSource("cliente");
+            setAiPrompt("");
+          }}
+        />
+        {referenceImage && imageSource === "ia" && (
+          <p className="rounded-lg bg-background-soft px-3 py-2 text-xs text-muted-foreground">
+            La imagen que has elegido está{" "}
+            <strong>generada con inteligencia artificial</strong> y es orientativa.
+            Se guardará con tu pedido para que sepamos qué tienes en mente.
+          </p>
+        )}
         {!isQuote && referenceImage && (
           <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
             Las imágenes sirven como <strong>referencia</strong>. El precio mostrado

@@ -248,6 +248,52 @@ export default function LegalPage() {
         </p>
       </Section>
 
+      <Section title="Imágenes generadas con inteligencia artificial">
+        <p>
+          Al configurar una tarta puedes pedir que una{" "}
+          <strong>inteligencia artificial</strong> te enseñe una idea aproximada
+          de cómo podría quedar. Esas imágenes las genera{" "}
+          <strong>Google</strong> (modelo Gemini) por cuenta de Dulce Flor, como
+          encargado del tratamiento y con contrato conforme al artículo 28 del
+          Reglamento (UE) 2016/679.
+        </p>
+        <p>
+          <strong>La imagen es orientativa y está generada por un ordenador</strong>,
+          no es una fotografía de tu tarta ni el aspecto final garantizado. Se
+          identifica como tal sobre la propia imagen, y para poder adjuntarla al
+          pedido tienes que aceptarlo expresamente. La tarta real la hacemos a
+          mano: el tono de los colores, la forma de las flores y los detalles
+          varían.
+        </p>
+        <p>
+          Qué se envía a Google: el acabado y los colores que eliges, y el texto
+          corto que escribas describiendo el tema o los motivos. <strong>No se
+          envía tu nombre, ni tu teléfono, ni la dedicatoria de la tarta</strong>:
+          las tartas se generan con una placa en blanco y el texto lo escribimos
+          nosotros después. Por eso te pedimos que en ese campo describas solo la
+          decoración, sin datos personales.
+        </p>
+        <p>
+          La base jurídica es tu propia petición en el marco de la preparación
+          del pedido (artículo 6.1.b del Reglamento). Usar el generador es
+          voluntario: puedes hacer el pedido sin él, o adjuntar una fotografía
+          tuya de referencia.
+        </p>
+        <p>
+          Google presta el servicio desde fuera del Espacio Económico Europeo, y
+          la transferencia se ampara en las garantías de su contrato de
+          tratamiento de datos. En el nivel contratado, Google{" "}
+          <strong>no utiliza lo que se le envía para entrenar sus modelos</strong>;
+          solo conserva los envíos un tiempo limitado para detectar usos
+          abusivos.
+        </p>
+        <p>
+          La imagen que elijas se guarda junto a tu pedido —igual que una
+          fotografía de referencia— para que el obrador sepa qué tienes en mente,
+          y se conserva el mismo tiempo que el pedido.
+        </p>
+      </Section>
+
       <Section title="Cookies y almacenamiento">
         <p>
           Esta web <strong>no utiliza cookies publicitarias, de analítica ni de

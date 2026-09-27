@@ -33,7 +33,7 @@ node scripts/admin-credentials.cjs  # genera las credenciales del panel (ver má
 | `/aviso-legal` | Aviso legal y política de privacidad |
 | `/pedido` | Configurador y wizard de pedido |
 | `/pedido/confirmacion/:id` | Confirmación + WhatsApp |
-| `/mi-pedido/:token` | Ficha privada del pedido, la que abre el cliente desde el SMS (sin login, excluida de buscadores) |
+| `/mi-pedido#token` | Ficha privada del pedido, la que abre el cliente desde el SMS (sin login, excluida de buscadores) |
 | `/admin` | Login administración |
 | `/admin/panel` | Dashboard |
 | `/admin/pedidos` | Lista de pedidos con filtros |
@@ -232,6 +232,17 @@ alias.
 hoy **cualquier usuario autenticado del proyecto puede leer todos los pedidos**,
 porque las políticas de `schema.sql` dicen `using (true)`. Ejecútalo aunque
 decidas no activar los avisos.
+
+## Generador de imágenes con IA
+
+Tiene su propio documento: **[ia-imagenes.md](ia-imagenes.md)**. Léelo antes de
+activarlo: además de la clave y los topes de gasto, hay tres obligaciones
+legales que están integradas en el diseño y que no se pueden quitar sin dejar la
+funcionalidad desprotegida.
+
+Resumen: `supabase/imagen-ia.sql`, las variables `IA_*`, `GEMINI_API_KEY`,
+`AI_IMAGE_IP_SALT` y `SUPABASE_SERVICE_ROLE_KEY` en Vercel, y
+`IA_PROVEEDOR=pruebas` para probarlo todo sin gastar.
 
 ## Configuración pendiente de Dulce Flor
 
