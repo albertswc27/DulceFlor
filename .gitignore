@@ -10,3 +10,8 @@ dist
 .screenshots
 
 .vercel
+
+# Ficheros de trabajo de la CLI de Supabase: identificadores del proyecto y
+# de la organizacion, y una marca de version. No son secretos, pero cambian
+# solos con cada comando y no pintan nada en el historial.
+supabase/.temp/
