@@ -26,8 +26,19 @@ const ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?
  * Salvaguarda: la service_role key se salta la seguridad por fila. Si alguien
  * la pega aquí por error, cualquiera podría descargarse todos los pedidos
  * desde el navegador. Preferimos quedarnos sin base de datos a publicarla.
+ *
+ * Y hay que reconocer los DOS formatos de clave secreta de Supabase, porque
+ * el repositorio es público y Vite mete esta variable dentro del JavaScript:
+ *
+ *   - La antigua es un JWT con `"role": "service_role"` en el payload.
+ *   - La nueva es una cadena opaca que empieza por `sb_secret_`. No se puede
+ *     descodificar, así que solo la delata el prefijo.
+ *
+ * Esto no es teórico: Supabase borra las claves antiguas a finales de 2026,
+ * así que la nueva va a ser la habitual y es la que más fácil se cuela.
  */
-function looksLikeServiceRoleKey(key: string): boolean {
+export function looksLikeServiceRoleKey(key: string): boolean {
+  if (key.startsWith("sb_secret_")) return true;
   try {
     const payload = JSON.parse(atob(key.split(".")[1] ?? ""));
     return payload?.role === "service_role";

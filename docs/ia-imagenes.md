@@ -147,13 +147,36 @@ Ninguna con prefijo `VITE_`: el repositorio es público.
 | Variable | Qué es |
 | --- | --- |
 | `IA_PROVEEDOR` | `gemini` o `pruebas` |
-| `GEMINI_API_KEY` | Clave de Google AI Studio, **con facturación activada** |
+| `GEMINI_API_KEY` | Clave de Google AI Studio, **con facturación activada** (ver abajo) |
 | `IA_MODELO` | Opcional, `gemini-3.1-flash-lite-image` por defecto |
 | `AI_IMAGE_IP_SALT` | Cadena larga al azar. Cambiarla reinicia los contadores del día |
 | `AI_IMAGE_DAY_LIMIT` | Opcional, 40 por defecto |
 | `SUPABASE_SERVICE_ROLE_KEY` | Solo esta función la necesita: los contadores están cerrados a la clave pública |
 
 Base de datos: `supabase/imagen-ia.sql`, después de los otros tres.
+
+### Cómo se saca la `GEMINI_API_KEY`, y por qué son dos pasos
+
+1. **Crear la clave** en <https://aistudio.google.com/api-keys> → *Create API key*.
+   La clave queda asociada a un proyecto de Google Cloud.
+2. **Activar la facturación** de ese proyecto, con el botón **Upgrade to Paid**
+   de esa misma pantalla.
+
+⚠️ **El segundo paso es el importante y no avisa de nada si se salta.** La clave
+del nivel gratuito *funciona igual*: el generador arranca, las imágenes salen y
+nada falla. Lo que cambia es la letra pequeña. La tabla de precios de Google lo
+dice literalmente para cada modelo:
+
+| Nivel | Lo que dice Google |
+| --- | --- |
+| Gratuito | «Content used to improve our products» |
+| De pago | «Content **not** used to improve our products» |
+
+Con la clave gratuita, lo que se manda —el tema que escribe la clienta y las
+fotos de las tartas de Dulce Flor— entra en el entrenamiento de Google y puede
+pasar por revisores humanos. Con facturación activada, no.
+
+Para comprobar en qué nivel está una clave: <https://aistudio.google.com/usage>.
 
 ---
 

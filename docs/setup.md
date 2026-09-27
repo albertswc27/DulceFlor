@@ -120,20 +120,33 @@ desactivar «Allow new users to sign up»**.
 
 ### 4. Conectar la web
 
-**Project Settings → API**, y copiar:
+**Settings → API Keys** (`/project/<ref>/settings/api-keys`), y copiar:
 
 | Variable de entorno | De dónde sale |
 | --- | --- |
-| `VITE_SUPABASE_URL` | Project URL |
-| `VITE_SUPABASE_ANON_KEY` | Project API keys → **anon / publishable** |
+| `VITE_SUPABASE_URL` | Settings → Data API → Project URL |
+| `VITE_SUPABASE_ANON_KEY` | `anon` (antigua) o `sb_publishable_...` (nueva) |
 
 Se añaden en Vercel igual que `VITE_ADMIN_ACCOUNTS` (tipo **Config**, las tres
 environments) y en el `.env` local. Después, **redeploy**.
 
-⚠️ La clave **anon** es pública y no pasa nada porque viaje en el JavaScript;
-lo que protege los datos son las políticas del paso 2. La **`service_role`** se
-salta esas políticas y **nunca** debe ponerse aquí — la aplicación la detecta y
-se niega a usarla, pero mejor no llegar a eso.
+⚠️ La clave pública es pública y no pasa nada porque viaje en el JavaScript;
+lo que protege los datos son las políticas del paso 2. La **secreta** se salta
+esas políticas y **nunca** debe ponerse aquí — la aplicación la detecta y se
+niega a usarla, pero mejor no llegar a eso.
+
+Hay **dos generaciones de claves** conviviendo, y la salvaguarda reconoce las
+dos porque se detectan de forma distinta:
+
+| | Pública | Secreta | Cómo se detecta la secreta |
+| --- | --- | --- | --- |
+| Antigua | `anon` (JWT `eyJ...`) | `service_role` (JWT `eyJ...`) | `"role": "service_role"` dentro del payload |
+| Nueva | `sb_publishable_...` | `sb_secret_...` | solo por el prefijo: es opaca |
+
+⏳ **Las antiguas se borran a finales de 2026** y entonces la web deja de
+funcionar. Este proyecto todavía usa las antiguas. Migrar es crear las nuevas
+en esa misma pantalla y cambiar el valor de las variables; las dos generaciones
+funcionan a la vez, así que se puede hacer sin ventana de corte.
 
 ### Cómo saber que funciona
 

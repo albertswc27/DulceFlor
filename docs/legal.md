@@ -14,8 +14,21 @@ VITE_LEGAL_HOLDER="Nombre y apellidos del titular"
 VITE_LEGAL_TAX_ID="00000000X"
 ```
 
-Mientras estén vacías, la página muestra «pendiente de confirmación» y un aviso
-visible, en lugar de inventar el dato. Ver `src/config/legal.ts`.
+Mientras estén vacías, la página legal **omite esas dos líneas**: no inventa el
+dato, pero tampoco enseña «pendiente de confirmación» a un cliente. Ver
+`src/config/legal.ts`.
+
+⚠️ Eso significa que **hoy el aviso legal se publica sin identificar al
+titular**, y el art. 10 de la LSSI lo exige. Como no se ve desde fuera, hay dos
+recordatorios:
+
+- `npx vite build` avisa por consola si las variables no están puestas
+  (`vite.config.ts`, plugin `dulce-flor-avisar-datos-legales`).
+- `LEGAL_DATA_PENDING`, en `src/config/legal.ts`, vale `true` mientras falten.
+
+Los datos los facilitó Dulce Flor por WhatsApp y están anotados **fuera del
+repositorio**. Se ponen como variables de entorno en Vercel, en las tres
+environments, y **nunca** en el código: son datos personales y esto es público.
 
 ## Datos del titular
 
