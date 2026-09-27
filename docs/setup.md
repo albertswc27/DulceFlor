@@ -217,6 +217,40 @@ esfuerzo:
 2. Mover la verificación y los pedidos a un backend o proveedor de identidad
    (ver `architecture.md`).
 
+## Aplicar el SQL en Supabase
+
+Hay cuatro ficheros en `supabase/` y **el orden importa**: `ficha-sms.sql`
+reescribe permisos que crea `equipo-y-permisos.sql`.
+
+```
+schema.sql            tablas base (ya aplicado)
+equipo-y-permisos.sql cierra los pedidos al equipo   <- obligatorio, ver abajo
+ficha-sms.sql         columnas del aviso y ficha publica
+imagen-ia.sql         contadores de gasto del generador de imagenes
+```
+
+Se pueden pegar a mano en el editor SQL de Supabase, o de una vez:
+
+```powershell
+$env:SUPABASE_ACCESS_TOKEN="sbp_..."   # supabase.com/dashboard/account/tokens
+node scripts/aplicar-sql.cjs
+```
+
+Los tres son idempotentes (`if not exists`, `or replace`, `on conflict do
+nothing`), así que volver a lanzarlo es seguro. Si uno falla, el script para
+ahí en vez de seguir contra una base a medio migrar.
+
+Para saber en cualquier momento qué falta, sin cambiar nada:
+`supabase/comprobar.sql`. Devuelve una línea por objeto con OK o FALTA, y
+además avisa si sigue presente el agujero de la política `using (true)`.
+
+Dos notas sobre la CLI de Supabase, porque cuestan media hora de averiguar:
+
+- **`supabase login` exige una terminal interactiva.** No se puede scriptar.
+  El token personal o la cadena de conexión son la alternativa.
+- **`supabase link` no hace falta**: `db query --project-ref <ref>` apunta al
+  proyecto en cada llamada, y la referencia sale del `.env`.
+
 ## Avisos por SMS
 
 El aviso automático al cliente cuando se tramita un pedido tiene su propio
