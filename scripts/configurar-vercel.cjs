@@ -43,12 +43,22 @@ function leerEnvLocal() {
   return valores;
 }
 
+/**
+ * `shell: true` es obligatorio en Windows: desde Node 20.12 no se pueden
+ * lanzar ficheros .cmd (y `npx` lo es) sin pasar por el intérprete, y el
+ * intento falla con EINVAL, que es indistinguible de «no hay sesión».
+ *
+ * Los argumentos que se le pasan son fijos y sin espacios; el único dato
+ * variable —el valor de la variable— viaja por la entrada estándar, así que
+ * no hay nada que citar ni que se pueda colar como comando.
+ */
 function vercel(args, entrada) {
   return execFileSync("npx", ["--yes", "vercel", ...args], {
     cwd: RAIZ,
     input: entrada,
     encoding: "utf8",
     stdio: ["pipe", "pipe", "pipe"],
+    shell: true,
   });
 }
 
