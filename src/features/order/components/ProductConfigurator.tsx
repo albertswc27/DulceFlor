@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { TOPPING_PRICE_CENTS } from "@/config/business";
+import { AI_PREVIEW_ENABLED, TOPPING_PRICE_CENTS } from "@/config/business";
 import { formatEuros } from "@/domain/money";
 import {
   getSizesFor,
@@ -292,7 +292,10 @@ function CakeConfigurator({
     "pastel-personalizado": "buttercream",
   };
   const suggestedFinish = ACABADO_POR_PRODUCTO[product.id];
-  const showAiPreview = suggestedFinish !== undefined;
+  // Apagado mientras el generador no tenga clave con facturacion: en modo
+  // pruebas devuelve una foto real de la tienda etiquetada como generada
+  // con IA, y eso delante de un cliente de verdad no puede salir.
+  const showAiPreview = AI_PREVIEW_ENABLED && suggestedFinish !== undefined;
 
   /**
    * Los sabores y rellenos sin suplemento son pocos, así que nombrarlos en el

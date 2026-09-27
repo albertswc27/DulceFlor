@@ -152,6 +152,7 @@ Ninguna con prefijo `VITE_`: el repositorio es público.
 | `AI_IMAGE_IP_SALT` | Cadena larga al azar. Cambiarla reinicia los contadores del día |
 | `AI_IMAGE_DAY_LIMIT` | Opcional, 40 por defecto |
 | `SUPABASE_SERVICE_ROLE_KEY` | Solo esta función la necesita: los contadores están cerrados a la clave pública |
+| `VITE_AI_PREVIEW` | **Interruptor de la interfaz.** `1` para enseñar el generador. Apagado por defecto: en modo pruebas devolvería fotos reales etiquetadas como IA a clientes reales |
 
 Base de datos: `supabase/imagen-ia.sql`, después de los otros tres.
 

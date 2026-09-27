@@ -235,3 +235,21 @@ export const PICKUP_CONDITIONS: readonly string[] = [
   "Una vez retirado el pedido del establecimiento, Dulce Flor no se responsabiliza de los daños causados por el transporte, golpes o manipulación.",
   "Transporta la tarta en plano, en el suelo del coche y evitando el calor directo.",
 ];
+
+/**
+ * ¿Se le enseña a la clienta el generador de imágenes con IA?
+ *
+ * **Apagado por defecto, y a propósito.** Con `IA_PROVEEDOR=pruebas` el
+ * servidor devuelve una de las fotos REALES de la tienda etiquetada como
+ * «generada con IA», escriba lo que escriba la clienta. Eso vale para
+ * revisar la interfaz, pero delante de un cliente de verdad es una función
+ * que parece rota —pides un unicornio y sale una tarta de nata cualquiera— y
+ * además pone una etiqueta falsa sobre una foto auténtica, que es justo lo
+ * que todo el aparato legal de esta funcionalidad intenta evitar.
+ *
+ * Se enciende con `VITE_AI_PREVIEW=1` en Vercel, y solo cuando la clave de
+ * Gemini tenga facturación: sin ella el modelo responde 0 peticiones al día.
+ * Ver docs/ia-imagenes.md.
+ */
+export const AI_PREVIEW_ENABLED =
+  (import.meta.env.VITE_AI_PREVIEW as string | undefined)?.trim() === "1";
