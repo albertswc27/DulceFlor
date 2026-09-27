@@ -132,12 +132,23 @@ function gemini(apiKey: string, modelo: string): ProveedorImagen {
         model: modelo,
         input,
         system_instruction: sistema,
-        // JPEG y no el PNG por defecto: el PNG pesa unas trece veces más y no
-        // cabría en el almacén del navegador ni en el bucket.
-        response_format: { mime_type: "image/jpeg" },
-        image_size: "1K",
-        // Vertical, que es como están hechas sus fotos y como se mira un móvil.
-        aspect_ratio: "4:5",
+        // TODO ESTO VA DENTRO DE response_format, no en la raíz. Comprobado
+        // contra la API real: con `image_size` o `aspect_ratio` sueltos
+        // responde 400 «Unknown parameter», así que el generador habría
+        // fallado en el 100% de las llamadas.
+        response_format: {
+          type: "image",
+          // JPEG y no el PNG por defecto: el PNG pesa unas trece veces más y
+          // no cabría en el almacén del navegador ni en el bucket.
+          mime_type: "image/jpeg",
+          // Flash Lite Image solo admite 1K, y la «K» va en mayúscula.
+          image_size: "1K",
+          // Vertical, que es como están hechas sus fotos y como se mira un móvil.
+          aspect_ratio: "4:5",
+          // Los bytes dentro de la respuesta, no una URL que habría que ir a
+          // buscar en una segunda petición.
+          delivery: "inline",
+        },
       };
       if (interaccionAnterior) cuerpo.previous_interaction_id = interaccionAnterior;
 

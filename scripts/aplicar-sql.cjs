@@ -47,13 +47,26 @@ const argumento = (nombre) => {
   return encontrado ? encontrado.slice(prefijo.length) : undefined;
 };
 
-/** La referencia del proyecto sale de la URL de Supabase del .env. */
-function referenciaDelProyecto() {
+/** Lee el .env local sin dependencias: solo NOMBRE=valor, ignorando comentarios. */
+function leerEnvLocal() {
   const ruta = path.join(RAIZ, ".env");
-  if (!fs.existsSync(ruta)) return undefined;
-  const url = fs
-    .readFileSync(ruta, "utf8")
-    .match(/^\s*VITE_SUPABASE_URL\s*=\s*https:\/\/([a-z0-9]+)\.supabase\.co/m);
+  if (!fs.existsSync(ruta)) return {};
+  const valores = {};
+  for (const linea of fs.readFileSync(ruta, "utf8").split(/\r?\n/)) {
+    const limpia = linea.trim();
+    if (!limpia || limpia.startsWith("#")) continue;
+    const corte = limpia.indexOf("=");
+    if (corte === -1) continue;
+    valores[limpia.slice(0, corte).trim()] = limpia.slice(corte + 1).trim();
+  }
+  return valores;
+}
+
+/** La referencia del proyecto sale de la URL de Supabase del .env. */
+function referenciaDelProyecto(local) {
+  const url = (local.VITE_SUPABASE_URL ?? "").match(
+    /^https:\/\/([a-z0-9]+)\.supabase\.co/
+  );
   return url?.[1];
 }
 
@@ -76,9 +89,13 @@ function supabase(args, entorno) {
 }
 
 function main() {
-  const dbUrl = argumento("db-url") ?? process.env.SUPABASE_DB_URL;
-  const token = argumento("token") ?? process.env.SUPABASE_ACCESS_TOKEN;
-  const ref = referenciaDelProyecto();
+  // El .env va el último: una variable puesta a mano en la terminal manda
+  // sobre lo que haya en el fichero, que es lo que se espera al probar algo.
+  const local = leerEnvLocal();
+  const dbUrl = argumento("db-url") ?? process.env.SUPABASE_DB_URL ?? local.SUPABASE_DB_URL;
+  const token =
+    argumento("token") ?? process.env.SUPABASE_ACCESS_TOKEN ?? local.SUPABASE_ACCESS_TOKEN;
+  const ref = referenciaDelProyecto(local);
 
   let destino;
   let entorno = {};
@@ -95,7 +112,10 @@ function main() {
       );
       process.exit(1);
     }
-    destino = ["--project-ref", ref];
+    // `--linked` es obligatorio al lado de `--project-ref`: sin él la CLI
+    // responde DbQueryMutuallyExclusiveFlagsError. Los dos juntos apuntan al
+    // proyecto en cada llamada y evitan tener que hacer `supabase link`.
+    destino = ["--linked", "--project-ref", ref];
     entorno = { SUPABASE_ACCESS_TOKEN: token };
     console.log(`Proyecto: ${ref}`);
   } else {

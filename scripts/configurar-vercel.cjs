@@ -301,6 +301,26 @@ function main() {
     VITE_SUPABASE_ANON_KEY: supabaseKey,
   };
 
+  // Las dos claves que cuestan dinero solo se ponen si están en el .env. Así
+  // el script sirve igual antes y después de contratarlas, y nadie tiene que
+  // acordarse de comentar una línea.
+  for (const nombre of ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY"]) {
+    const valor = local[nombre];
+    if (valor) variables[nombre] = valor;
+    else console.log(`(${nombre} no está en el .env: no la toco)`);
+  }
+
+  // La service_role se salta la seguridad por fila. Que esté en el .env es
+  // correcto —la lee la función del servidor—, pero si alguien la ha pegado
+  // con el prefijo VITE_ acabaría dentro del JavaScript público.
+  if (Object.keys(local).some((n) => n.startsWith("VITE_") && /SERVICE_ROLE|SECRET/i.test(n))) {
+    console.error(
+      "\nHay una variable VITE_ con pinta de clave secreta en el .env.\n" +
+        "Vite mete todo lo que empieza por VITE_ dentro del JavaScript público.\n"
+    );
+    process.exit(1);
+  }
+
   console.log("\nPoniendo variables del servidor:\n");
   for (const [nombre, valor] of Object.entries(variables)) poner(nombre, valor);
 

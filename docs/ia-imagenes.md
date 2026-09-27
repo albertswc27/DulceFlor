@@ -162,9 +162,12 @@ Base de datos: `supabase/imagen-ia.sql`, después de los otros tres.
 2. **Activar la facturación** de ese proyecto, con el botón **Upgrade to Paid**
    de esa misma pantalla.
 
-⚠️ **El segundo paso es el importante y no avisa de nada si se salta.** La clave
-del nivel gratuito *funciona igual*: el generador arranca, las imágenes salen y
-nada falla. Lo que cambia es la letra pequeña. La tabla de precios de Google lo
+⚠️ **Sin el segundo paso no sale ni una imagen.** Comprobado con la clave real:
+en el nivel gratuito `gemini-3.1-flash-lite-image` tiene un límite de **0
+peticiones al día** y la API responde `429 Rate limit exceeded ... on Free
+Tier`. No es una cuestión de cuota pequeña: el modelo no está disponible.
+
+Y aunque lo estuviera, cambia la letra pequeña. La tabla de precios de Google lo
 dice literalmente para cada modelo:
 
 | Nivel | Lo que dice Google |
@@ -180,16 +183,33 @@ Para comprobar en qué nivel está una clave: <https://aistudio.google.com/usage
 
 ---
 
-## Lo que falta confirmar con una llamada real
+## Comprobado contra la API real (27/09/2026)
 
-La forma exacta de la respuesta de la API de Gemini **no está verificada contra
-el servicio real**. El código la lee buscando la imagen en el árbol JSON en vez
-de por una ruta fija, precisamente para que un cambio de nombre de campo no
-tumbe el generador, pero la primera llamada con clave real hay que mirarla.
+Se verificó con una clave de verdad, y **apareció un fallo que habría tumbado el
+generador entero**: `image_size` y `aspect_ratio` estaban en la raíz del cuerpo
+de la petición, y van **dentro de `response_format`**. Sueltos, la API responde
+`400 Unknown parameter`, así que no habría salido ni una sola imagen.
 
-Igual pasa con el identificador de interacción que permite editar la imagen: si
-no llegara, el refinado generaría una imagen nueva en vez de modificar la
-anterior. Funcionaría, pero peor.
+Lo que queda comprobado:
+
+| | |
+| --- | --- |
+| Endpoint | `POST /v1beta/interactions` existe y es el correcto |
+| Modelo | `gemini-3.1-flash-lite-image` está disponible |
+| `image_size` | `512`, `1K`, `2K`, `4K`, **con la K en mayúscula**. Flash Lite **solo admite `1K`** |
+| `aspect_ratio` | `1:1 3:2 2:3 3:4 4:3 4:5 5:4 9:16 16:9 21:9`. Usamos `4:5` |
+| Respuesta | la imagen viaja en `steps[].content[]` como `{type:"image", data:"<base64>"}` |
+| Identificador | `id` en la raíz, que es el que se manda como `previous_interaction_id` |
+
+La forma del cuerpo está clavada con tests en `api/_ia-proveedores.test.ts`,
+porque es un fallo que no se ve en ninguna revisión: el cuerpo es un objeto
+suelto, el compilador no lo mira, y no aparece hasta que una clienta pulsa el
+botón.
+
+**Sigue sin comprobarse de extremo a extremo una generación con imagen**,
+porque la clave está en el nivel gratuito y ahí este modelo tiene un límite de
+**0 peticiones al día**: no es solo que Google entrene con lo enviado, es que no
+responde. En cuanto haya facturación hay que hacer una generación real y mirarla.
 
 Con `IA_PROVEEDOR=pruebas` todo lo demás —cupos, guardado, etiquetado, la
 casilla, el pedido— se puede verificar sin clave y sin gastar.
