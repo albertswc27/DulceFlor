@@ -5,4 +5,4 @@ Disallow: /admin
 # Cada ficha de pedido lleva datos de un cliente concreto: no se indexa.
 Disallow: /mi-pedido
 
-Sitemap: https://dulceflorbcn.es/sitemap.xml
+Sitemap: https://www.dulceflorbcn.es/sitemap.xml

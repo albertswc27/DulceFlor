@@ -228,7 +228,7 @@ describe("nombres que rompen el recorte", () => {
     requestedTime: "18:00",
     fulfillmentType: "pickup" as const,
   };
-  const URL = "https://dulceflorbcn.es/mi-pedido#bcdfghjkmnpqrstvwxyz2";
+  const URL = "https://www.dulceflorbcn.es/mi-pedido#bcdfghjkmnpqrstvwxyz2";
 
   it("un nombre con emoji no se parte por la mitad", () => {
     // Recortar con slice dejaria medio caracter —un sustituto suelto— y el

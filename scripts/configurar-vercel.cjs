@@ -139,7 +139,7 @@ function main() {
   const variables = {
     SUPABASE_URL: supabaseUrl,
     SUPABASE_ANON_KEY: supabaseKey,
-    PUBLIC_SITE_URL: "https://dulceflorbcn.es",
+    PUBLIC_SITE_URL: "https://www.dulceflorbcn.es",
     SMS_PROVIDER: "pruebas",
     SMS_SENDER: "DulceFlor",
   };

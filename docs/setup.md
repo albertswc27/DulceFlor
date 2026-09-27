@@ -233,6 +233,28 @@ hoy **cualquier usuario autenticado del proyecto puede leer todos los pedidos**,
 porque las políticas de `schema.sql` dicen `using (true)`. Ejecútalo aunque
 decidas no activar los avisos.
 
+## Sobre vercel.json
+
+Dos cosas que conviene no tocar sin saber por qué están:
+
+- El `rewrites` manda **todo** al `index.html`, porque el enrutado lo hace
+  React. Eso NO se traga las funciones de `/api`: Vercel resuelve el sistema de
+  ficheros —estáticos y funciones— *antes* de aplicar los rewrites. Se intentó
+  además excluir `/api` explícitamente con un patrón de exclusión, pero Vercel
+  lo rechaza al validar (`invalid source pattern`), y la alternativa con
+  parámetro con nombre ensucia el destino con una cadena de consulta. Así que
+  se deja el catch-all, que es lo correcto y lo que ya funcionaba.
+- **Nunca** usar la propiedad antigua `routes` para el fallback del SPA: esa sí
+  se evalúa antes del sistema de ficheros y dejaría las funciones sin
+  responder.
+- `api/generar-imagen.ts` tiene 60 segundos y el resto 15: generar una imagen
+  tarda segundos, y con 15 Vercel cortaría la petición justo antes de recibir
+  la imagen… que ya se habría pagado.
+
+Nota: `vercel.json` valida contra un esquema y **rechaza propiedades que no
+conozca**, así que no se le pueden meter comentarios en forma de clave extra.
+El despliegue falla con «should NOT have additional property».
+
 ## Generador de imágenes con IA
 
 Tiene su propio documento: **[ia-imagenes.md](ia-imagenes.md)**. Léelo antes de

@@ -85,7 +85,7 @@ JavaScript que se descarga cualquier visitante, y este repositorio es público.
 | `TWILIO_AUTH_TOKEN` | Solo si `SMS_PROVIDER=twilio` |
 | `SUPABASE_URL` | La misma URL que `VITE_SUPABASE_URL` |
 | `SUPABASE_ANON_KEY` | La misma clave que `VITE_SUPABASE_ANON_KEY` |
-| `PUBLIC_SITE_URL` | `https://dulceflorbcn.es` (confirmado el 26/09/2026), sin barra final. **Va dentro de cada SMS enviado**: cambiarlo después deja muertos los enlaces ya enviados |
+| `PUBLIC_SITE_URL` | `https://www.dulceflorbcn.es` — el canónico; el apex redirige con un 308, sin barra final. **Va dentro de cada SMS enviado**: cambiarlo después deja muertos los enlaces ya enviados |
 | `SMS_MAX_POR_PEDIDO` | Opcional, 5 por defecto. Tope de envíos del mismo pedido, incluso pidiendo reenvío a mano |
 | `SMS_PREFIJOS_PERMITIDOS` | Opcional, `+34` por defecto. Países a los que se acepta enviar, separados por comas |
 
@@ -199,7 +199,7 @@ real antes de enviar.
 # 1. En Vercel (o en .env local si se usa `vercel dev`):
 SMS_PROVIDER=pruebas
 SMS_SENDER=DulceFlor
-PUBLIC_SITE_URL=https://dulceflorbcn.es
+PUBLIC_SITE_URL=https://www.dulceflorbcn.es
 SUPABASE_URL=…
 SUPABASE_ANON_KEY=…
 ```
