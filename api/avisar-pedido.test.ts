@@ -58,6 +58,9 @@ vi.mock("@supabase/supabase-js", () => ({
 
 const { default: handler } = await import("./avisar-pedido");
 
+/** Con forma de JWT (tres partes) para pasar el filtro barato previo. */
+const JWT = ["eyJhbGciOiJIUzI1NiJ9", "eyJzdWIiOiJ1c2VyLTEifQ", "firma-de-mentira"].join(".");
+
 const PEDIDO = {
   id: "11111111-2222-3333-4444-555555555555",
   public_id: "DF-2026-A1B2C",
@@ -68,9 +71,12 @@ const PEDIDO = {
   requested_time: "18:00",
   fulfillment_type: "pickup",
   payload: {},
+  customer_notified_at: null,
+  sms_opt_out: false,
+  sms_sent_count: 0,
 };
 
-function peticion(body: unknown, { token = "jwt-valido" }: { token?: string | null } = {}) {
+function peticion(body: unknown, { token = JWT }: { token?: string | null } = {}) {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token !== null) headers.Authorization = `Bearer ${token}`;
   return new Request("https://dulceflorbcn.es/api/avisar-pedido", {
@@ -110,6 +116,15 @@ describe("quién puede llamar", () => {
     const res = await handler.fetch(peticion({ orderId: PEDIDO.id }, { token: null }));
     expect(res.status).toBe(401);
     expect((await cuerpo(res)).error).toBe("sin_sesion");
+  });
+
+  it("descarta sin salir a la red lo que no tiene forma de JWT", async () => {
+    const res = await handler.fetch(peticion({ orderId: PEDIDO.id }, { token: "basura" }));
+    expect(res.status).toBe(401);
+    // No llega ni a preguntarle a Supabase: es lo que evita que miles de
+    // peticiones con basura agoten el límite del servicio de autenticación
+    // y dejen al equipo sin poder entrar al panel.
+    expect(actualizaciones).toHaveLength(0);
   });
 
   it("con un token que Supabase rechaza, tampoco", async () => {
@@ -157,7 +172,7 @@ describe("qué pedido", () => {
     const res = await handler.fetch(
       new Request("https://dulceflorbcn.es/api/avisar-pedido", {
         method: "POST",
-        headers: { Authorization: "Bearer jwt", "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${JWT}`, "Content-Type": "application/json" },
         body: "{{{",
       })
     );
@@ -180,7 +195,7 @@ describe("qué pedido", () => {
 
 describe("todo lo que evita un gasto inútil", () => {
   it("respeta al cliente que ha pedido que no le avisen por SMS", async () => {
-    escenario.pedido = { ...PEDIDO, payload: { smsOptOut: true } };
+    escenario.pedido = { ...PEDIDO, sms_opt_out: true };
     const res = await handler.fetch(peticion({ orderId: PEDIDO.id }));
     expect(res.status).toBe(409);
     expect((await cuerpo(res)).error).toBe("sin_sms");
@@ -190,7 +205,8 @@ describe("todo lo que evita un gasto inútil", () => {
   it("no avisa dos veces al mismo cliente", async () => {
     escenario.pedido = {
       ...PEDIDO,
-      payload: { customerNotifiedAt: "2026-09-25T10:00:00.000Z" },
+      customer_notified_at: "2026-09-25T10:00:00.000Z",
+      sms_sent_count: 1,
     };
     const res = await handler.fetch(peticion({ orderId: PEDIDO.id }));
     expect(res.status).toBe(409);
@@ -201,7 +217,8 @@ describe("todo lo que evita un gasto inútil", () => {
   it("pero sí reenvía cuando se pide expresamente", async () => {
     escenario.pedido = {
       ...PEDIDO,
-      payload: { customerNotifiedAt: "2026-09-25T10:00:00.000Z" },
+      customer_notified_at: "2026-09-25T10:00:00.000Z",
+      sms_sent_count: 1,
     };
     const res = await handler.fetch(peticion({ orderId: PEDIDO.id, force: true }));
     expect(res.status).toBe(200);
@@ -226,6 +243,48 @@ describe("todo lo que evita un gasto inútil", () => {
   });
 });
 
+describe("topes que protegen la factura", () => {
+  it("no pasa del tope de SMS por pedido ni pidiendo reenvío", async () => {
+    escenario.pedido = {
+      ...PEDIDO,
+      customer_notified_at: "2026-09-01T10:00:00.000Z",
+      sms_sent_count: 5,
+    };
+    const res = await handler.fetch(peticion({ orderId: PEDIDO.id, force: true }));
+    expect(res.status).toBe(429);
+    expect((await cuerpo(res)).error).toBe("tope_alcanzado");
+    expect(actualizaciones).toHaveLength(0);
+  });
+
+  it("un reenvío inmediato se frena: es lo que convierte un bucle en una factura", async () => {
+    escenario.pedido = {
+      ...PEDIDO,
+      customer_notified_at: new Date().toISOString(),
+      sms_sent_count: 1,
+    };
+    const res = await handler.fetch(peticion({ orderId: PEDIDO.id, force: true }));
+    expect(res.status).toBe(429);
+    expect((await cuerpo(res)).error).toBe("demasiado_pronto");
+    expect(actualizaciones).toHaveLength(0);
+  });
+
+  it("no envía a un país que no está en la lista permitida", async () => {
+    // Un numero de tarificacion especial puede costar varios euros por
+    // mensaje, y el telefono lo escribe quien rellena el formulario publico.
+    escenario.pedido = { ...PEDIDO, customer_phone: "+8816 2233 4455" };
+    const res = await handler.fetch(peticion({ orderId: PEDIDO.id }));
+    expect(res.status).toBe(422);
+    expect((await cuerpo(res)).error).toBe("destino_no_permitido");
+    expect(actualizaciones).toHaveLength(0);
+  });
+
+  it("el contador de envíos sube con cada aviso", async () => {
+    escenario.pedido = { ...PEDIDO, sms_sent_count: 2 };
+    await handler.fetch(peticion({ orderId: PEDIDO.id }));
+    expect(actualizaciones[0].sms_sent_count).toBe(3);
+  });
+});
+
 describe("el envío correcto", () => {
   it("responde con el enlace, el coste y el momento del envío", async () => {
     const res = await handler.fetch(peticion({ orderId: PEDIDO.id }));
@@ -236,16 +295,27 @@ describe("el envío correcto", () => {
     // Un aviso normal tiene que caber en un solo SMS facturado.
     expect(body.segments).toBe(1);
     expect(body.encoding).toBe("gsm7");
+    // El token va tras la almohadilla: el fragmento no viaja al servidor, asi
+    // que la llave del pedido no queda escrita en ningun registro de peticiones.
     expect(String(body.cardUrl)).toMatch(
-      /^https:\/\/dulceflorbcn\.es\/mi-pedido\/[2-9bcdfghjkmnpqrstvwxyz]{22}$/
+      /^https:\/\/dulceflorbcn\.es\/mi-pedido#[2-9bcdfghjkmnpqrstvwxyz]{22}$/
     );
     expect(typeof body.sentAt).toBe("string");
+  });
+
+  it("es el SERVIDOR quien marca el aviso, no el navegador", async () => {
+    // Si lo marcara el navegador, una tablet con la copia vieja del pedido
+    // borraria la marca al subir la fila y saldria un segundo SMS pagado.
+    await handler.fetch(peticion({ orderId: PEDIDO.id }));
+    const guardado = actualizaciones[0];
+    expect(typeof guardado.customer_notified_at).toBe("string");
+    expect(guardado.customer_notified_by).toBe("sms");
   });
 
   it("guarda el HASH del token, nunca el token que viaja en el SMS", async () => {
     const res = await handler.fetch(peticion({ orderId: PEDIDO.id }));
     const body = await cuerpo(res);
-    const token = String(body.cardUrl).split("/").pop()!;
+    const token = String(body.cardUrl).split("#").pop()!;
 
     expect(actualizaciones).toHaveLength(1);
     const guardado = actualizaciones[0];

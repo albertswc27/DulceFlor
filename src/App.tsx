@@ -51,7 +51,7 @@ export default function App() {
               {/* Ficha privada del pedido, la que se abre desde el SMS. Cuelga de su
                   propia raíz y no de /pedido para poder excluirla de los buscadores
                   sin tapar el configurador. */}
-              <Route path="/mi-pedido/:token" element={<PublicOrderPage />} />
+              <Route path="/mi-pedido" element={<PublicOrderPage />} />
             </Route>
 
             <Route path="/admin" element={<AdminLoginPage />} />

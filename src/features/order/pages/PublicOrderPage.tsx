@@ -8,7 +8,7 @@
  * enlace (ver services/publicOrder.ts).
  */
 import * as React from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -209,7 +209,9 @@ function OrderCard({ order }: { order: PublicOrderView }) {
           ) : (
             <>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Total del pedido</span>
+                <span className="text-muted-foreground">
+                  {order.pendingExtras ? "Total actual" : "Total del pedido"}
+                </span>
                 <span className="font-display text-xl font-bold text-primary">
                   {formatEuros(order.totalCents ?? 0)}
                 </span>
@@ -223,20 +225,53 @@ function OrderCard({ order }: { order: PublicOrderView }) {
                 </div>
               )}
               <Separator />
-              <div className="flex items-center justify-between">
-                <span className="font-medium text-foreground">
-                  {isDelivery ? "Pendiente al recibir" : "Pendiente al recoger"}
-                </span>
-                <span className="font-display text-xl font-bold text-primary">
-                  {order.balanceDueCents === null
-                    ? "Por confirmar"
-                    : formatEuros(order.balanceDueCents)}
-                </span>
-              </div>
-              <p className="pt-1 text-xs text-muted-foreground">
-                Puedes pagar en efectivo, por Bizum o con transferencia. La web no
-                realiza cobros.
-              </p>
+              {/* Si se cobró de más, el cliente tiene que enterarse por aquí
+                  igual que se enteraba por el aviso en papel. */}
+              {order.overpaidCents !== null && order.overpaidCents > 0 ? (
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-foreground">Te devolvemos</span>
+                  <span className="font-display text-xl font-bold text-success">
+                    {formatEuros(order.overpaidCents)}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-foreground">
+                    {isDelivery ? "Pendiente al recibir" : "Pendiente al recoger"}
+                  </span>
+                  <span className="font-display text-xl font-bold text-primary">
+                    {order.balanceDueCents === null
+                      ? "Por confirmar"
+                      : formatEuros(order.balanceDueCents)}
+                  </span>
+                </div>
+              )}
+              {/* Dos avisos que el panel ya le da a Dulce Flor y que el cliente
+                  tiene el mismo derecho a ver: un importe que aún puede moverse
+                  no se le puede presentar como cerrado. */}
+              {order.pendingExtras && (
+                <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
+                  Has pedido algo que tenemos que revisar (una nota, un topping
+                  fuera de lista o una imagen de referencia), así que
+                  <strong> este importe todavía puede cambiar</strong>. Te
+                  confirmamos el total definitivo por WhatsApp.
+                </p>
+              )}
+              {order.deliveryFeePending && (
+                <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
+                  Tu dirección está fuera de nuestras zonas con tarifa fija, así que
+                  <strong> este importe todavía no incluye el transporte</strong>.
+                  Te lo confirmamos por WhatsApp.
+                </p>
+              )}
+              {/* Si somos nosotros quienes le debemos dinero, explicarle como
+                  pagar es absurdo. */}
+              {!(order.overpaidCents !== null && order.overpaidCents > 0) && (
+                <p className="pt-1 text-xs text-muted-foreground">
+                  Puedes pagar en efectivo, por Bizum o con transferencia. La web no
+                  realiza cobros.
+                </p>
+              )}
             </>
           )}
         </CardContent>
@@ -316,14 +351,16 @@ function useNoIndex() {
 }
 
 export default function PublicOrderPage() {
-  const { token } = useParams<{ token: string }>();
+  // El token llega en el fragmento de la URL, no en la ruta: así no viaja
+  // al servidor y no queda escrito en ningún registro de peticiones.
+  const token = useLocation().hash.replace(/^#/, "");
   const [result, setResult] = React.useState<PublicOrderResult | null>(null);
   useNoIndex();
 
   React.useEffect(() => {
     let alive = true;
     setResult(null);
-    void fetchPublicOrder(token ?? "").then((r) => {
+    void fetchPublicOrder(token).then((r) => {
       if (alive) setResult(r);
     });
     return () => {

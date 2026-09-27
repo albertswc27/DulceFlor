@@ -213,10 +213,49 @@ describe("margen del SMS frente a cambios de dominio", () => {
         requestedTime: "20:30",
         fulfillmentType: "delivery",
       },
-      "https://www.dulceflorbcn.es/mi-pedido/bcdfghjkmnpqrstvwxyz2"
+      "https://www.dulceflorbcn.es/mi-pedido#bcdfghjkmnpqrstvwxyz2"
     );
     const coste = measureSms(texto);
     expect(coste.segments).toBe(1);
     expect(coste.remaining).toBeGreaterThanOrEqual(10);
+  });
+});
+
+describe("nombres que rompen el recorte", () => {
+  const BASE = {
+    publicId: "DF-2026-A1B2C",
+    requestedDate: "2026-09-30",
+    requestedTime: "18:00",
+    fulfillmentType: "pickup" as const,
+  };
+  const URL = "https://dulceflorbcn.es/mi-pedido#bcdfghjkmnpqrstvwxyz2";
+
+  it("un nombre con emoji no se parte por la mitad", () => {
+    // Recortar con slice dejaria medio caracter —un sustituto suelto— y el
+    // proveedor rechazaria el mensaje por «caracteres no validos»: el aviso no
+    // saldria y nadie sabria por que. Se recorta por puntos de codigo.
+    const texto = buildOrderStatusSms(
+      { ...BASE, customerName: "Mariaisabel\u{1F382}Perez" },
+      URL
+    );
+    const sueltos = [...texto].filter((c) => {
+      const p = c.codePointAt(0)!;
+      return p >= 0xd800 && p <= 0xdfff;
+    });
+    expect(sueltos).toEqual([]);
+    expect(JSON.parse(JSON.stringify(texto))).toBe(texto);
+  });
+
+  it("aguanta un nombre de una sola letra", () => {
+    const texto = buildOrderStatusSms({ ...BASE, customerName: "A" }, URL);
+    expect(texto).toContain("A, pedido");
+    expect(measureSms(texto).segments).toBe(1);
+  });
+
+  it("aguanta un nombre vacio sin dejar el mensaje ilegible", () => {
+    const texto = buildOrderStatusSms({ ...BASE, customerName: "   " }, URL);
+    expect(texto).toContain("DF-2026-A1B2C");
+    expect(texto).toContain("tramitado");
+    expect(measureSms(texto).segments).toBe(1);
   });
 });

@@ -175,6 +175,14 @@ export interface OrderRow {
   customer_phone: string;
   customer_email: string | null;
   payload: Record<string, unknown>;
+  /**
+   * Columnas del aviso por SMS. Las escribe el SERVIDOR (ver
+   * api/avisar-pedido.ts) y `toRow` no las devuelve nunca, así que subir un
+   * pedido desde el panel no puede pisarlas. Solo llegan de vuelta al leer.
+   */
+  customer_notified_at?: string | null;
+  customer_notified_by?: string | null;
+  sms_opt_out?: boolean | null;
 }
 
 /**
@@ -183,7 +191,22 @@ export interface OrderRow {
  * bengalas, discos…) sin migrar la base de datos.
  */
 export function toRow(order: Order): OrderRow {
-  const { id, publicId, createdAt, status, customer, ...rest } = order;
+  // customerNotifiedAt, customerNotifiedBy y smsOptOut se sacan a propósito:
+  // viven en columnas propias que manda el servidor. Si se colaran en
+  // `payload`, subir el pedido desde una tablet con la copia vieja borraría
+  // la marca de «ya avisado» y el cliente recibiría —y la tienda pagaría—
+  // un segundo SMS.
+  const {
+    id,
+    publicId,
+    createdAt,
+    status,
+    customer,
+    customerNotifiedAt: _notificadoEn,
+    customerNotifiedBy: _notificadoPor,
+    smsOptOut: _sinSms,
+    ...rest
+  } = order;
   return {
     id,
     public_id: publicId,
@@ -207,6 +230,14 @@ export function fromRow(row: OrderRow): Order | null {
     publicId: row.public_id,
     createdAt: row.created_at,
     status: normalizeOrderStatus(row.status),
+    // Estas tres mandan desde la columna, no desde el payload: es la copia
+    // que escribe el servidor y la única de fiar.
+    customerNotifiedAt: row.customer_notified_at ?? undefined,
+    customerNotifiedBy:
+      row.customer_notified_by === "sms" || row.customer_notified_by === "whatsapp"
+        ? row.customer_notified_by
+        : undefined,
+    smsOptOut: row.sms_opt_out === true ? true : undefined,
   } as Order;
   // Una fila escrita por una versión distinta de la web podría no encajar:
   // se descarta en vez de reventar el panel entero.
@@ -302,10 +333,28 @@ class OrderRepositoryImpl implements OrderRepository {
   }
 
   setSmsOptOut(id: string, optOut: boolean): Order | undefined {
-    return this.mutate(id, (order) => ({
+    const updated = this.mutate(id, (order) => ({
       ...order,
       smsOptOut: optOut ? true : undefined,
     }));
+    // `mutate` sube la fila completa, y `toRow` ya no incluye esta columna
+    // (a propósito: el panel no debe pisar lo que escribe el servidor). Así
+    // que la preferencia se manda aparte, en una escritura dirigida solo a
+    // su columna. Si falla, queda guardada en local y el envío automático la
+    // respeta en este dispositivo; el servidor la recibirá al reintentarlo.
+    if (updated) void this.pushSmsOptOut(id, optOut);
+    return updated;
+  }
+
+  private async pushSmsOptOut(id: string, optOut: boolean): Promise<void> {
+    const supabase = await getSupabase();
+    if (!supabase) return;
+    try {
+      await supabase.from("orders").update({ sms_opt_out: optOut }).eq("id", id);
+    } catch {
+      // Silencioso a propósito: es una preferencia, no un pedido. Lo que no
+      // puede es tumbar el panel.
+    }
   }
 
   private mutate(id: string, change: (order: Order) => Order): Order | undefined {

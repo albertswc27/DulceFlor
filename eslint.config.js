@@ -26,7 +26,13 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": "off",
-      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        // El guion bajo marca lo que se declara solo para APARTARLO: al
+        // desestructurar un objeto, sacar un campo es la forma de excluirlo
+        // del resto (ver toRow en services/orderRepository.ts).
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
     },
   }
 );

@@ -223,9 +223,15 @@ El aviso automático al cliente cuando se tramita un pedido tiene su propio
 documento: **[sms.md](sms.md)**. Léelo antes de activarlo — hay un trámite en la
 CNMC que puede tardar un mes y sin el cual los SMS no llegan.
 
-Resumen: `supabase/ficha-sms.sql` en Supabase, las variables `SMS_*`,
-`SUPABASE_URL`, `SUPABASE_ANON_KEY` y `PUBLIC_SITE_URL` en Vercel, y
-`SMS_PROVIDER=pruebas` mientras se tramita el alias.
+Resumen: `supabase/equipo-y-permisos.sql` y luego `supabase/ficha-sms.sql` en
+Supabase, las variables `SMS_*`, `SUPABASE_URL`, `SUPABASE_ANON_KEY` y
+`PUBLIC_SITE_URL` en Vercel, y `SMS_PROVIDER=pruebas` mientras se tramita el
+alias.
+
+⚠️ `equipo-y-permisos.sql` no es opcional ni es solo para los SMS: arregla que
+hoy **cualquier usuario autenticado del proyecto puede leer todos los pedidos**,
+porque las políticas de `schema.sql` dicen `using (true)`. Ejecútalo aunque
+decidas no activar los avisos.
 
 ## Configuración pendiente de Dulce Flor
 

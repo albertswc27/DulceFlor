@@ -194,7 +194,11 @@ const MAX_FIRST_NAME = 12;
 
 function firstName(fullName: string): string {
   const first = fullName.trim().split(/\s+/)[0] ?? "";
-  return first.length > MAX_FIRST_NAME ? first.slice(0, MAX_FIRST_NAME) : first;
+  // Se recorta por PUNTOS DE CÓDIGO, no con slice. Un slice parte por la mitad
+  // los caracteres que ocupan dos unidades (una emoji pegada al nombre, y pasa)
+  // y deja una cadena mal formada que el proveedor rechaza por «caracteres no
+  // válidos»: el aviso no saldría y nadie sabría por qué.
+  return [...first].slice(0, MAX_FIRST_NAME).join("");
 }
 
 /**

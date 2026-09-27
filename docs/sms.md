@@ -86,6 +86,8 @@ JavaScript que se descarga cualquier visitante, y este repositorio es público.
 | `SUPABASE_URL` | La misma URL que `VITE_SUPABASE_URL` |
 | `SUPABASE_ANON_KEY` | La misma clave que `VITE_SUPABASE_ANON_KEY` |
 | `PUBLIC_SITE_URL` | `https://dulceflorbcn.es` (confirmado el 26/09/2026), sin barra final. **Va dentro de cada SMS enviado**: cambiarlo después deja muertos los enlaces ya enviados |
+| `SMS_MAX_POR_PEDIDO` | Opcional, 5 por defecto. Tope de envíos del mismo pedido, incluso pidiendo reenvío a mano |
+| `SMS_PREFIJOS_PERMITIDOS` | Opcional, `+34` por defecto. Países a los que se acepta enviar, separados por comas |
 
 Las variables solo se aplican a despliegues **nuevos**: después de añadirlas hay
 que volver a desplegar.
@@ -99,16 +101,45 @@ que volver a desplegar.
 
 ## Base de datos
 
-Ejecutar `supabase/ficha-sms.sql` en el SQL Editor de Supabase, **después** de
-`schema.sql`. Es idempotente. Añade:
+En el SQL Editor de Supabase, **en este orden** y después de `schema.sql`. Los
+dos son idempotentes.
 
-- `orders.card_token_hash` y `orders.card_expires_at`.
+### 1. `supabase/equipo-y-permisos.sql` — ⚠️ obligatorio antes de los SMS
+
+Arregla un agujero que ya existía: las políticas de `schema.sql` se llaman
+«solo el equipo lee los pedidos» pero dicen `to authenticated using (true)`, es
+decir, **cualquiera que consiga ser un usuario autenticado del proyecto podía
+leerlo todo**. Y la clave anon viaja dentro del JavaScript de la web —es pública
+por diseño—, así que con el alta libre puesta (como viene Supabase de fábrica)
+bastaba con registrarse para descargarse la agenda entera de clientes.
+
+Con los SMS eso se agrava: ese mismo usuario podría pedir el envío de un aviso
+por cada pedido y vaciar el saldo.
+
+El fichero crea la tabla `team_members`, da de alta automáticamente a las
+cuentas que ya existen —para no dejar a nadie fuera del panel— y cambia las
+políticas para que estar autenticado deje de ser suficiente. **Sigue haciendo
+falta desactivar el alta libre** en Authentication → Sign In / Providers →
+Email; esto es la segunda cerradura, no la primera.
+
+### 2. `supabase/ficha-sms.sql`
+
+- Columnas `card_token_hash`, `card_expires_at`, `customer_notified_at`,
+  `customer_notified_by`, `sms_opt_out` y `sms_sent_count`.
+- Acota el `INSERT` de `anon` a las columnas que el formulario público escribe
+  de verdad, para que nadie pueda registrar un pedido fijando él mismo el hash
+  del enlace o el contador de envíos.
 - La función `get_order_card(token)`, que es lo que lee la ficha pública.
 
-La base de datos guarda el **hash** del token, nunca el token. Consecuencia
-buscada: si alguien se llevara la tabla entera, no podría fabricar enlaces
-válidos. Consecuencia asumida: **reenviar el aviso genera un enlace nuevo y el
-anterior deja de funcionar**.
+Dos decisiones que conviene conocer:
+
+- **Se guarda el hash del token, nunca el token.** Si alguien se llevara la
+  tabla entera, no podría fabricar enlaces válidos. A cambio, reenviar el aviso
+  genera un enlace nuevo y el anterior deja de funcionar.
+- **Las marcas del aviso van en columnas, no dentro de `payload`.** El panel
+  sube el pedido con la fila completa, así que una tablet con una copia de hace
+  diez minutos borraría la marca de «ya avisado» y el sistema mandaría —y
+  cobraría— un segundo SMS al mismo cliente.
 
 ---
 
@@ -132,6 +163,15 @@ Casos que el panel resuelve sin que haya que preguntar a nadie:
 | El cliente no quiere SMS | Se marca en su pedido y el envío automático lo respeta |
 | Sin saldo / credenciales mal | Mensaje concreto en el panel y botón de WhatsApp |
 | Sin conexión | Se dice que no se ha enviado, y se puede reintentar |
+| Teléfono de otro país | Se rechaza salvo que su prefijo esté en `SMS_PREFIJOS_PERMITIDOS`: un número de tarificación especial puede costar euros por mensaje |
+| Se pide reenviar dos veces seguidas | Se frena un minuto; y nunca más de `SMS_MAX_POR_PEDIDO` envíos por pedido |
+
+### Por qué el enlace lleva almohadilla
+
+El enlace es `https://dulceflorbcn.es/mi-pedido#<token>`, con el token **después
+de la almohadilla**. El fragmento de una URL no se envía al servidor, así que la
+llave que abre la ficha no queda escrita en el registro de peticiones de cada
+visita ni puede escaparse por la cabecera `Referer`.
 
 ---
 

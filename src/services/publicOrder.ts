@@ -35,6 +35,20 @@ export interface PublicOrderView {
   depositPaidCents: number;
   /** Lo que queda por pagar al recoger. null si el total aún no es firme. */
   balanceDueCents: number | null;
+  /**
+   * Dinero a favor del cliente: se cobró señal sobre algo a presupuestar y
+   * el presupuesto cerró por debajo. El aviso en papel lo decía; la ficha
+   * no puede perderlo.
+   */
+  overpaidCents: number | null;
+  /**
+   * El pedido lleva peticiones que Dulce Flor tiene que revisar y que
+   * pueden mover el importe. El panel y el WhatsApp rotulan «TOTAL ACTUAL»
+   * en ese caso; la ficha del cliente tiene que decir lo mismo.
+   */
+  pendingExtras: boolean;
+  /** Entrega fuera de zona con tarifa: al total le falta el transporte. */
+  deliveryFeePending: boolean;
   urgent: boolean;
 }
 
@@ -82,6 +96,9 @@ function parseRow(row: unknown): PublicOrderView | null {
     totalCents: numberOrNull(r.total_cents),
     depositPaidCents: numberOrNull(r.deposit_paid_cents) ?? 0,
     balanceDueCents: numberOrNull(r.balance_due_cents),
+    overpaidCents: numberOrNull(r.overpaid_cents),
+    pendingExtras: r.pending_extras === true,
+    deliveryFeePending: r.delivery_fee_pending === true,
     urgent: r.urgent === true,
   };
 }
@@ -131,7 +148,14 @@ export async function fetchPublicOrder(token: string): Promise<PublicOrderResult
   }
 }
 
-/** URL absoluta de la ficha, que es lo que viaja dentro del SMS. */
+/**
+ * URL absoluta de la ficha, que es lo que viaja dentro del SMS.
+ *
+ * El token va en el FRAGMENTO (después de #), no en la ruta. El fragmento
+ * no se envía nunca al servidor: así la llave del pedido no queda escrita
+ * en el registro de peticiones de cada visita ni puede escaparse por la
+ * cabecera Referer si algún día se añade un enlace externo sin cuidado.
+ */
 export function buildPublicOrderUrl(origin: string, token: string): string {
-  return `${origin.replace(/\/+$/, "")}/mi-pedido/${token}`;
+  return `${origin.replace(/\/+$/, "")}/mi-pedido#${token}`;
 }

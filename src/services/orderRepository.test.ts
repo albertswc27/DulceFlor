@@ -187,11 +187,46 @@ describe("estados retirados al simplificar el flujo (20/09/2026)", () => {
   });
 });
 
-describe("aviso al cliente", () => {
-  it("el momento del aviso viaja a la base de datos y vuelve", () => {
-    const avisado: Order = { ...PEDIDO, customerNotifiedAt: "2026-09-21T09:30:00.000Z" };
-    expect(fromRow(toRow(avisado))?.customerNotifiedAt).toBe(
-      "2026-09-21T09:30:00.000Z"
-    );
+describe("aviso al cliente: quien es el dueno de la marca", () => {
+  // Estas tres marcas las escribe el SERVIDOR en columnas propias. Si viajaran
+  // dentro de `payload`, subir el pedido desde una tablet con la copia vieja
+  // las borraria, y el cliente recibiria —y la tienda pagaria— un segundo SMS.
+  it("toRow NO las manda: subir un pedido no puede pisarlas", () => {
+    const avisado: Order = {
+      ...PEDIDO,
+      customerNotifiedAt: "2026-09-21T09:30:00.000Z",
+      customerNotifiedBy: "sms",
+      smsOptOut: true,
+    };
+    const fila = toRow(avisado);
+    const comoTexto = JSON.stringify(fila.payload);
+    expect(comoTexto).not.toContain("customerNotifiedAt");
+    expect(comoTexto).not.toContain("customerNotifiedBy");
+    expect(comoTexto).not.toContain("smsOptOut");
+  });
+
+  it("fromRow las lee de la columna, que es la copia de fiar", () => {
+    const fila = {
+      ...toRow(PEDIDO),
+      customer_notified_at: "2026-09-21T09:30:00.000Z",
+      customer_notified_by: "sms",
+      sms_opt_out: true,
+    };
+    const pedido = fromRow(fila);
+    expect(pedido?.customerNotifiedAt).toBe("2026-09-21T09:30:00.000Z");
+    expect(pedido?.customerNotifiedBy).toBe("sms");
+    expect(pedido?.smsOptOut).toBe(true);
+  });
+
+  it("un pedido sin avisar vuelve sin marcas, no con basura", () => {
+    const pedido = fromRow(toRow(PEDIDO));
+    expect(pedido?.customerNotifiedAt).toBeUndefined();
+    expect(pedido?.customerNotifiedBy).toBeUndefined();
+    expect(pedido?.smsOptOut).toBeUndefined();
+  });
+
+  it("un canal desconocido en la columna no se cuela en el dominio", () => {
+    const fila = { ...toRow(PEDIDO), customer_notified_by: "paloma-mensajera" };
+    expect(fromRow(fila)?.customerNotifiedBy).toBeUndefined();
   });
 });

@@ -263,9 +263,20 @@ function twilio(accountSid: string, authToken: string): SmsProvider {
 function consola(): SmsProvider {
   return {
     name: "pruebas",
-    async send({ to, text, sender }) {
+    async send({ to, text, sender, reference }) {
+      // Lo que se escribe aquí acaba en los registros de Vercel, que ve
+      // cualquiera con acceso al proyecto y que se reenvían a cualquier
+      // integración que se contrate. Así que NO va el texto entero: llevaría
+      // el móvil del cliente y el enlace con el token en claro, es decir, una
+      // llave viva de su ficha durante semanas. Y en modo pruebas no se envía
+      // ningún SMS, con lo que el registro sería el único sitio donde
+      // existiría ese enlace.
+      //
+      // Para probar no hace falta nada de eso: el endpoint ya devuelve el
+      // enlace en su respuesta y el panel lo enseña.
       console.info(
-        `[SMS en modo pruebas] de "${sender}" a ${to} (${text.length} caracteres): ${text}`
+        `[SMS en modo pruebas] pedido ${reference}, remitente "${sender}", ` +
+          `destino ***${to.slice(-3)}, ${text.length} caracteres`
       );
       return { ok: true, providerId: null };
     },
