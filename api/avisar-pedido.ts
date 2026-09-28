@@ -21,9 +21,9 @@ import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 // En las funciones de Vercel no existe el alias «@/»: es cosa de Vite y del
 // tsconfig, y el empaquetador de la función no lo resuelve. Rutas relativas.
-import { buildOrderStatusSms, measureSms, PHONE_PROBLEM_MESSAGES, toE164 } from "../src/domain/sms";
-import { newOrderToken } from "../src/domain/orderId";
-import { buildProvider } from "./_sms-providers";
+import { buildOrderStatusSms, measureSms, PHONE_PROBLEM_MESSAGES, toE164 } from "../src/domain/sms.js";
+import { newOrderToken } from "../src/domain/orderId.js";
+import { buildProvider } from "./_sms-providers.js";
 
 export const config = { runtime: "nodejs", maxDuration: 15 };
 

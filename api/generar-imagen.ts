@@ -27,8 +27,8 @@ import {
   describeAiPreview,
   MAX_DETAIL_LENGTH,
   validateAiPreviewOptions,
-} from "../src/domain/aiPreview";
-import { construirProveedorIa } from "./_ia-proveedores";
+} from "../src/domain/aiPreview.js";
+import { construirProveedorIa } from "./_ia-proveedores.js";
 
 export const config = {
   runtime: "nodejs",
