@@ -120,8 +120,8 @@ describe("toppings (precio actualizado: 2,50 €)", () => {
 
   it("los toppings a 2,50 € pueden hacer superar el umbral de señal de 40 €", () => {
     // Tarta clásica 10-12 personas · 2 discos = 38 € de carta. Con la caja
-    // (1,99 €) son 39,99 €: justo por debajo del umbral, sin señal. Un topping
-    // la lleva a 42,49 € y ya toca señal del 30 %.
+    // (0,99 €) son 38,99 €: por debajo del umbral, sin señal. Un topping la
+    // lleva a 41,49 € y ya toca señal del 30 %.
     const sin = computeUnitPriceCents({
       productId: "pastel-clasico",
       customerType: "individual",
@@ -144,11 +144,9 @@ describe("toppings (precio actualizado: 2,50 €)", () => {
     expect(computeDeposit(conTopping).depositRequired).toBe(true);
   });
 
-  it("con la caja a 1,99 €, la tarta de 39 € ya pide señal ella sola", () => {
-    // Consecuencia directa de subir la caja de 0,99 € a 1,99 €: 39 + 1,99 son
-    // 40,99 € y el umbral de señal es «más de 40 €». Antes quedaba en 39,99 €
-    // y no pedía nada. Está escrito aquí para que el cambio sea deliberado y
-    // no una sorpresa en el mostrador.
+  it("la tarta de 39 € se queda en 39,99 € y NO pide señal", () => {
+    // Justo por debajo del umbral («más de 40 €»). Está escrito porque es el
+    // caso que se rompería si alguien volviera a subir la caja a 1,99 €.
     const tarta = computeUnitPriceCents({
       productId: "pastel-clasico",
       customerType: "individual",
@@ -158,7 +156,8 @@ describe("toppings (precio actualizado: 2,50 €)", () => {
       extraIds: [],
     })!;
     expect(tarta).toBe(3900 + CAKE_BOX_PRICE_CENTS);
-    expect(computeDeposit(tarta).depositRequired).toBe(true);
+    expect(tarta).toBe(3999);
+    expect(computeDeposit(tarta).depositRequired).toBe(false);
   });
 
   it("excepción de carta: suplemento 6 € en tres leches de 28–30 porciones", () => {
@@ -1223,9 +1222,9 @@ describe("la caja de transporte (obligatoria, y sin precio a la vista)", () => {
     }
   });
 
-  it("se cobra 1,99 € y va DENTRO del precio, nunca como línea aparte", () => {
+  it("se cobra 0,99 € y va DENTRO del precio, nunca como línea aparte", () => {
     const producto = getProduct("pastel-clasico")!;
-    expect(CAKE_BOX_PRICE_CENTS).toBe(199);
+    expect(CAKE_BOX_PRICE_CENTS).toBe(99);
     expect(getPackagingCents(producto)).toBe(CAKE_BOX_PRICE_CENTS);
 
     const seleccion = {

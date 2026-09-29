@@ -47,11 +47,14 @@ export const CAKE_FILLING_SURCHARGE_CENTS = 250;
  *
  * Los aperitivos y los bocaditos pequeños no la llevan.
  *
- * 1,99 € confirmado por audio el 29/09/2026 («le ponemos uno noventa y nueve,
- * la caja»). Estuvo a 0,99 € desde la iteración 8 por un error de
- * transcripción; se corrigió en cuanto se cotejó con el audio original.
+ * Son 0,99 €, confirmado por Dulce Flor el 29/09/2026.
+ *
+ * NO LO CAMBIES a 1,99 € leyendo la transcripción automática del audio de
+ * WhatsApp: ahí pone «le ponemos uno noventa y nueve, la caja», pero es un
+ * error de la transcripción. Ya se cambió una vez por eso y hubo que
+ * revertirlo. El precio acordado es 0,99 €.
  */
-export const CAKE_BOX_PRICE_CENTS = 199;
+export const CAKE_BOX_PRICE_CENTS = 99;
 
 /**
  * Suplemento por pedido urgente: menos de STANDARD_ORDER_LEAD_TIME_DAYS de
