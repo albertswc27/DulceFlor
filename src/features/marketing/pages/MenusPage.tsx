@@ -32,7 +32,7 @@ import {
   DEPOSIT_PERCENTAGE,
   DEPOSIT_THRESHOLD_CENTS,
   MAX_ORDER_ADVANCE_MONTHS,
-  STANDARD_ORDER_LEAD_TIME_HOURS,
+  STANDARD_ORDER_LEAD_TIME_DAYS,
   TOPPING_PRICE_CENTS,
   WHATSAPP_PHONE,
 } from "@/config/business";
@@ -913,7 +913,7 @@ export default function MenusPage() {
             <ul className="list-disc space-y-1.5 pl-5 text-sm text-foreground/90">
               <li>
                 Pedidos con hasta {MAX_ORDER_ADVANCE_MONTHS} meses de antelación.
-                Recomendamos al menos {STANDARD_ORDER_LEAD_TIME_HOURS / 24} días;
+                Recomendamos al menos {STANDARD_ORDER_LEAD_TIME_DAYS} días;
                 con menos margen el pedido es urgente y se confirma por WhatsApp.
               </li>
               <li>

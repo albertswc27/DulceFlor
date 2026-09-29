@@ -45,7 +45,7 @@ describe("horario comercial (confirmado: 10:00–22:00 todos los días)", () => 
   });
 });
 
-describe("pedidos urgentes (menos de 72 h, aceptados desde el 29/08/2026)", () => {
+describe("pedidos urgentes (menos de 3 días naturales, aceptados desde el 29/08/2026)", () => {
   it("las fechas dentro de las 72 h ahora SÍ son seleccionables", () => {
     expect(isDateSelectable(new Date(2026, 7, 18), NOW)).toBe(true); // hoy
     expect(isDateSelectable(new Date(2026, 7, 19), NOW)).toBe(true); // +1 día
@@ -87,26 +87,50 @@ describe("pedidos urgentes (menos de 72 h, aceptados desde el 29/08/2026)", () =
     expect(first!.time).toBe("10:00");
   });
 
-  it("clasifica la urgencia por slot: antes del umbral sí, después no", () => {
-    // El umbral (72 h) cae el viernes 21/08 a las 18:00.
-    const friday = new Date(2026, 7, 21);
-    expect(isSlotUrgent(friday, "17:30", NOW)).toBe(true);
-    expect(isSlotUrgent(friday, "18:00", NOW)).toBe(false); // 72 h exactas: no urgente
+  it("el umbral cae a MEDIANOCHE del tercer día, no a media jornada", () => {
+    // NOW es el martes 18/08 a las 18:00. Con 3 días naturales el umbral es el
+    // viernes 21/08 a las 00:00, así que el viernes entero ya tiene margen.
+    expect(isSlotUrgent(new Date(2026, 7, 20), "21:30", NOW)).toBe(true);
+    expect(isSlotUrgent(new Date(2026, 7, 21), "10:00", NOW)).toBe(false);
     expect(isSlotUrgent(new Date(2026, 7, 19), "12:00", NOW)).toBe(true);
     expect(isSlotUrgent(new Date(2026, 7, 22), "10:00", NOW)).toBe(false);
   });
 
-  it("marca como urgentes los días que ofrecen algún slot urgente", () => {
+  it("son urgentes hoy, mañana y pasado; el tercer día ya no", () => {
+    // Es la regla tal como la dice Dulce Flor: «hasta el segundo día urgente,
+    // el día 3 ya no es necesario».
     expect(isDateUrgent(new Date(2026, 7, 18), NOW)).toBe(true); // hoy
-    expect(isDateUrgent(new Date(2026, 7, 21), NOW)).toBe(true); // día mixto
-    expect(isDateUrgent(new Date(2026, 7, 22), NOW)).toBe(false); // con margen
+    expect(isDateUrgent(new Date(2026, 7, 19), NOW)).toBe(true); // mañana
+    expect(isDateUrgent(new Date(2026, 7, 20), NOW)).toBe(true); // pasado
+    expect(isDateUrgent(new Date(2026, 7, 21), NOW)).toBe(false); // tercer día
   });
 
-  it("distingue el día frontera (mixto) de un día urgente entero", () => {
-    // Viernes 21/08: urgente hasta las 17:30, con margen desde las 18:00.
-    expect(isDateFullyUrgent(new Date(2026, 7, 21), NOW)).toBe(false);
-    expect(isDateFullyUrgent(new Date(2026, 7, 19), NOW)).toBe(true);
-    expect(isDateFullyUrgent(new Date(2026, 7, 22), NOW)).toBe(false);
+  it("la HORA a la que se pide ya no cambia si el pedido es urgente", () => {
+    // Esta era la queja de Dulce Flor, y tenía razón: con 72 h rodantes, pedir
+    // el martes a las 9:00 para el viernes eran 73 h (sin recargo) y pedirlo
+    // ese mismo martes a las 21:30 eran 62 h (con 5 € de recargo). El mismo
+    // viernes, dos precios distintos según la hora. Imposible de explicar en
+    // el mostrador.
+    const viernes = new Date(2026, 7, 21);
+    const martesTemprano = new Date(2026, 7, 18, 9, 0, 0);
+    const martesTarde = new Date(2026, 7, 18, 21, 30, 0);
+    expect(isDateUrgent(viernes, martesTemprano)).toBe(false);
+    expect(isDateUrgent(viernes, martesTarde)).toBe(false);
+
+    // Y al revés: el jueves es urgente se pida a la hora que se pida.
+    const jueves = new Date(2026, 7, 20);
+    expect(isDateUrgent(jueves, martesTemprano)).toBe(true);
+    expect(isDateUrgent(jueves, martesTarde)).toBe(true);
+  });
+
+  it("ya no hay días a medias: o el día entero es urgente, o no lo es", () => {
+    // isDateFullyUrgent existía porque el umbral de 72 h partía un día por la
+    // mitad. Con días naturales coincide siempre con isDateUrgent, y SlotPicker
+    // se apoya en eso para pintar cada día de un solo color.
+    for (const dia of [18, 19, 20, 21, 22, 25, 31]) {
+      const fecha = new Date(2026, 7, dia);
+      expect(isDateFullyUrgent(fecha, NOW)).toBe(isDateUrgent(fecha, NOW));
+    }
   });
 
   it("clasifica la combinación fecha+hora elegida por el cliente", () => {

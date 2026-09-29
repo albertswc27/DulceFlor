@@ -10,7 +10,7 @@ import {
   INSTAGRAM_HANDLE,
   INSTAGRAM_URL,
   MAX_ORDER_ADVANCE_MONTHS,
-  STANDARD_ORDER_LEAD_TIME_HOURS,
+  STANDARD_ORDER_LEAD_TIME_DAYS,
   PHONE_CALLS,
   PHONE_CALLS_DISPLAY,
   WHATSAPP_PHONE,
@@ -212,7 +212,7 @@ function Footer() {
             </li>
             <li className="text-cocoa-foreground/70">
               Pedidos con hasta {MAX_ORDER_ADVANCE_MONTHS} meses de antelación;
-              con menos de {STANDARD_ORDER_LEAD_TIME_HOURS / 24} días, urgentes
+              con menos de {STANDARD_ORDER_LEAD_TIME_DAYS} días, urgentes
               por WhatsApp.
             </li>
           </ul>

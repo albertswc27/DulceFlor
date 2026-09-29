@@ -89,6 +89,15 @@ export interface ItemCustomization {
   /** Ocasión del regalo (cajas de desayuno y copas personalizadas). */
   occasion?: string;
   /**
+   * La clienta ha marcado la caja de transporte, que en las tartas es
+   * obligatoria para poder continuar (Dulce Flor, 29/09/2026).
+   *
+   * Se guarda aunque su valor útil sea siempre `true`: deja constancia de que
+   * se le enseñó y lo aceptó, y permite distinguir un pedido nuevo de uno
+   * antiguo, de antes de que la caja se pidiera marcar.
+   */
+  boxAccepted?: boolean;
+  /**
    * Velas para la tarta. Solo se guarda la cantidad: el precio unitario vive
    * en CANDLE_UNIT_PRICE_CENTS (única fuente de verdad).
    */

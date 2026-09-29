@@ -20,6 +20,7 @@ import {
   getMenuBasePriceCents,
   getPackagingCents,
   getProduct,
+  requiresBox,
   getProductsFor,
   getSizesFor,
   getUnitBasePriceCents,
@@ -118,9 +119,37 @@ describe("toppings (precio actualizado: 2,50 €)", () => {
   });
 
   it("los toppings a 2,50 € pueden hacer superar el umbral de señal de 40 €", () => {
-    // Pastel clásico 20-22 personas · 1 disco = 39 € + caja → sin señal.
-    // Con 1 topping (2,50 €) el total pasa de 40 € → señal del 30 %.
-    const base = computeUnitPriceCents({
+    // Tarta clásica 10-12 personas · 2 discos = 38 € de carta. Con la caja
+    // (1,99 €) son 39,99 €: justo por debajo del umbral, sin señal. Un topping
+    // la lleva a 42,49 € y ya toca señal del 30 %.
+    const sin = computeUnitPriceCents({
+      productId: "pastel-clasico",
+      customerType: "individual",
+      sizeId: "10-12-2d",
+      flavorId: "chocolate",
+      toppingIds: [],
+      extraIds: [],
+    })!;
+    expect(sin).toBe(3800 + CAKE_BOX_PRICE_CENTS);
+    expect(computeDeposit(sin).depositRequired).toBe(false);
+    const conTopping = computeUnitPriceCents({
+      productId: "pastel-clasico",
+      customerType: "individual",
+      sizeId: "10-12-2d",
+      flavorId: "chocolate",
+      toppingIds: ["fresas"],
+      extraIds: [],
+    })!;
+    expect(conTopping).toBe(3800 + CAKE_BOX_PRICE_CENTS + 250);
+    expect(computeDeposit(conTopping).depositRequired).toBe(true);
+  });
+
+  it("con la caja a 1,99 €, la tarta de 39 € ya pide señal ella sola", () => {
+    // Consecuencia directa de subir la caja de 0,99 € a 1,99 €: 39 + 1,99 son
+    // 40,99 € y el umbral de señal es «más de 40 €». Antes quedaba en 39,99 €
+    // y no pedía nada. Está escrito aquí para que el cambio sea deliberado y
+    // no una sorpresa en el mostrador.
+    const tarta = computeUnitPriceCents({
       productId: "pastel-clasico",
       customerType: "individual",
       sizeId: "20-22-1d",
@@ -128,17 +157,8 @@ describe("toppings (precio actualizado: 2,50 €)", () => {
       toppingIds: [],
       extraIds: [],
     })!;
-    expect(computeDeposit(base).depositRequired).toBe(false);
-    const conTopping = computeUnitPriceCents({
-      productId: "pastel-clasico",
-      customerType: "individual",
-      sizeId: "20-22-1d",
-      flavorId: "chocolate",
-      toppingIds: ["fresas"],
-      extraIds: [],
-    })!;
-    expect(conTopping).toBe(3900 + CAKE_BOX_PRICE_CENTS + 250);
-    expect(computeDeposit(conTopping).depositRequired).toBe(true);
+    expect(tarta).toBe(3900 + CAKE_BOX_PRICE_CENTS);
+    expect(computeDeposit(tarta).depositRequired).toBe(true);
   });
 
   it("excepción de carta: suplemento 6 € en tres leches de 28–30 porciones", () => {
@@ -710,7 +730,9 @@ describe("velas (1 € por unidad, confirmado 23/08/2026)", () => {
     const pricing = computeOrderPricing([item], 0);
     expect(pricing.totalCents).toBe(3900 + CAKE_BOX_PRICE_CENTS + 200);
     expect(pricing.depositRequired).toBe(true);
-    expect(pricing.depositCents).toBe(1260);
+    // Derivada del total, no escrita a mano: si cambia el precio de la caja
+    // este test debe seguir comprobando la REGLA (el 30 %), no una cifra.
+    expect(pricing.depositCents).toBe(Math.round(pricing.totalCents * 0.3));
   });
 
   it("en tartas a presupuestar las velas se cobran pero la tarta sigue pendiente", () => {
@@ -1178,5 +1200,54 @@ describe("mini alfajores (confirmados 20/09/2026)", () => {
         quantity: 24,
       })
     ).toBeNull();
+  });
+});
+
+describe("la caja de transporte (obligatoria, y sin precio a la vista)", () => {
+  it("la llevan las tartas, también las que se presupuestan a mano", () => {
+    // «Todo lo que sea tartas grandes igual que la personalizada.» En las de
+    // presupuesto no suma importe aparte —va dentro de lo que se valora a
+    // mano— pero la tarta sale en caja igual y hay que marcarla.
+    for (const id of ["pastel-clasico", "pastel-buttercream", "pastel-fondant", "cheesecake"]) {
+      const producto = getProduct(id)!;
+      expect(requiresBox(producto)).toBe(true);
+    }
+  });
+
+  it("NO la llevan los aperitivos ni lo que se vende por unidades", () => {
+    // «En todo menos en los bocadillos pequeños»: van en bandeja.
+    for (const id of ["mini-alfajores", "caja-desayuno"]) {
+      const producto = getProduct(id);
+      if (!producto) continue;
+      expect(requiresBox(producto)).toBe(false);
+    }
+  });
+
+  it("se cobra 1,99 € y va DENTRO del precio, nunca como línea aparte", () => {
+    const producto = getProduct("pastel-clasico")!;
+    expect(CAKE_BOX_PRICE_CENTS).toBe(199);
+    expect(getPackagingCents(producto)).toBe(CAKE_BOX_PRICE_CENTS);
+
+    const seleccion = {
+      productId: "pastel-clasico",
+      customerType: "individual" as const,
+      sizeId: "10-12-2d",
+      flavorId: "chocolate",
+      toppingIds: [],
+      extraIds: [],
+    };
+    // Lo que se enseña en la carta NO lleva caja; lo que se cobra, sí.
+    expect(
+      getMenuBasePriceCents("pastel-clasico", "individual", "10-12-2d", "chocolate")
+    ).toBe(3800);
+    expect(computeUnitPriceCents(seleccion)).toBe(3800 + CAKE_BOX_PRICE_CENTS);
+  });
+
+  it("en una tarta a presupuesto la caja no suma aparte", () => {
+    // El precio entero lo pone Dulce Flor a mano y la caja ya va dentro:
+    // sumarla aquí la cobraría dos veces.
+    const fondant = getProduct("pastel-fondant")!;
+    expect(requiresBox(fondant)).toBe(true);
+    expect(getPackagingCents(fondant)).toBe(0);
   });
 });

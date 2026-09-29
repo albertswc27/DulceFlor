@@ -6,7 +6,7 @@
 import {
   DEPOSIT_PERCENTAGE,
   PICKUP_CONDITIONS,
-  STANDARD_ORDER_LEAD_TIME_HOURS,
+  STANDARD_ORDER_LEAD_TIME_DAYS,
   WHATSAPP_PHONE,
 } from "@/config/business";
 import { getProduct } from "./catalog";
@@ -66,7 +66,7 @@ export function buildOrderWhatsAppMessage(order: Order): string {
   if (order.urgent) {
     lines.push(
       `🔴 PEDIDO URGENTE: menos de ${
-        STANDARD_ORDER_LEAD_TIME_HOURS / 24
+        STANDARD_ORDER_LEAD_TIME_DAYS
       } días de antelación. Pendiente de que Dulce Flor confirme si puede prepararlo.`
     );
   }

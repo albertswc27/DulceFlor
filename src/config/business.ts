@@ -4,7 +4,7 @@
  * Confirmado por Dulce Flor por WhatsApp (17/08/2026):
  *   - Antelación estándar: 3 días («Mínimo 3 días»). OJO: matizado el
  *     29/08/2026 — ya NO bloquea; con menos margen el pedido es URGENTE
- *     (ver STANDARD_ORDER_LEAD_TIME_HOURS más abajo).
+ *     (ver STANDARD_ORDER_LEAD_TIME_DAYS más abajo).
  *   - Horario: 10:00–22:00 («Hacemos de 10am hasta las 10pm»); no indicaron
  *     días de cierre, se asume abierto todos los días hasta que digan lo contrario.
  *
@@ -35,15 +35,26 @@ export const SPONGE_FLAVOR_SURCHARGE_CENTS = 290;
 export const CAKE_FILLING_SURCHARGE_CENTS = 250;
 
 /**
- * Caja de transporte de las tartas. Dulce Flor pidió que TODA tarta salga en
- * caja y que su coste vaya «dentro del precio»: no es un extra que el cliente
- * elija ni una línea suelta en el resumen, sino parte del importe de la tarta
- * (ver getUnitBasePriceCents). Los aperitivos no la llevan.
+ * Caja de transporte de las tartas.
+ *
+ * Dulce Flor pidió DOS cosas que parecen contradictorias y no lo son:
+ *   1. Que el cliente tenga que MARCARLA para poder continuar, como la casilla
+ *      obligatoria de un pedido de comida a domicilio («que te obligue a
+ *      marcarlo»). Ver CAKE_BOX en el catálogo y la sección del configurador.
+ *   2. Que su precio NO se vea en ninguna parte («sin necesidad de que
+ *      aparezca el precio»): va sumado dentro del importe de la tarta, no como
+ *      línea suelta del resumen. Ver getUnitBasePriceCents.
+ *
+ * Los aperitivos y los bocaditos pequeños no la llevan.
+ *
+ * 1,99 € confirmado por audio el 29/09/2026 («le ponemos uno noventa y nueve,
+ * la caja»). Estuvo a 0,99 € desde la iteración 8 por un error de
+ * transcripción; se corrigió en cuanto se cotejó con el audio original.
  */
-export const CAKE_BOX_PRICE_CENTS = 99;
+export const CAKE_BOX_PRICE_CENTS = 199;
 
 /**
- * Suplemento por pedido urgente: menos de STANDARD_ORDER_LEAD_TIME_HOURS de
+ * Suplemento por pedido urgente: menos de STANDARD_ORDER_LEAD_TIME_DAYS de
  * margen obliga a reorganizar el obrador (confirmado el 20/09/2026: 5 €).
  * Se aplica UNA vez por pedido, no por artículo.
  */
@@ -82,12 +93,22 @@ export const DEPOSIT_THRESHOLD_CENTS = 4000;
 export const DEPOSIT_PERCENTAGE = 30;
 
 /**
- * Antelación estándar (confirmado 17/08/2026: «Mínimo 3 días»; matizado el
- * 29/08/2026): ya NO bloquea el calendario. Un pedido para antes de este
- * plazo se acepta pero queda marcado como URGENTE y debe confirmarse por
- * WhatsApp con la tienda.
+ * Antelación estándar, en DÍAS NATURALES (confirmado 17/08/2026: «Mínimo 3
+ * días»; matizado el 29/08/2026): ya NO bloquea el calendario. Un pedido para
+ * antes de este plazo se acepta pero queda marcado como URGENTE y debe
+ * confirmarse por WhatsApp con la tienda.
+ *
+ * Días naturales, y no 72 horas, desde el 29/09/2026. Antes se contaban horas
+ * rodantes y eso hacía que el MISMO jueves saliera urgente o no según la hora
+ * a la que se hiciera el pedido: pedir el lunes a las 9:00 para el jueves eran
+ * 73 h (no urgente) y pedirlo el lunes a las 18:00 eran 64 h (urgente, +5 €).
+ * Dulce Flor cuenta días de calendario —«hasta el segundo día urgente, el día
+ * 3 ya no»— y tenía razón: la regla de antes era imposible de explicar en el
+ * mostrador.
+ *
+ * Con 3: hoy, mañana y pasado son urgentes; el tercer día ya no.
  */
-export const STANDARD_ORDER_LEAD_TIME_HOURS = 72;
+export const STANDARD_ORDER_LEAD_TIME_DAYS = 3;
 
 /**
  * Colchón mínimo incluso para pedidos urgentes: nadie puede pedir algo «para

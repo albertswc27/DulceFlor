@@ -21,7 +21,7 @@ import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   BUSINESS_HOURS,
   MAX_ORDER_ADVANCE_MONTHS,
-  STANDARD_ORDER_LEAD_TIME_HOURS,
+  STANDARD_ORDER_LEAD_TIME_DAYS,
   URGENT_ORDER_SURCHARGE_CENTS,
 } from "@/config/business";
 import { formatEuros } from "@/domain/money";
@@ -52,7 +52,7 @@ const CLOSED_DAYS = Object.entries(BUSINESS_HOURS)
   .filter(([, windows]) => windows.length === 0)
   .map(([day]) => DAY_NAMES_PLURAL[Number(day)]);
 
-const STANDARD_LEAD_DAYS = STANDARD_ORDER_LEAD_TIME_HOURS / 24;
+const STANDARD_LEAD_DAYS = STANDARD_ORDER_LEAD_TIME_DAYS;
 const URGENCY_SURCHARGE_LABEL = formatEuros(URGENT_ORDER_SURCHARGE_CENTS);
 
 interface SlotPickerProps {
@@ -121,7 +121,7 @@ export function SlotPicker({
   onSelect,
   variant = "public",
 }: SlotPickerProps) {
-  // Un reloj VIVO, no fijo por montaje. Con la antelación de 72 h daba igual,
+  // Un reloj VIVO, no fijo por montaje. Con la antelación de 3 días daba igual,
   // pero ahora se puede pedir para el mismo día y el kiosk deja este selector
   // montado horas: con un reloj congelado ofrecería horas ya pasadas que
   // submitOrder rechazaría después, sin salida a la vista.

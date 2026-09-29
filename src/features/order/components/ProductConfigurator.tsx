@@ -14,6 +14,7 @@ import { AI_PREVIEW_ENABLED, TOPPING_PRICE_CENTS } from "@/config/business";
 import { formatEuros } from "@/domain/money";
 import {
   getSizesFor,
+  requiresBox,
   TOPPINGS,
   type CatalogOption,
   type CatalogProduct,
@@ -82,6 +83,7 @@ export interface ConfiguratorInitial {
   occasion?: string;
   notes?: string;
   quantity?: number;
+  boxAccepted?: boolean;
   candleDigits?: string;
   candleStyle?: CandleStyle;
   sparklerQuantity?: number;
@@ -109,6 +111,7 @@ export function draftItemToInitial(item: {
     occasion: c.occasion,
     notes: c.notes,
     quantity: item.quantity,
+    boxAccepted: c.boxAccepted,
     candleDigits: c.candleDigits,
     candleStyle: c.candleStyle,
     sparklerQuantity: c.sparklerQuantity,
@@ -212,6 +215,13 @@ function CakeConfigurator({
   // Las velas son de números: se guarda la cifra, y la cantidad de velas es
   // simplemente cuántos dígitos tiene. El acabado (vela o bengala) cambia el
   // precio por unidad, y las bengalas sueltas van aparte.
+  /**
+   * La caja de transporte. Arranca SIN marcar a propósito: si viniera marcada
+   * dejaría de ser una decisión y volveríamos a lo de antes, que es que nadie
+   * se entera de que la tarta lleva caja. Al editar un artículo ya añadido sí
+   * se restaura, para no obligar a marcarla dos veces.
+   */
+  const [boxAccepted, setBoxAccepted] = React.useState(initial?.boxAccepted ?? false);
   const [candleDigits, setCandleDigits] = React.useState(initial?.candleDigits ?? "");
   const [candleStyle, setCandleStyle] = React.useState<CandleStyle>(
     initial?.candleStyle ?? "vela"
@@ -242,6 +252,7 @@ function CakeConfigurator({
     setSavedImageId(initial?.referenceImageId ?? null);
     setImageSource(initial?.referenceImageSource ?? "cliente");
     setAiPrompt(initial?.aiPrompt ?? "");
+    setBoxAccepted(initial?.boxAccepted ?? false);
     setCandleDigits(initial?.candleDigits ?? "");
     setCandleStyle(initial?.candleStyle ?? "vela");
     setSparklerQuantity(initial?.sparklerQuantity ?? 0);
@@ -251,6 +262,12 @@ function CakeConfigurator({
 
   const needsFlavor = Boolean(product.flavors && product.flavors.length > 0);
   const needsFilling = Boolean(product.fillings && product.fillings.length > 0);
+  /**
+   * La caja se enseña en todas las tartas, también en las de presupuesto: ahí
+   * no suma importe aparte (va dentro de lo que se valora a mano) pero la
+   * tarta sale en caja igual y hay que marcarla.
+   */
+  const showBox = requiresBox(product);
   const isCheesecake = product.id === "cheesecake";
   const isFondant = product.customCakeType === "fondant";
   /** Las solicitudes a medida exigen fotografía de referencia. */
@@ -395,6 +412,11 @@ function CakeConfigurator({
       }
     }
 
+    if (showBox && !boxAccepted) {
+      setError("Marca la caja para continuar: todas las tartas salen en caja.");
+      return;
+    }
+
     const size = sizes.find((s) => s.id === sizeId)!;
     const flavor = product.flavors?.find((f) => f.id === flavorId);
     const filling = product.fillings?.find((f) => f.id === fillingId);
@@ -415,6 +437,7 @@ function CakeConfigurator({
       notes: notes.trim() || undefined,
       referenceImageSource: referenceImageId ? imageSource : undefined,
       aiPrompt: referenceImageId && imageSource === "ia" ? aiPrompt : undefined,
+      boxAccepted: showBox ? true : undefined,
       candleDigits: candleDigits || undefined,
       candleStyle: candleDigits ? candleStyle : undefined,
       candleQuantity: candleDigits ? candleDigits.length : undefined,
@@ -663,6 +686,29 @@ function CakeConfigurator({
         </fieldset>
       )}
 
+      {/* La caja de transporte.
+          Dulce Flor pidió expresamente que esto se vea y haya que marcarlo
+          («que te obligue a marcarlo»), pero SIN precio («sin necesidad de
+          que aparezca el precio»). El importe va dentro del precio de la
+          tarta; aquí solo se decide, no se cobra. */}
+      {showBox && (
+        <fieldset>
+          <legend className="mb-2 flex w-full items-baseline justify-between gap-2">
+            <span className="font-display text-base font-semibold text-primary">
+              Caja para transportarla
+            </span>
+            <span className="text-xs text-muted-foreground">Obligatorio</span>
+          </legend>
+          <OptionCard
+            selected={boxAccepted}
+            onSelect={() => setBoxAccepted((marcada) => !marcada)}
+            role="checkbox"
+            title="Añadir caja"
+            subtitle="Todas nuestras tartas salen en caja decorada, para que llegue entera a la mesa."
+          />
+        </fieldset>
+      )}
+
       {/* Descripción del diseño (fondant, obligatoria) */}
       {isQuote && (
         <div className="space-y-1.5">
@@ -798,11 +844,10 @@ function CakeConfigurator({
           ) : breakdown ? (
             <>
               <AnimatedPrice cents={cakeCents! + candlesCents} className="text-2xl" />
-              {/* La caja va dentro del precio, no como cargo aparte: se
-                  menciona para que nadie crea que se la cobran al recoger. */}
-              {breakdown.packagingCents > 0 && (
-                <p className="text-xs text-muted-foreground">Caja incluida</p>
-              )}
+              {/* Antes aquí ponía «Caja incluida» en letra pequeña y gris, y
+                  era justo lo que Dulce Flor no llegó a ver. Ahora la caja es
+                  una sección que hay que marcar, así que este texto sobra: lo
+                  único que añadiría es la sospecha de un cargo aparte. */}
             </>
           ) : (
             <p className="max-w-[13rem] text-sm text-muted-foreground">
@@ -890,7 +935,7 @@ function CakeConfigurator({
         type="button"
         size="xl"
         className="w-full"
-        disabled={!isQuote && !breakdown}
+        disabled={(!isQuote && !breakdown) || (showBox && !boxAccepted)}
         onClick={handleConfirm}
       >
         {isQuote ? "Solicitar presupuesto" : confirmLabel}

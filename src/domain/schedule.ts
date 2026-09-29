@@ -3,7 +3,7 @@
  * reglas de antelación (ver config/business.ts, confirmadas por el cliente):
  *
  *  - Se puede reservar con hasta MAX_ORDER_ADVANCE_MONTHS meses de antelación.
- *  - Con menos de STANDARD_ORDER_LEAD_TIME_HOURS (3 días) el pedido se acepta
+ *  - Con menos de STANDARD_ORDER_LEAD_TIME_DAYS (3 días) el pedido se acepta
  *    igualmente pero es URGENTE: debe confirmarse con la tienda por WhatsApp.
  *  - Incluso urgente, hace falta un mínimo de URGENT_MIN_LEAD_TIME_MINUTES.
  *
@@ -14,7 +14,7 @@ import {
   BUSINESS_HOURS,
   MAX_ORDER_ADVANCE_MONTHS,
   SLOT_INTERVAL_MINUTES,
-  STANDARD_ORDER_LEAD_TIME_HOURS,
+  STANDARD_ORDER_LEAD_TIME_DAYS,
   URGENT_MIN_LEAD_TIME_MINUTES,
   type TimeWindow,
 } from "@/config/business";
@@ -50,10 +50,22 @@ export function earliestAllowedDateTime(now: Date): Date {
 
 /**
  * Umbral de urgencia: todo slot anterior a este instante es un pedido
- * urgente. Exactamente 3 días de antelación NO es urgente.
+ * urgente. Se cuenta en DÍAS NATURALES, no en horas rodantes.
+ *
+ * El umbral cae a las 00:00 del día N, así que un día entero es urgente o no
+ * lo es, sin depender de la hora a la que se haga el pedido. Con N = 3 y hoy
+ * lunes: lunes, martes y miércoles son urgentes; el jueves ya no, se pida el
+ * lunes a las 9:00 o a las 23:00.
+ *
+ * `setDate` hace la aritmética en hora local, que es lo que hay que usar:
+ * los días de la tienda son los del calendario de Barcelona, y así un cambio
+ * de hora no mueve la frontera.
  */
 export function urgencyThresholdDateTime(now: Date): Date {
-  return new Date(now.getTime() + STANDARD_ORDER_LEAD_TIME_HOURS * 60 * 60 * 1000);
+  const threshold = new Date(now);
+  threshold.setHours(0, 0, 0, 0);
+  threshold.setDate(threshold.getDate() + STANDARD_ORDER_LEAD_TIME_DAYS);
+  return threshold;
 }
 
 /**
@@ -120,9 +132,14 @@ export function isDateUrgent(date: Date, now: Date = new Date()): boolean {
 }
 
 /**
- * ¿Son urgentes TODOS los slots de la fecha? En el día frontera (el umbral
- * de 72 h cae a media jornada) esto es false aunque isDateUrgent sea true:
- * las primeras horas son urgentes y las últimas no.
+ * ¿Son urgentes TODOS los slots de la fecha?
+ *
+ * Nació para el día frontera: con el umbral viejo de 72 h rodantes, un día
+ * podía tener las primeras horas urgentes y las últimas no. Desde que la
+ * urgencia va por días naturales el umbral cae a medianoche, así que esto
+ * coincide SIEMPRE con isDateUrgent. Se mantiene porque SlotPicker distingue
+ * los dos casos al pintar, y porque si algún día vuelve un umbral parcial el
+ * calendario seguirá siendo correcto sin tocarlo.
  */
 export function isDateFullyUrgent(date: Date, now: Date = new Date()): boolean {
   const slots = getAvailableSlotsForDate(date, now);

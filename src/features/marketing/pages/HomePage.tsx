@@ -35,7 +35,7 @@ import {
   DEPOSIT_PERCENTAGE,
   DEPOSIT_THRESHOLD_CENTS,
   MAX_ORDER_ADVANCE_MONTHS,
-  STANDARD_ORDER_LEAD_TIME_HOURS,
+  STANDARD_ORDER_LEAD_TIME_DAYS,
   PHONE_CALLS,
   PHONE_CALLS_DISPLAY,
   TOPPING_PRICE_CENTS,
@@ -132,7 +132,7 @@ const STEPS = [
   {
     icon: CalendarClock,
     title: "Elige fecha y entrega",
-    text: `Recogida en tienda o entrega a domicilio. Reserva con hasta ${MAX_ORDER_ADVANCE_MONTHS} meses de antelación; con menos de ${STANDARD_ORDER_LEAD_TIME_HOURS / 24} días el pedido es urgente y te lo confirmamos por WhatsApp.`,
+    text: `Recogida en tienda o entrega a domicilio. Reserva con hasta ${MAX_ORDER_ADVANCE_MONTHS} meses de antelación; con menos de ${STANDARD_ORDER_LEAD_TIME_DAYS} días el pedido es urgente y te lo confirmamos por WhatsApp.`,
   },
   {
     icon: MessageCircle,
@@ -615,7 +615,7 @@ function DeliverySection() {
               </ul>
               <p className="mt-3 text-xs text-muted-foreground">
                 Pedidos con hasta {MAX_ORDER_ADVANCE_MONTHS} meses de antelación.
-                Con menos de {STANDARD_ORDER_LEAD_TIME_HOURS / 24} días, urgentes
+                Con menos de {STANDARD_ORDER_LEAD_TIME_DAYS} días, urgentes
                 a confirmar por WhatsApp.
               </p>
             </CardContent>

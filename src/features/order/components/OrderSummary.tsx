@@ -6,12 +6,12 @@ import { Separator } from "@/components/ui/separator";
 import { formatEuros } from "@/domain/money";
 import {
   DEPOSIT_PERCENTAGE,
-  STANDARD_ORDER_LEAD_TIME_HOURS,
+  STANDARD_ORDER_LEAD_TIME_DAYS,
 } from "@/config/business";
 import { useOrderDraft } from "@/features/order/state/OrderDraftContext";
 import { AnimatedPrice } from "./AnimatedPrice";
 
-const STANDARD_LEAD_DAYS = STANDARD_ORDER_LEAD_TIME_HOURS / 24;
+const STANDARD_LEAD_DAYS = STANDARD_ORDER_LEAD_TIME_DAYS;
 
 export function OrderSummary({ showDepositInfo = true }: { showDepositInfo?: boolean }) {
   const { state, derived } = useOrderDraft();

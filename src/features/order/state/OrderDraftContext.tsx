@@ -128,7 +128,7 @@ const selectedOptionSchema = z.object({ id: z.string(), label: z.string() });
  * Validación estricta del borrador restaurado de sessionStorage: un borrador
  * corrupto o de un esquema antiguo NUNCA debe tumbar la app — se descarta.
  */
-const draftStateSchema = z.object({
+export const draftStateSchema = z.object({
   customerType: z.enum(["individual", "business"]).nullable(),
   items: z.array(
     z.object({
@@ -156,6 +156,7 @@ const draftStateSchema = z.object({
         dedicationText: z.string().optional(),
         designDescription: z.string().optional(),
         occasion: z.string().optional(),
+        boxAccepted: z.boolean().optional(),
         candleQuantity: z.number().int().nonnegative().optional(),
         candleDigits: z.string().optional(),
         candleStyle: z.enum(["vela", "bengala"]).optional(),

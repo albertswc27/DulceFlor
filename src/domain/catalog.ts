@@ -854,6 +854,23 @@ export function getSizesFor(
  * No se aplica a los aperitivos (van en bandeja) ni a lo que se presupuesta
  * a mano, donde la caja ya va dentro del presupuesto.
  */
+/**
+ * ¿Hay que enseñar la caja —y obligar a marcarla— en este producto?
+ *
+ * NO es lo mismo que getPackagingCents, y la diferencia importa: las tartas a
+ * presupuesto (personalizada, fondant) no suman la caja aparte porque va
+ * dentro del precio que se valora a mano, pero SALEN EN CAJA igual y Dulce
+ * Flor quiere que el cliente la marque también: «todo lo que sea tartas
+ * grandes igual que la personalizada».
+ *
+ * Fuera quedan los aperitivos y los bocaditos, que se venden por unidades y
+ * van en bandeja: «en todo menos en los bocadillos pequeños».
+ */
+export function requiresBox(product: CatalogProduct): boolean {
+  if (product.quantityTiers) return false;
+  return CATEGORY_FAMILY[product.category] === "tartas";
+}
+
 export function getPackagingCents(product: CatalogProduct): number {
   if (product.pricingType === "quote") return 0;
   if (product.quantityTiers) return 0;
