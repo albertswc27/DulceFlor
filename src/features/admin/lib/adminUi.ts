@@ -21,8 +21,8 @@ export const STATUS_BADGE_VARIANT: Record<
 };
 
 /**
- * Orden natural de los estados para selects y botoneras: el recorrido real de
- * un pedido es pendiente → tramitado → entregado (ver ORDER_STATUS_LABELS).
+ * Orden natural de los estados, para ordenar y listar: el recorrido real de un
+ * pedido es pendiente → tramitado → finalizado (ver ORDER_STATUS_LABELS).
  */
 export const ORDER_STATUS_SEQUENCE: OrderStatus[] = [
   "pending_quote",
@@ -31,6 +31,17 @@ export const ORDER_STATUS_SEQUENCE: OrderStatus[] = [
   "completed",
   "cancelled",
 ];
+
+/**
+ * Lo que el panel ofrece PULSAR. Dos botones y no cinco, por petición expresa
+ * de Dulce Flor (01/10/2026): «solo dos opciones, tramitado o finalizado».
+ *
+ * No es lo mismo que ORDER_STATUS_SEQUENCE a propósito. «Pendiente» y
+ * «Pendiente de presupuesto» no se eligen: son el estado con el que NACE el
+ * pedido según cómo se haya hecho, y ofrecerlos como botón solo invitaba a
+ * retroceder sin motivo. Un pedido que esté en ellos los sigue mostrando.
+ */
+export const ORDER_STATUS_ACTIONS: OrderStatus[] = ["confirmed", "completed"];
 
 /** "2026-08-17" → "domingo, 17 de agosto de 2026". */
 export function formatRequestedDay(dateIso: string): string {

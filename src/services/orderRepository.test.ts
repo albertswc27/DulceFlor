@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 import { fromRow, toRow, type OrderRow } from "./orderRepository";
 import { newPublicOrderId } from "@/domain/orderId";
+import { ORDER_STATUS_ACTIONS } from "@/features/admin/lib/adminUi";
 import {
   normalizeOrderStatus,
   ORDER_STATUS_LABELS,
@@ -182,8 +183,30 @@ describe("estados retirados al simplificar el flujo (20/09/2026)", () => {
   });
 
   it("las etiquetas son las que pidió Dulce Flor", () => {
+    // «Finalizado», no «Entregado»: lo pidió así el 01/10/2026. El
+    // identificador sigue siendo `completed` para no invalidar los pedidos ya
+    // guardados; lo que cambia es solo lo que se lee en el panel.
     expect(ORDER_STATUS_LABELS.confirmed).toBe("Tramitado");
-    expect(ORDER_STATUS_LABELS.completed).toBe("Entregado");
+    expect(ORDER_STATUS_LABELS.completed).toBe("Finalizado");
+  });
+
+  it("el panel solo deja pulsar esos dos estados", () => {
+    // «Solo dos opciones, tramitado o finalizado». Pendiente y Pendiente de
+    // presupuesto son con los que nace el pedido, no se eligen; Cancelado es
+    // una excepción y vive aparte, fuera de la botonera.
+    expect(ORDER_STATUS_ACTIONS).toEqual(["confirmed", "completed"]);
+    expect(ORDER_STATUS_ACTIONS.map((estado) => ORDER_STATUS_LABELS[estado])).toEqual([
+      "Tramitado",
+      "Finalizado",
+    ]);
+  });
+
+  it("un pedido en un estado que ya no se pulsa SIGUE teniendo etiqueta", () => {
+    // Recortar la botonera no puede dejar sin nombre a los pedidos que ya
+    // estaban en esos estados: en el panel se siguen viendo.
+    for (const estado of ["pending", "pending_quote", "cancelled"] as const) {
+      expect(ORDER_STATUS_LABELS[estado]).toBeTruthy();
+    }
   });
 });
 

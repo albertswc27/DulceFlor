@@ -73,7 +73,7 @@ import {
 } from "@/domain/types";
 import { orderRepository } from "@/services/orderRepository";
 import {
-  ORDER_STATUS_SEQUENCE,
+  ORDER_STATUS_ACTIONS,
   STATUS_BADGE_VARIANT,
   formatCreatedAt,
   formatRequestedDay,
@@ -448,6 +448,8 @@ export default function AdminOrderDetailPage() {
     orderId ? (orderRepository.getById(orderId) ?? null) : null
   );
   const [quoteInput, setQuoteInput] = React.useState("");
+  /** Cancelar pide confirmación: es irreversible de hecho y se pulsa sin querer. */
+  const [confirmandoCancelar, setConfirmandoCancelar] = React.useState(false);
   const [sendingSms, setSendingSms] = React.useState(false);
   /** Este despliegue puede enviar SMS (hay servidor y sesión que validar). */
   const smsAvailable = isSmsAvailable();
@@ -1079,7 +1081,7 @@ export default function AdminOrderDetailPage() {
                 aria-label="Cambiar estado del pedido"
                 className="grid grid-cols-2 gap-2"
               >
-                {ORDER_STATUS_SEQUENCE.map((status) => {
+                {ORDER_STATUS_ACTIONS.map((status) => {
                   const isCurrent = order.status === status;
                   return (
                     <Button
@@ -1102,6 +1104,50 @@ export default function AdminOrderDetailPage() {
               <p className="mt-3 text-xs text-muted-foreground">
                 El estado actual aparece resaltado. El cambio se guarda al instante.
               </p>
+
+              {/* Cancelar no es un estado más del recorrido, es una excepción,
+                  y por eso no está entre los dos botones. Pero tiene que
+                  seguir existiendo: sin esto un pedido anulado no se puede
+                  marcar y seguiría contando en los totales del panel.
+                  Dos pulsaciones a propósito: no se cancela sin querer. */}
+              {order.status !== "cancelled" && (
+                <div className="mt-4 border-t pt-3">
+                  {confirmandoCancelar ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm text-muted-foreground">
+                        ¿Seguro que quieres cancelarlo?
+                      </span>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          setConfirmandoCancelar(false);
+                          changeStatus("cancelled");
+                        }}
+                      >
+                        Sí, cancelar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setConfirmandoCancelar(false)}
+                      >
+                        No
+                      </Button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="text-sm text-muted-foreground underline underline-offset-4"
+                      onClick={() => setConfirmandoCancelar(true)}
+                    >
+                      Cancelar este pedido
+                    </button>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 

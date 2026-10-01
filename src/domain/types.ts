@@ -5,11 +5,16 @@ export type CustomerType = "individual" | "business";
 export type FulfillmentType = "pickup" | "delivery";
 
 /**
- * Estados de un pedido. Dulce Flor pidió simplificarlos (20/09/2026): lo
- * único que necesita distinguir es si ya ha revisado y gestionado el pedido
- * ("Tramitado") y si el cliente ya se lo ha llevado ("Entregado"). Los
- * estados intermedios «en preparación» y «listo» se retiraron porque nadie
- * los mantenía al día.
+ * Estados de un pedido. Dulce Flor pidió simplificarlos (20/09/2026) y los
+ * redujo otra vez el 01/10/2026: en el panel solo quiere poder marcar DOS
+ * cosas, «Tramitado» y «Finalizado». Los estados intermedios «en preparación»
+ * y «listo» se retiraron porque nadie los mantenía al día.
+ *
+ * Los demás estados siguen existiendo, pero no se eligen a mano: «Pendiente»
+ * y «Pendiente de presupuesto» son con los que NACE un pedido según cómo se
+ * haya hecho, y «Cancelado» es una excepción. Se siguen mostrando cuando un
+ * pedido está en ellos; lo que se recortó es la botonera.
+ * Ver ORDER_STATUS_ACTIONS.
  *
  * Los identificadores se conservan (confirmed/completed) para no invalidar
  * los pedidos ya guardados en el navegador y en Supabase: solo cambian las
@@ -26,7 +31,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   pending: "Pendiente",
   pending_quote: "Pendiente de presupuesto",
   confirmed: "Tramitado",
-  completed: "Entregado",
+  completed: "Finalizado",
   cancelled: "Cancelado",
 };
 
