@@ -399,8 +399,13 @@ export default function OrderWizardPage() {
     <div className="container max-w-5xl pb-32 pt-6 sm:pt-10 lg:pb-10">
       {/* Cabecera del wizard */}
       <div className="mb-6 flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={back} aria-label="Volver">
+        {/* Con texto, no solo la flecha: era un icono gris claro sin rótulo y
+            la gente no lo encontraba. La dueña lo resumió así: «quiero
+            retroceder para agregar algo más, no me deja». */}
+        <Button variant="ghost" onClick={back} className="shrink-0 px-2 sm:px-3">
           <ArrowLeft />
+          <span className="hidden sm:inline">Atrás</span>
+          <span className="sr-only sm:hidden">Volver</span>
         </Button>
         <div>
           <p className="text-xs uppercase tracking-[0.15em] text-accent">
@@ -887,6 +892,7 @@ export default function OrderWizardPage() {
                   >
                     Continuar
                   </Button>
+                  <VolverAlCatalogo onClick={() => goTo("product")} />
                 </div>
               )}
 
@@ -909,6 +915,7 @@ export default function OrderWizardPage() {
                   >
                     Continuar
                   </Button>
+                  <VolverAlCatalogo onClick={() => goTo("product")} />
                 </div>
               )}
 
@@ -1164,10 +1171,16 @@ export default function OrderWizardPage() {
                   <DialogTitle>Tu pedido</DialogTitle>
                 </DialogHeader>
                 <div className="overflow-y-auto">
-                  <OrderItemsList />
+                  {/* Con onEdit: sin esta función la lista ni siquiera ofrece
+                      el botón de editar, y el carrito del móvil es justo donde
+                      la gente pulsa cuando quiere cambiar algo. */}
+                  <OrderItemsList onEdit={openEditor} />
                   <div className="mt-4">
                     <OrderSummary />
                   </div>
+                  {step !== "product" && (
+                    <VolverAlCatalogo onClick={() => goTo("product")} className="mt-4" />
+                  )}
                 </div>
               </DialogDrawerContent>
             </Dialog>
@@ -1180,5 +1193,35 @@ export default function OrderWizardPage() {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * «Añadir otro artículo»: vuelve al catálogo sin perder nada.
+ *
+ * No existía. Para añadir una segunda tarta había que dar con una flecha gris
+ * sin rótulo arriba del todo y pulsarla dos veces, y en el móvil el botón de
+ * retroceso del teléfono se sale del pedido entero porque el paso no va en la
+ * URL. El borrador sobrevive igualmente —está en sessionStorage— pero eso el
+ * cliente no lo sabe, y lo que ve es que no puede.
+ */
+function VolverAlCatalogo({
+  onClick,
+  className,
+}: {
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="lg"
+      className={`w-full ${className ?? ""}`}
+      onClick={onClick}
+    >
+      <ArrowLeft />
+      Añadir otro artículo
+    </Button>
   );
 }

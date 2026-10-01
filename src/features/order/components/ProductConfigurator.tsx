@@ -230,6 +230,8 @@ function CakeConfigurator({
     initial?.sparklerQuantity ?? 0
   );
   const [error, setError] = React.useState<string | null>(null);
+  /** Para llevar al cliente hasta la casilla de la caja si intenta seguir sin marcarla. */
+  const cajaRef = React.useRef<HTMLFieldSetElement>(null);
 
   // Al cambiar de producto se reinicia la selección. Con `initial` (edición de
   // un artículo ya añadido) se restaura TODO lo que el cliente había elegido,
@@ -413,7 +415,10 @@ function CakeConfigurator({
     }
 
     if (showBox && !boxAccepted) {
-      setError("Marca la caja para continuar: todas las tartas salen en caja.");
+      setError("Falta marcar la caja, que es obligatoria: todas las tartas salen en caja.");
+      // Y se la enseñamos: el configurador es largo y la casilla puede quedar
+      // fuera de pantalla, así que decir «marca la caja» sin más no basta.
+      cajaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
 
@@ -692,12 +697,31 @@ function CakeConfigurator({
           que aparezca el precio»). El importe va dentro del precio de la
           tarta; aquí solo se decide, no se cobra. */}
       {showBox && (
-        <fieldset>
+        <fieldset
+          ref={cajaRef}
+          // Resaltada MIENTRAS NO SE MARCA, y neutra en cuanto se marca. Entre
+          // diez secciones opcionales seguidas, la única obligatoria no puede
+          // parecerse al resto: una clienta real se quedó atascada aquí sin
+          // entender qué le faltaba.
+          className={
+            boxAccepted
+              ? ""
+              : "rounded-xl border-2 border-primary/50 bg-primary/5 p-3 sm:p-4"
+          }
+        >
           <legend className="mb-2 flex w-full items-baseline justify-between gap-2">
             <span className="font-display text-base font-semibold text-primary">
               Caja para transportarla
             </span>
-            <span className="text-xs text-muted-foreground">Obligatorio</span>
+            <span
+              className={
+                boxAccepted
+                  ? "text-xs text-muted-foreground"
+                  : "rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground"
+              }
+            >
+              Obligatorio
+            </span>
           </legend>
           <OptionCard
             selected={boxAccepted}
@@ -929,13 +953,31 @@ function CakeConfigurator({
         </p>
       )}
 
-      {/* Deshabilitado mientras falten las opciones obligatorias: así el botón
-          no promete algo que aún no se puede añadir. */}
+      {/* El recordatorio que pidió Dulce Flor, justo encima del botón: «que
+          diga abajo, donde pone añadir el pedido, que es obligatorio». */}
+      {showBox && !boxAccepted && (
+        <button
+          type="button"
+          onClick={() =>
+            cajaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+          }
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-4 py-2 text-sm font-medium text-primary"
+        >
+          Falta marcar la caja (obligatoria)
+        </button>
+      )}
+
+      {/* OJO: el botón NO se apaga porque falte la caja.
+          Se apagó durante un día y el resultado fue que una clienta escribió a
+          la tienda diciendo que «no le deja continuar»: un botón muerto no
+          explica nada. Ahora se puede pulsar siempre, y al pulsarlo dice qué
+          falta y lleva hasta ello. Solo sigue apagado cuando aún no hay precio
+          que prometer (falta tamaño o sabor). */}
       <Button
         type="button"
         size="xl"
         className="w-full"
-        disabled={(!isQuote && !breakdown) || (showBox && !boxAccepted)}
+        disabled={!isQuote && !breakdown}
         onClick={handleConfirm}
       >
         {isQuote ? "Solicitar presupuesto" : confirmLabel}
