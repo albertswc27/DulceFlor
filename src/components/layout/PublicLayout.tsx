@@ -230,7 +230,7 @@ function Footer() {
             ))}
           </ul>
           <p className="mt-3 text-xs text-cocoa-foreground/50">
-            Abierto todos los días.
+            Los lunes permanecemos cerrados.
           </p>
         </div>
       </div>

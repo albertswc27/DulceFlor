@@ -13,7 +13,8 @@ import {
 
 /**
  * Reglas confirmadas por Dulce Flor:
- *  - Horario 10:00–22:00 todos los días (17/08/2026).
+ *  - Horario (01/10/2026): lunes CERRADO, martes a sábado 10:00–21:00 y
+ *    domingos 11:00–20:00.
  *  - Antelación estándar 3 días (17/08/2026), matizada el 29/08/2026: ya NO
  *    bloquea. Con menos margen el pedido se acepta como URGENTE (colchón
  *    mínimo de 60 minutos) y se confirma por WhatsApp.
@@ -21,27 +22,46 @@ import {
  *
  * Referencia temporal fija: martes 2026-08-18 a las 18:00.
  *  - Colchón urgente: primer instante seleccionable hoy a las 19:00.
- *  - Umbral de urgencia (72 h): viernes 2026-08-21 a las 18:00.
+ *  - Umbral de urgencia (3 días naturales): viernes 2026-08-21 a las 00:00.
  *  - Límite de reserva: jueves 2027-02-18 (día completo).
  */
 const NOW = new Date(2026, 7, 18, 18, 0, 0);
 
-describe("horario comercial (confirmado: 10:00–22:00 todos los días)", () => {
-  it("abre todos los días de la semana", () => {
-    for (let d = 0; d < 7; d++) {
-      const date = new Date(2026, 7, 23 + d); // domingo 23 → sábado 29
-      expect(isOpenOn(date)).toBe(true);
+describe("horario comercial (actualizado 01/10/2026: lunes cerrado)", () => {
+  it("cierra los lunes y abre el resto de la semana", () => {
+    expect(isOpenOn(new Date(2026, 7, 23))).toBe(true); // domingo
+    expect(isOpenOn(new Date(2026, 7, 24))).toBe(false); // LUNES
+    for (let dia = 25; dia <= 29; dia++) {
+      expect(isOpenOn(new Date(2026, 7, dia))).toBe(true); // martes → sábado
     }
   });
 
-  it("un día con margen ofrece de 10:00 a 22:00 sin cortes", () => {
-    const saturday = new Date(2026, 7, 22);
-    const slots = getAvailableSlotsForDate(saturday, NOW);
+  it("el lunes no ofrece ninguna hora y no se puede elegir", () => {
+    // No basta con que isOpenOn diga false: el calendario tiene que dejarlo
+    // en gris y rechazar la fecha aunque alguien la escriba a mano.
+    const lunes = new Date(2026, 7, 24);
+    expect(getAvailableSlotsForDate(lunes, NOW)).toEqual([]);
+    expect(isDateSelectable(lunes, NOW)).toBe(false);
+    expect(isRequestedSlotValid("2026-08-24", "12:00", NOW)).toBe(false);
+  });
+
+  it("de martes a sábado ofrece de 10:00 a 21:00 sin cortes", () => {
+    const sabado = new Date(2026, 7, 22);
+    const slots = getAvailableSlotsForDate(sabado, NOW);
     expect(slots[0]).toBe("10:00");
-    expect(slots[slots.length - 1]).toBe("22:00");
+    expect(slots[slots.length - 1]).toBe("21:00");
     expect(slots).toContain("15:00"); // sin cierre de mediodía
     expect(slots).not.toContain("09:30");
-    expect(slots).not.toContain("22:30");
+    expect(slots).not.toContain("21:30");
+  });
+
+  it("el domingo abre más tarde y cierra antes", () => {
+    const domingo = new Date(2026, 7, 23);
+    const slots = getAvailableSlotsForDate(domingo, NOW);
+    expect(slots[0]).toBe("11:00");
+    expect(slots[slots.length - 1]).toBe("20:00");
+    expect(slots).not.toContain("10:30");
+    expect(slots).not.toContain("20:30");
   });
 });
 
@@ -57,7 +77,7 @@ describe("pedidos urgentes (menos de 3 días naturales, aceptados desde el 29/08
     const today = new Date(2026, 7, 18);
     const slots = getAvailableSlotsForDate(today, NOW);
     expect(slots[0]).toBe("19:00");
-    expect(slots).toContain("22:00");
+    expect(slots).toContain("21:00");
     expect(slots).not.toContain("18:30");
   });
 
@@ -76,9 +96,10 @@ describe("pedidos urgentes (menos de 3 días naturales, aceptados desde el 29/08
   });
 
   it("agotado el día, el primer hueco salta al día (y mes) siguiente", () => {
-    // Lunes 31/08 a las 22:30: ya no queda hora hoy. El selector se apoya en
-    // esto para abrir el calendario en septiembre en vez de en un agosto
-    // entero en gris.
+    // Lunes 31/08 a las 22:30. El lunes está cerrado y además es el último
+    // día del mes, así que el primer hueco cae en septiembre. El selector se
+    // apoya en esto para abrir el calendario en el mes correcto en vez de en
+    // un agosto entero en gris.
     const lateLastDayOfMonth = new Date(2026, 7, 31, 22, 30, 0);
     const first = findFirstAvailableSlot(lateLastDayOfMonth);
     expect(first).not.toBeNull();
@@ -142,11 +163,11 @@ describe("pedidos urgentes (menos de 3 días naturales, aceptados desde el 29/08
 
 describe("horizonte máximo de reserva (6 meses)", () => {
   it("el día límite (18/02/2027) aún se puede elegir entero", () => {
-    const limitDay = new Date(2027, 1, 18);
+    const limitDay = new Date(2027, 1, 18); // jueves
     const slots = getAvailableSlotsForDate(limitDay, NOW);
     expect(slots[0]).toBe("10:00");
-    expect(slots[slots.length - 1]).toBe("22:00");
-    expect(isRequestedSlotValid("2027-02-18", "22:00", NOW)).toBe(true);
+    expect(slots[slots.length - 1]).toBe("21:00");
+    expect(isRequestedSlotValid("2027-02-18", "21:00", NOW)).toBe(true);
   });
 
   it("más allá del límite no hay fechas seleccionables", () => {
@@ -159,7 +180,7 @@ describe("horizonte máximo de reserva (6 meses)", () => {
 describe("validación de slot solicitado", () => {
   it("acepta combinaciones válidas, con margen o urgentes", () => {
     expect(isRequestedSlotValid("2026-08-22", "10:30", NOW)).toBe(true);
-    expect(isRequestedSlotValid("2026-08-22", "22:00", NOW)).toBe(true);
+    expect(isRequestedSlotValid("2026-08-22", "21:00", NOW)).toBe(true);
     expect(isRequestedSlotValid("2026-08-20", "12:00", NOW)).toBe(true); // urgente
     expect(isRequestedSlotValid("2026-08-18", "19:00", NOW)).toBe(true); // hoy
   });

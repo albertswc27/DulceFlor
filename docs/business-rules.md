@@ -18,7 +18,7 @@ Fuente de verdad de catálogo y precios: [`src/domain/catalog.ts`](../src/domain
 | Antelación estándar | 3 **días naturales** («Mínimo 3 días», WhatsApp 17/08/2026). **Matizado el 29/08/2026: ya no bloquea el calendario.** Con menos margen el pedido se acepta como **URGENTE**: queda marcado en el sistema (`Order.urgent`), el mensaje de WhatsApp lo encabeza con «PEDIDO URGENTE» y la tienda debe confirmarlo expresamente. **Cambiado el 29/09/2026 de 72 h rodantes a días naturales**: el umbral cae a las 00:00, así que hoy, mañana y pasado son urgentes y el tercer día ya no, sin depender de la hora a la que se haga el pedido (antes, el mismo jueves salía con o sin recargo según se pidiera el lunes por la mañana o por la tarde) | `STANDARD_ORDER_LEAD_TIME_DAYS = 3` |
 | Colchón mínimo urgente | Ni siquiera un pedido urgente puede ser «para dentro de 10 minutos»: mínimo 60 min de margen desde la web/kiosk (confirmado 30/08/2026) | `URGENT_MIN_LEAD_TIME_MINUTES = 60` |
 | Antelación máxima | Se puede reservar con hasta 6 meses vista (el 29/08/2026 confirmaron que hay clientes que apartan tarta para meses después y dejaron la cifra a nuestro criterio; los 6 meses quedaron confirmados el 30/08/2026). El día que cae justo en el límite se puede elegir entero | `MAX_ORDER_ADVANCE_MONTHS = 6` |
-| Horario | 10:00–22:00 («de 10am hasta las 10pm», WhatsApp 17/08/2026). No indicaron días de cierre → abierto todos los días hasta nuevo aviso | `BUSINESS_HOURS` |
+| Horario | **Lunes cerrado. Martes a sábado 10:00–21:00. Domingos 11:00–20:00** (WhatsApp 01/10/2026: «cerramos los lunes y nuestro horario es de martes a sábados de 10am hasta las 9pm y los domingos 11am hasta las 8pm»). Antes figuraba 10:00–22:00 todos los días. De aquí sale el calendario del pedido: el lunes deja de ofrecerse entero | `BUSINESS_HOURS` |
 | Cartas claras = empresas | Confirmado 17/08/2026 | catálogo `availableFor` |
 | Lista de toppings | Confirmada 17/08/2026 (derivada de las cartas) | `TOPPINGS` |
 | Extras de tarta | Dedicatoria **2,50 €**, imagen en papel comestible **8 €** y **toppers de 6 figuras 5 €** (actualizados y añadido el 20/09/2026). Los tres se ofrecen en las tartas con precio automático | `EXTRAS` |
@@ -56,7 +56,7 @@ Fuente de verdad de catálogo y precios: [`src/domain/catalog.ts`](../src/domain
 ## Pendiente de Dulce Flor
 
 - **Nombre completo del titular (autónomo)** para el aviso legal. El NIF ya fue facilitado por WhatsApp; por privacidad no se guarda en este repositorio público.
-- Días de cierre semanales, si los hubiera (hoy: abierto todos los días, 10:00–22:00).
+- Días de cierre puntuales: vacaciones y festivos. El cierre semanal de los lunes ya está recogido en `BUSINESS_HOURS`, pero no hay forma de marcar un día suelto.
 - **Fotos de tres leches y de las especialidades** (pudín, torta de chocolate, torta helada): esas fichas siguen sin fotografía real y dibujan la ilustración de marca.
 - **Papel comestible en pudín casero, torta de chocolate y torta helada**: hoy solo ofrecen dedicatoria. La regla general dice «todos los productos», así que o falta el extra en esos tres o la regla tiene excepciones. Pendiente de confirmar antes de tocarlo.
 

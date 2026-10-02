@@ -5,8 +5,8 @@
  *   - Antelación estándar: 3 días («Mínimo 3 días»). OJO: matizado el
  *     29/08/2026 — ya NO bloquea; con menos margen el pedido es URGENTE
  *     (ver STANDARD_ORDER_LEAD_TIME_DAYS más abajo).
- *   - Horario: 10:00–22:00 («Hacemos de 10am hasta las 10pm»); no indicaron
- *     días de cierre, se asume abierto todos los días hasta que digan lo contrario.
+ *   - Horario: ver BUSINESS_HOURS. ACTUALIZADO el 01/10/2026: cierran los
+ *     lunes, martes a sábado 10:00–21:00 y domingos 11:00–20:00.
  *
  * Confirmado por Dulce Flor (18/08/2026): dirección de la tienda, zonas de
  * entrega tal como estaban, y fuera de Barcelona los gastos de envío se
@@ -169,21 +169,30 @@ export interface TimeWindow {
 }
 
 /**
- * Horario confirmado por Dulce Flor (17/08/2026): 10:00–22:00.
- * No indicaron días de cierre → abierto todos los días hasta nuevo aviso.
+ * Horario de la tienda, actualizado por Dulce Flor el 01/10/2026:
+ * «cerramos los lunes y nuestro horario es de martes a sábados de 10am hasta
+ * las 9pm y los domingos 11am hasta las 8pm».
+ *
+ * Hasta esa fecha figuraba 10:00–22:00 todos los días, que es lo que dijeron
+ * en agosto. El calendario del pedido sale de aquí, así que esto es lo que
+ * decide qué días y qué horas puede elegir un cliente: el lunes deja de
+ * ofrecerse entero.
+ *
  * Clave: día de la semana según Date.getDay() (0 = domingo … 6 = sábado).
  * Un array vacío significa cerrado todo el día.
  */
-const DAILY_HOURS: TimeWindow[] = [{ start: "10:00", end: "22:00" }];
+const DE_MARTES_A_SABADO: TimeWindow[] = [{ start: "10:00", end: "21:00" }];
+const DOMINGO: TimeWindow[] = [{ start: "11:00", end: "20:00" }];
+const CERRADO: TimeWindow[] = [];
 
 export const BUSINESS_HOURS: Record<number, TimeWindow[]> = {
-  0: DAILY_HOURS,
-  1: DAILY_HOURS,
-  2: DAILY_HOURS,
-  3: DAILY_HOURS,
-  4: DAILY_HOURS,
-  5: DAILY_HOURS,
-  6: DAILY_HOURS,
+  0: DOMINGO,
+  1: CERRADO, // lunes
+  2: DE_MARTES_A_SABADO,
+  3: DE_MARTES_A_SABADO,
+  4: DE_MARTES_A_SABADO,
+  5: DE_MARTES_A_SABADO,
+  6: DE_MARTES_A_SABADO,
 };
 
 export interface DeliveryZone {
