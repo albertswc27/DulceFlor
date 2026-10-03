@@ -243,11 +243,51 @@ export default function OrderWizardPage() {
     }
   }, [state.items.length, step]);
 
+  /**
+   * Cada paso del pedido es una entrada del historial del navegador.
+   *
+   * Sin esto, el botón «atrás» del navegador —y el gesto de retroceso del
+   * móvil, y el de la tablet de la tienda— se salen del pedido ENTERO en vez
+   * de retroceder un paso, porque el paso vivía solo en un useState y la URL
+   * nunca cambiaba. Dulce Flor lo reportó dos veces con las mismas palabras:
+   * «cuando intento retroceder para agregar otra cosa, no puedo».
+   *
+   * El borrador nunca se perdía (vive en sessionStorage), pero eso el cliente
+   * no lo sabe: lo que ve es que se ha salido, y entonces ya da igual.
+   *
+   * Se empuja por el router y no con history.pushState a pelo para que el
+   * router no se quede con una idea distinta de dónde está.
+   */
   function goTo(next: StepId) {
     // El aviso de "añadido" solo vive en la vuelta inmediata al catálogo.
     if (next !== "product") setLastAddedName(null);
     setStep(next);
+    // history.pushState y no navigate(): el router NO crea una entrada cuando
+    // la ruta no cambia —comprobado en un navegador real, retroceder se salía
+    // a la página anterior— y aquí la URL es siempre /pedido. Como la URL no
+    // se toca, el router sigue resolviendo la misma ruta y no se entera.
+    window.history.pushState({ pasoPedido: next }, "");
+    empujados.current += 1;
   }
+
+  /** El paso con el que se entró: a donde lleva retroceder del todo. */
+  const pasoInicial = React.useRef(step);
+  /** Cuántas entradas de historial llevamos puestas nosotros. */
+  const empujados = React.useRef(0);
+
+  // Retroceder en el navegador = retroceder un paso aquí.
+  React.useEffect(() => {
+    function alRetroceder(evento: PopStateEvent) {
+      const estado = evento.state as { pasoPedido?: StepId } | null;
+      empujados.current = Math.max(0, empujados.current - 1);
+      // Al salir del configurador hay que soltarlo, o se abriría otra vez encima.
+      setConfiguringProduct(null);
+      setEditingItem(null);
+      setStep(estado?.pasoPedido ?? pasoInicial.current);
+    }
+    window.addEventListener("popstate", alRetroceder);
+    return () => window.removeEventListener("popstate", alRetroceder);
+  }, []);
 
   function handleCustomerType(type: CustomerType) {
     if (state.customerType && state.customerType !== type && state.items.length > 0) {
@@ -362,6 +402,12 @@ export default function OrderWizardPage() {
   const visibleStepIndex = stepOrder.indexOf(step);
 
   function back() {
+    // Delegar en el historial: así el botón de la cabecera y el del navegador
+    // hacen exactamente lo mismo y no se desincronizan.
+    if (empujados.current > 0) {
+      window.history.back();
+      return;
+    }
     switch (step) {
       case "product":
         goTo("customer-type");
