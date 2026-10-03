@@ -28,7 +28,6 @@ Se eliminó **1 duplicado exacto**: `WhatsApp Image 2026-08-21 at 16.13.433.jpeg
 | Nombre original | Nuevo nombre | Contenido real (auditoría visual) | Uso en la web |
 | --- | --- | --- | --- |
 | `tarta-clasica-chocolate-crema-cafe.webp` | `fotos/tartas/tarta-clasica-chocolate-crema-cafe.webp` | tarta de chocolate con drip, rosetones de crema tipo café/dulce de leche y chips de chocolate | Referencias de tarta clásica |
-| `tarta-clasica-chocolate-drip-dedicatoria.webp` | `fotos/tartas/tarta-clasica-chocolate-dedicatoria.webp` | tarta de chocolate de cumpleaños con drip, dedicatoria escrita y topper dorado "Happy Birthday 50" | Referencias de tarta clásica |
 | `tarta-clasica-chocolate-dulce-de-leche.webp` | `fotos/tartas/tarta-clasica-chocolate-dulce-de-leche.webp` | tarta de chocolate con cobertura de ganache, cenefa de dulce de leche y fideos de chocolate | Referencias de tarta clásica |
 | `tarta-clasica-chocolate-trufa-drip.webp` | `fotos/tartas/tarta-clasica-chocolate-trufa-drip.webp` | tarta de chocolate entera con drip, rosetones de crema de chocolate y virutas/chips | Referencias de tarta clásica |
 | `tarta-clasica-buttercream-rosa-lotus.webp` | `fotos/tartas/tarta-clasica-lotus-buttercream.webp` | tarta redonda de crema Lotus (speculoos) con cenefa de manga y galletas Lotus | Referencias de tarta clásica |
@@ -116,6 +115,11 @@ Auditadas **visualmente a ciegas** antes de clasificarlas: el nombre del archivo
 | `fondant4.jpeg` | — (descartada) | Misma tarta de boda que `fondant3`, peor encuadre y fondo desordenado | Descartada: `duplicado-de-tarta-boda` |
 | `personalziado.jpeg` | `fotos/tartas-personalizadas/tarta-futbol-blanca-escudo.webp` | Tarta blanca con escudo de fútbol | Personalizadas · referencia |
 | `personalziado2.jpeg` | `fotos/tartas-personalizadas/tarta-cumpleanos-marfil-lazo-dorado.webp` | Tarta marfil con lazo dorado | Personalizadas · «Ver más» |
+| WhatsApp 02/10/2026 16.53.07 | `fotos/tartas-personalizadas/tartas-quince-anos-dos-pisos-mariposas.webp` | Dos tartas de quince años de dos pisos, azul y verde, con flores naturales, mariposas y luces | **Portada de «Tartas» en la home** (`TARTAS_COVER_PHOTO`) |
+| WhatsApp 02/10/2026 16.52.29 | `fotos/tartas-personalizadas/tarta-volantes-blancos-flores-rosas.webp` | Tarta blanca de volantes con flores rosas y topper «Happy Birthday» | Personalizadas |
+| WhatsApp 02/10/2026 16.52.45 | `fotos/tartas-personalizadas/tarta-buttercream-lila-toppers-brillo.webp` | Tarta marfil con cenefa lila y toppers de purpurina | Personalizadas |
+| WhatsApp 02/10/2026 16.53.16 | `fotos/tartas-personalizadas/tarta-futbol-roja-escudo-azulgrana.webp` | Tarta roja con cenefa azul y toppers de fútbol | Personalizadas |
+| WhatsApp 02/10/2026 16.53.35 | `fotos/tartas-personalizadas/tarta-infantil-videojuego-piezas-fondant.webp` | Tarta infantil azul con letras y piezas de fondant de colores | Personalizadas |
 | `personalziado3.jpeg` | `fotos/tartas-personalizadas/tarta-corazon-rosetones-rojos.webp` | Tarta con forma de corazón y rosetones rojos | Personalizadas · referencia |
 | `personalziado4.jpeg` | `fotos/tartas-personalizadas/tarta-buttercream-rosetones-lila.webp` | Montaje 2×1: se recorta el fotograma derecho (tarta de rosetones lila) | Personalizadas · «Ver más» |
 | `personalziado5.jpeg` | `fotos/tartas-personalizadas/tarta-infantil-conejito-primer-cumple.webp` | Tarta de primer cumpleaños con conejito | Personalizadas · «Ver más» |
@@ -145,7 +149,9 @@ Auditadas a ciegas y **verificadas dos veces** antes de publicarlas, porque dos 
 
 ### Punto abierto
 
-La tarta de pistacho lleva escrito **«Felicidades, Noelia»**, el nombre de pila de una clienta. Dulce Flor envió la foto expresamente para publicarla y no se ve ninguna cara, pero conviene que lo sepa. El repositorio ya publicaba otras tartas con dedicatoria (`tarta-clasica-merengue-dedicatoria`, `tarta-clasica-chocolate-dedicatoria`).
+La tarta de pistacho lleva escrito **«Felicidades, Noelia»**, el nombre de pila de una clienta. Dulce Flor envió la foto expresamente para publicarla y no se ve ninguna cara, pero conviene que lo sepa. El repositorio ya publicaba otras tartas con dedicatoria (`tarta-clasica-merengue-dedicatoria`).
+
+Las cinco fotos del 02/10/2026 llevan nombres de pila en los toppers (Montse, Jhon, Valentino, Sara, Miriel) y las envió Dulce Flor para publicarlas. No se ve ninguna cara.
 
 
 ## Tarta Tres Leches (26/08/2026)
@@ -183,3 +189,16 @@ src/assets/
 - Las cartas de **fondo oscuro** corresponden a la oferta para **particulares**; las de **fondo claro** indican explícitamente (o comparten diseño con la que lo indica) precios para **empresas y restaurantes**. La asignación de `...196.jpeg` a empresas es una **inferencia por estilo visual** — pendiente de confirmar con Dulce Flor.
 - No existen fotografías reales de producto individuales (solo las cartas y el logo). Las tarjetas de producto de la web usan estilos de marca como placeholder hasta disponer de fotos reales.
 - Los datos extraídos de estas cartas alimentan `src/domain/catalog.ts` (fuente de verdad del catálogo).
+
+## Retirada del 02/10/2026
+
+`tarta-clasica-chocolate-dedicatoria.webp` (la de «MIRIAN») se ha **borrado** a
+petición de Dulce Flor. Estaba hecha en una mesa de casa, con una botella de
+refresco y unos botes al fondo, y desentonaba con el resto, que están tomadas
+en la tienda. No era una foto cualquiera: era la que encabezaba la tarjeta de
+«Tartas» en la home, o sea la imagen más visible de la web.
+
+Se cogía como `CLASSIC_CAKE_PHOTOS[4]`. Ahora la portada es
+`TARTAS_COVER_PHOTO`, con nombre propio, porque con el índice bastaba quitar
+cualquier foto de esa lista para que la portada cambiara sola a otra distinta
+sin que nadie se enterara.

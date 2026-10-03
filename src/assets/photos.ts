@@ -13,7 +13,6 @@ import tartaChocolateTrufa from "./fotos/tartas/tarta-clasica-chocolate-trufa-dr
 import tartaNataDrip from "./fotos/tartas/tarta-clasica-nata-drip-chocolate.webp";
 import tartaLotus from "./fotos/tartas/tarta-clasica-lotus-buttercream.webp";
 import tartaCremaCafe from "./fotos/tartas/tarta-clasica-chocolate-crema-cafe.webp";
-import tartaChocolateDedicatoria from "./fotos/tartas/tarta-clasica-chocolate-dedicatoria.webp";
 import tartaMerengue from "./fotos/tartas/tarta-clasica-merengue-dedicatoria.webp";
 import tartaDulceLeche from "./fotos/tartas/tarta-clasica-chocolate-dulce-de-leche.webp";
 import tartaVintage from "./fotos/tartas/tarta-decoracion-vintage-turquesa.webp";
@@ -34,6 +33,11 @@ import personalizadaOblea from "./fotos/tartas-personalizadas/tarta-aniversario-
 import personalizadaConejito from "./fotos/tartas-personalizadas/tarta-infantil-conejito-primer-cumple.webp";
 import personalizadaFutbolBlanca from "./fotos/tartas-personalizadas/tarta-futbol-blanca-escudo.webp";
 import personalizadaLazoDorado from "./fotos/tartas-personalizadas/tarta-cumpleanos-marfil-lazo-dorado.webp";
+import personalizadaQuinceAnos from "./fotos/tartas-personalizadas/tartas-quince-anos-dos-pisos-mariposas.webp";
+import personalizadaVolantes from "./fotos/tartas-personalizadas/tarta-volantes-blancos-flores-rosas.webp";
+import personalizadaLilaBrillo from "./fotos/tartas-personalizadas/tarta-buttercream-lila-toppers-brillo.webp";
+import personalizadaFutbolRoja from "./fotos/tartas-personalizadas/tarta-futbol-roja-escudo-azulgrana.webp";
+import personalizadaVideojuego from "./fotos/tartas-personalizadas/tarta-infantil-videojuego-piezas-fondant.webp";
 
 /* ------------------------- Tres leches -------------------------- */
 import tresLechesFuente from "./fotos/tartas/tarta-tres-leches-fuente-cristal.webp";
@@ -118,11 +122,6 @@ export const CLASSIC_CAKE_PHOTOS: Photo[] = [
     caption: "Crema de café y pepitas",
   },
   {
-    src: tartaChocolateDedicatoria,
-    alt: "Tarta clásica de chocolate con drip y dedicatoria de cumpleaños escrita sobre la tarta",
-    caption: "Con dedicatoria escrita",
-  },
-  {
     src: tartaMerengue,
     alt: "Tarta clásica con merengue tostado a soplete y dedicatoria escrita con chocolate",
     caption: "Merengue tostado con dedicatoria",
@@ -173,7 +172,44 @@ export const FONDANT_CAKE_PHOTOS: Photo[] = [
  * Tartas PERSONALIZADAS sin fondant: decoración a medida trabajada a manga,
  * toppers, obleas impresas o flores naturales.
  */
+/**
+ * La foto que encabeza la tarjeta de «Tartas» en la home: la imagen más
+ * visible de toda la web.
+ *
+ * Tiene nombre propio y no un índice a propósito. Antes se cogía como
+ * CLASSIC_CAKE_PHOTOS[4], así que quitar cualquier foto de esa lista cambiaba
+ * la portada por otra distinta sin que nadie se enterara. Dulce Flor eligió
+ * esta el 02/10/2026: «ponemos una de las principales, como la de las dos
+ * tartas, la de quince años».
+ */
+export const TARTAS_COVER_PHOTO: Photo = {
+  src: personalizadaQuinceAnos,
+  alt: "Dos tartas de quince años de dos pisos, en azul y verde, con flores naturales, mariposas plateadas y luces en el piso central",
+  caption: "Quince años, dos pisos con luces",
+};
+
 export const CUSTOM_CAKE_PHOTOS: Photo[] = [
+  TARTAS_COVER_PHOTO,
+  {
+    src: personalizadaVolantes,
+    alt: "Tarta blanca con volantes de buttercream y flores de azúcar en tonos rosa, con topper de Happy Birthday",
+    caption: "Volantes blancos con flores",
+  },
+  {
+    src: personalizadaLilaBrillo,
+    alt: "Tarta de buttercream color marfil con cenefa lila a manga y toppers de purpurina",
+    caption: "Cenefa lila con toppers",
+  },
+  {
+    src: personalizadaFutbolRoja,
+    alt: "Tarta roja con cenefa azul a manga y toppers de fútbol con el escudo azulgrana",
+    caption: "Fútbol, roja y azulgrana",
+  },
+  {
+    src: personalizadaVideojuego,
+    alt: "Tarta infantil azul con letras y piezas de colores en fondant y toppers de videojuego",
+    caption: "Infantil de videojuego",
+  },
   {
     src: personalizadaCorazon,
     alt: "Tarta con forma de corazón decorada con rosetones rojos a manga",

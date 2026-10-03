@@ -43,6 +43,7 @@ import {
 import { CakeReferences } from "@/features/order/components/CakeReferences";
 import {
   CLASSIC_CAKE_PHOTOS,
+  TARTAS_COVER_PHOTO,
   GLASS_PHOTOS,
   SAVOURY_HERO_PHOTOS,
   type Photo,
@@ -80,8 +81,9 @@ interface FamilyCard {
 const FAMILY_CARDS: FamilyCard[] = [
   {
     id: "tartas",
-    // Foto distinta de las 4 que muestra la galería de abajo, para no repetir.
-    photo: CLASSIC_CAKE_PHOTOS[4],
+    // Por nombre y no por índice: antes era CLASSIC_CAKE_PHOTOS[4] y bastaba
+    // con quitar una foto de esa lista para que la portada cambiara sola.
+    photo: TARTAS_COVER_PHOTO,
     description:
       "Configúrala y conoce el precio al momento, o pídenos un diseño a medida.",
     badge:
