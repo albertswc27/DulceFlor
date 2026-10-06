@@ -225,11 +225,17 @@ export function AiCakePreview({ suggestedFinish, onAccept }: AiCakePreviewProps)
 
       {image && (
         <div className="space-y-3">
-          <div className="relative overflow-hidden rounded-xl border border-border bg-card">
+          {/* Alto acotado y centrada.
+              La imagen es 4:5, así que a todo el ancho del configurador pasaba
+              de 1000 px de alto: empujaba la casilla de aceptación y el resto
+              de opciones fuera de la pantalla, y en un móvil había que hacer
+              scroll un buen rato para volver al pedido. `mx-auto` con un ancho
+              máximo la deja grande pero no infinita. */}
+          <div className="relative mx-auto max-w-sm overflow-hidden rounded-xl border border-border bg-card">
             <img
               src={image}
               alt="Idea aproximada de la tarta, generada con inteligencia artificial"
-              className="w-full object-cover"
+              className="max-h-[70vh] w-full object-contain"
             />
             <EtiquetaIa />
           </div>
