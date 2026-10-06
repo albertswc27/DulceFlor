@@ -63,8 +63,10 @@ describe("el cuerpo que se le manda a Gemini", () => {
       mime_type: "image/jpeg",
       image_size: "1K",
       aspect_ratio: "4:5",
-      delivery: "inline",
     });
+    // `delivery` NO: la API devuelve 400 «Image delivery mode is not
+    // supported». Comprobado contra el servicio real el 06/10/2026.
+    expect(formato).not.toHaveProperty("delivery");
   });
 
   it("y NO los deja sueltos en la raíz, que es lo que devolvía 400", async () => {

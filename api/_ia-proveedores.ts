@@ -145,9 +145,9 @@ function gemini(apiKey: string, modelo: string): ProveedorImagen {
           image_size: "1K",
           // Vertical, que es como están hechas sus fotos y como se mira un móvil.
           aspect_ratio: "4:5",
-          // Los bytes dentro de la respuesta, no una URL que habría que ir a
-          // buscar en una segunda petición.
-          delivery: "inline",
+          // Aquí NO va `delivery`. Lo puse por si acaso, pensando en pedir los
+          // bytes en vez de una URL, y la API responde 400 «Image delivery
+          // mode is not supported»: no existe. Por defecto ya vienen inline.
         },
       };
       if (interaccionAnterior) cuerpo.previous_interaction_id = interaccionAnterior;

@@ -230,10 +230,16 @@ porque es un fallo que no se ve en ninguna revisión: el cuerpo es un objeto
 suelto, el compilador no lo mira, y no aparece hasta que una clienta pulsa el
 botón.
 
-**Sigue sin comprobarse de extremo a extremo una generación con imagen**,
-porque la clave está en el nivel gratuito y ahí este modelo tiene un límite de
-**0 peticiones al día**: no es solo que Google entrene con lo enviado, es que no
-responde. En cuanto haya facturación hay que hacer una generación real y mirarla.
+**Comprobado de extremo a extremo el 06/10/2026**, con créditos comprados: una
+generación real tarda **7 segundos**, devuelve un JPEG de unos 600 kB y trae el
+identificador de interacción. La tarta que salió es de un piso, con rosetones y
+drip de chocolate sobre base dorada: justo lo que el obrador sabe hacer, y sin
+texto encima. El cierre de la lista de opciones más las fotos reales como
+referencia hacen su trabajo.
+
+Apareció un último parámetro inventado: **`delivery` no existe** (`400 Image
+delivery mode is not supported`). Lo había puesto para pedir los bytes en vez
+de una URL, y resulta que por defecto ya vienen dentro de la respuesta.
 
 Con `IA_PROVEEDOR=pruebas` todo lo demás —cupos, guardado, etiquetado, la
 casilla, el pedido— se puede verificar sin clave y sin gastar.

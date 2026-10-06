@@ -292,7 +292,12 @@ function main() {
     PUBLIC_SITE_URL: "https://www.dulceflorbcn.es",
     SMS_PROVIDER: "pruebas",
     SMS_SENDER: "DulceFlor",
-    IA_PROVEEDOR: "pruebas",
+    // gemini de verdad desde el 06/10/2026: creditos comprados, clave con
+    // facturacion y una generacion real comprobada.
+    IA_PROVEEDOR: "gemini",
+    // El interruptor de la interfaz. Sin esto el generador existe pero no
+    // se le ensena a nadie. Ver AI_PREVIEW_ENABLED en src/config/business.ts.
+    VITE_AI_PREVIEW: "1",
     // Las dos con prefijo VITE_ las lee el navegador, no el servidor, y son
     // las mismas de arriba. Están aquí porque tienen que existir en los TRES
     // entornos: sin ellas en preview, una preview se despliega sin base de
