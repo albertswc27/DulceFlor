@@ -17,6 +17,48 @@
  * puede depender de `window` ni de `process`.
  */
 
+/**
+ * Lo que el prompt necesita saber del catálogo, copiado aquí a mano.
+ *
+ * Y no importado, que sería lo natural: `catalog.ts` importa con el alias
+ * `@/`, que Node no resuelve dentro de la función serverless. Importarlo
+ * tumbaría `/api/generar-imagen` en producción, igual que pasó con las
+ * extensiones de los imports.
+ *
+ * El riesgo de copiar es que se desincronice, así que hay un test que compara
+ * estas tres tablas con el catálogo y falla nombrando lo que sobra o falta.
+ */
+const ALTURA_POR_DISCO: Record<string, number> = {
+  "1d": 8,
+  "2d": 13,
+  "3d": 20,
+};
+
+const PERSONAS_POR_TAMANO: Record<string, string> = {
+  "4-6": "4 a 6",
+  "10-12": "10 a 12",
+  "16-18": "16 a 18",
+  "20-22": "20 a 22",
+};
+
+const TOPPINGS_PARA_LA_IA: Record<string, string> = {
+  fresas: "fresas frescas",
+  "dulce-de-leche": "dulce de leche",
+  oreo: "galletas Oreo",
+  "kinder-bueno": "Kinder Bueno",
+  lotus: "galletas Lotus",
+  nutella: "Nutella",
+  "frutos-rojos": "frutos rojos",
+  chocolate: "chocolate",
+};
+
+/** Para el test de sincronía con el catálogo. */
+export const AI_CATALOGO_LOCAL = {
+  discos: ALTURA_POR_DISCO,
+  tamanos: PERSONAS_POR_TAMANO,
+  toppings: TOPPINGS_PARA_LA_IA,
+};
+
 /** Acabados que Dulce Flor hace de verdad. Cada uno tiene sus fotos de estilo. */
 export type CakeFinish = "nata" | "buttercream" | "fondant";
 
@@ -37,21 +79,21 @@ export const CAKE_FINISHES: FinishOption[] = [
     label: "Nata y chocolate",
     description: "Nuestro acabado clásico, con cobertura y chorreado de chocolate.",
     prompt:
-      "tarta redonda de dos pisos bajos cubierta de nata montada lisa, con un chorreado (drip) de chocolate por el borde superior",
+      "cubierta de nata montada lisa, con un chorreado (drip) de chocolate por el borde superior",
   },
   {
     id: "buttercream",
     label: "Buttercream",
     description: "Rosetones y cenefa hechos con manga pastelera.",
     prompt:
-      "tarta redonda cubierta de buttercream con rosetones y cenefa hechos a manga pastelera, textura visible de crema",
+      "cubierta de buttercream con rosetones y cenefa hechos a manga pastelera, textura visible de crema",
   },
   {
     id: "fondant",
     label: "Fondant",
     description: "Forrada de fondant liso, con figuras modeladas a mano.",
     prompt:
-      "tarta forrada de fondant liso y mate, con figuras sencillas modeladas a mano, acabado artesanal",
+      "forrada de fondant liso y mate, con figuras sencillas modeladas a mano, acabado artesanal",
   },
 ];
 
@@ -88,6 +130,24 @@ export interface AiPreviewOptions {
   colourIds: string[];
   /** Tema o motivos, en palabras del cliente. Opcional. */
   detail: string;
+  /**
+   * Tamaño elegido en el configurador, para que la tarta dibujada sea LA SUYA.
+   *
+   * Dulce Flor lo detectó probándolo: «pongo de un disco, de 4-6 personas, y
+   * me hace una torta de dos pisos». Normal: hasta ahora no se le mandaba el
+   * tamaño, solo el acabado y los colores, así que la altura y el diámetro se
+   * los inventaba el modelo.
+   *
+   * Ojo con el vocabulario, que es la causa del malentendido: los DISCOS son
+   * la altura de UNA tarta de un solo piso (1 disco = 8 cm, 2 = 13, 3 = 20),
+   * no tartas apiladas.
+   */
+  tierId?: string;
+  discId?: string;
+  /** Toppings elegidos: van POR ENCIMA y se ven. */
+  toppingIds?: string[];
+  /** El extra «Toppers de 6 figuras»: figuritas de pie sobre la tarta. */
+  figurineToppers?: boolean;
 }
 
 export type AiPreviewProblem =
@@ -138,6 +198,10 @@ export function validateAiPreviewOptions(raw: {
   finish?: unknown;
   colourIds?: unknown;
   detail?: unknown;
+  tierId?: unknown;
+  discId?: unknown;
+  toppingIds?: unknown;
+  figurineToppers?: unknown;
 }): AiPreviewValidation {
   const finish = CAKE_FINISHES.find((f) => f.id === raw.finish)?.id;
   if (!finish) return { ok: false, problem: "acabado-invalido" };
@@ -161,7 +225,30 @@ export function validateAiPreviewOptions(raw: {
     return { ok: false, problem: "detalle-sospechoso" };
   }
 
-  return { ok: true, options: { finish, colourIds, detail } };
+  // Lo nuevo también sale de listas cerradas del catálogo: nada de esto lo
+  // escribe el cliente, así que no amplía la superficie de lo que se le puede
+  // colar al modelo. Lo que no se reconozca, se ignora en vez de fallar: un
+  // id viejo no puede dejar sin generar a nadie.
+  const tierId =
+    typeof raw.tierId === "string" && raw.tierId in PERSONAS_POR_TAMANO ? raw.tierId : undefined;
+  const discId =
+    typeof raw.discId === "string" && raw.discId in ALTURA_POR_DISCO ? raw.discId : undefined;
+  const toppingIds = Array.isArray(raw.toppingIds)
+    ? raw.toppingIds.filter((id): id is string => typeof id === "string" && id in TOPPINGS_PARA_LA_IA)
+    : [];
+
+  return {
+    ok: true,
+    options: {
+      finish,
+      colourIds,
+      detail,
+      tierId,
+      discId,
+      toppingIds,
+      figurineToppers: raw.figurineToppers === true,
+    },
+  };
 }
 
 /**
@@ -182,7 +269,9 @@ export function validateAiPreviewOptions(raw: {
 export const AI_SYSTEM_PROMPT = [
   "Eres el fotógrafo de producto de una pastelería artesanal pequeña de barrio.",
   "Genera UNA fotografía realista de UNA sola tarta, centrada, sobre una mesa neutra y con luz natural suave.",
-  "La tarta debe ser ARTESANAL Y ALCANZABLE: como mucho dos pisos bajos, decoración sencilla hecha a mano.",
+  "La tarta debe ser ARTESANAL Y ALCANZABLE: decoración sencilla hecha a mano, del nivel de una pastelería de barrio.",
+  "MUY IMPORTANTE: es UNA tarta REDONDA de UN SOLO PISO, salvo que la descripción diga otra cosa. NUNCA apiles tartas ni hagas pisos escalonados por tu cuenta.",
+  "La altura y el diámetro te los da la descripción: respétalos, son los que ha encargado el cliente.",
   "Nada de tartas de concurso, esculturas de azúcar, pisos imposibles, purpurina irreal ni acabados industriales.",
   "NO escribas ningún texto, letra, número ni firma sobre la tarta ni en la imagen.",
   "Si la descripción pide una dedicatoria, coloca en su lugar una placa lisa de chocolate blanco EN BLANCO, sin nada escrito.",
@@ -199,10 +288,48 @@ function describeColours(colourIds: string[]): string {
   return `Colores: ${nombres.join(" y ")}.`;
 }
 
+/**
+ * La forma de la tarta: un solo piso, con su altura y su diámetro.
+ *
+ * Se dice en centímetros y en personas porque el modelo entiende mucho mejor
+ * «12 cm de alto» que «2 discos», y porque «disco» en una pastelería es una
+ * capa de bizcocho, no un piso: traducirlo mal era justo lo que hacía que
+ * saliera una tarta de dos pisos cuando se pedía la más pequeña.
+ */
+function describeArquitectura(options: AiPreviewOptions): string {
+  const alto = options.discId ? ALTURA_POR_DISCO[options.discId] : undefined;
+  const personas = options.tierId ? PERSONAS_POR_TAMANO[options.tierId] : undefined;
+  if (!alto && !personas) return "";
+  const partes = ["UNA sola tarta redonda de UN SOLO PISO"];
+  if (alto) partes.push(`de unos ${alto} cm de alto`);
+  if (personas) partes.push(`y del tamaño de una tarta para ${personas} personas`);
+  return `${partes.join(" ")}.`;
+}
+
+/** Los toppings van por encima y SE VEN: si se piden fresas, hay fresas. */
+function describeToppings(toppingIds: string[] | undefined): string {
+  if (!toppingIds || toppingIds.length === 0) return "";
+  const nombres = toppingIds
+    .map((id) => TOPPINGS_PARA_LA_IA[id])
+    .filter((n): n is string => Boolean(n));
+  if (nombres.length === 0) return "";
+  return `Por encima lleva, bien visible: ${nombres.join(", ")}.`;
+}
+
 /** El texto que se envía al modelo para la PRIMERA generación. */
 export function buildImagePrompt(options: AiPreviewOptions): string {
   const finish = CAKE_FINISHES.find((f) => f.id === options.finish)!;
-  const partes = [`Una ${finish.prompt}.`, describeColours(options.colourIds)];
+  const partes = [
+    describeArquitectura(options),
+    `Acabado: ${finish.prompt}.`,
+    describeColours(options.colourIds),
+    describeToppings(options.toppingIds),
+  ];
+  if (options.figurineToppers) {
+    partes.push("Lleva seis figuritas decorativas de pie sobre la tarta.");
+  }
+  // El bizcocho y el relleno NO se mandan a propósito: van por dentro y no se
+  // ven en una foto. Lo dijo la propia Dulce Flor al probarlo.
   if (options.detail) {
     // El texto del cliente va al final y marcado como decoración: así no puede
     // reescribir lo anterior («ignora lo de arriba y haz…»), solo añadir.

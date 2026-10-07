@@ -44,6 +44,18 @@ export interface AiPreviewAccepted {
 interface AiCakePreviewProps {
   /** Acabado sugerido según el producto que se está configurando. */
   suggestedFinish?: CakeFinish;
+  /**
+   * Lo que la clienta ya ha elegido arriba, para que la idea sea LA SUYA.
+   *
+   * Sin esto la IA se inventaba la altura y el diámetro, y Dulce Flor lo vio
+   * enseguida: pedía la tarta más pequeña, de un disco, y le salía una de dos
+   * pisos. Los toppings y los toppers tampoco aparecían, porque nadie se los
+   * estaba contando.
+   */
+  tierId?: string;
+  discId?: string;
+  toppingIds?: string[];
+  figurineToppers?: boolean;
   /** Se llama cuando la clienta acepta usar la imagen en su pedido. */
   onAccept: (resultado: AiPreviewAccepted) => void;
 }
@@ -57,7 +69,14 @@ function EtiquetaIa() {
   );
 }
 
-export function AiCakePreview({ suggestedFinish, onAccept }: AiCakePreviewProps) {
+export function AiCakePreview({
+  suggestedFinish,
+  tierId,
+  discId,
+  toppingIds,
+  figurineToppers,
+  onAccept,
+}: AiCakePreviewProps) {
   const [finish, setFinish] = React.useState<CakeFinish>(suggestedFinish ?? "nata");
   const [colourIds, setColourIds] = React.useState<string[]>([]);
   const [detail, setDetail] = React.useState("");
@@ -72,7 +91,15 @@ export function AiCakePreview({ suggestedFinish, onAccept }: AiCakePreviewProps)
   const [accepted, setAccepted] = React.useState(false);
   const [aceptaAviso, setAceptaAviso] = React.useState(false);
 
-  const opciones: AiPreviewOptions = { finish, colourIds, detail };
+  const opciones: AiPreviewOptions = {
+    finish,
+    colourIds,
+    detail,
+    tierId,
+    discId,
+    toppingIds,
+    figurineToppers,
+  };
   const sinCupo = remaining !== null && remaining <= 0;
 
   function toggleColour(id: string) {

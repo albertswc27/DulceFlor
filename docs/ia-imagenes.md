@@ -83,6 +83,40 @@ nombre y la edad de un niño) **nunca sale hacia el proveedor**.
 
 ---
 
+## La tarta dibujada es LA DEL PEDIDO (07/10/2026)
+
+Dulce Flor lo probó y detectó lo que no cuadraba: «pongo de un disco, de 4-6
+personas, y me hace una torta de dos pisos»; «si pongo fresas, no me pone las
+fresas»; «si pongo toppers, tampoco».
+
+Tenía razón en todo: al modelo **solo se le mandaban el acabado, los colores y
+el texto libre**. Ni el tamaño, ni la altura, ni los toppings, ni los extras.
+La arquitectura se la inventaba.
+
+Y había algo peor: la descripción de cada acabado empezaba por «tarta redonda
+de **dos pisos bajos**», y la instrucción fija decía «como mucho dos pisos».
+O sea que a cada generación se le estaban *pidiendo* dos pisos.
+
+Ahora el prompt lleva:
+
+| Qué | De dónde sale | Por qué |
+| --- | --- | --- |
+| Altura en cm | el disco elegido (1→8, 2→13, 3→20) | «disco» es una capa de bizcocho, no un piso; el modelo entiende «8 cm» |
+| Tamaño en personas | el tramo elegido | da el diámetro |
+| Toppings | los marcados | van por encima y se ven |
+| Toppers de 6 figuras | el extra | figuritas de pie sobre la tarta |
+
+**El bizcocho y el relleno NO se mandan**, y lo dijo ella misma: «el bizcocho no
+es necesario porque como es interno no se ve».
+
+⚠️ `aiPreview.ts` **no puede importar `catalog.ts`**: el catálogo usa el alias
+`@/`, que Node no resuelve dentro de la función serverless, y hacerlo tumbaría
+`/api/generar-imagen` en producción. Por eso las alturas, los tramos y los
+toppings están copiados a mano en una tabla local, y hay un test que falla si
+se desincroniza del catálogo.
+
+---
+
 ## Proveedor y coste
 
 **Google Gemini 3.1 Flash Lite Image.**

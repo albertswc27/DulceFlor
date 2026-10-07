@@ -15,6 +15,7 @@ import { formatEuros } from "@/domain/money";
 import {
   getSizesFor,
   requiresBox,
+  splitCakeSizeId,
   TOPPINGS,
   type CatalogOption,
   type CatalogProduct,
@@ -755,6 +756,13 @@ function CakeConfigurator({
       {showAiPreview && (
         <AiCakePreview
           suggestedFinish={suggestedFinish}
+          // Lo ya elegido arriba, para que la idea sea la tarta de la clienta
+          // y no una cualquiera: el tamaño manda la altura y el diámetro, y
+          // los toppings y los toppers se tienen que ver.
+          tierId={splitCakeSizeId(sizeId)?.tierId}
+          discId={splitCakeSizeId(sizeId)?.discId}
+          toppingIds={toppingIds}
+          figurineToppers={extraIds.includes("toppers-6-figuras")}
           onAccept={async ({ image, summary }) => {
             // Pasa por el mismo aro que una foto subida: llega a 1024 px sin
             // comprimir y guardarla tal cual llenaría el almacenamiento del
