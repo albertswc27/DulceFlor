@@ -59,10 +59,15 @@ export async function generateCakeImage(
     response = await fetch("/api/generar-imagen", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      // `...options` y NO los campos uno a uno. Estaban enumerados y por eso
+      // el tamaño, los toppings y los toppers no llegaban nunca al servidor:
+      // se añadieron al tipo, al componente y al prompt, y aquí se caían sin
+      // que nada fallara. Con el spread, lo que se añada al tipo viaja solo.
+      //
+      // Mandar de más no abre ningún agujero: el servidor valida TODO contra
+      // sus listas cerradas y descarta lo que no reconoce.
       body: JSON.stringify({
-        finish: options.finish,
-        colourIds: options.colourIds,
-        detail: options.detail,
+        ...options,
         sessionToken: extras.sessionToken,
         refine: extras.refine,
       }),
