@@ -1,5 +1,5 @@
 /// <reference types="vitest/config" />
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "node:path";
 
@@ -17,12 +17,21 @@ import path from "node:path";
  * variables de entorno de Vercel, nunca en el código. Ver docs/legal.md.
  */
 function avisarSiFaltanDatosLegales(): Plugin {
+  let modo = "production";
   return {
     name: "dulce-flor-avisar-datos-legales",
     apply: "build",
+    config(_, entorno) {
+      modo = entorno.mode;
+    },
     buildStart() {
+      // loadEnv y no process.env a secas: en Vercel las variables llegan por
+      // el entorno, pero en local viven en el .env y solo Vite las lee. Mirando
+      // solo process.env el aviso saltaba en cada build local aunque los datos
+      // estuvieran puestos, y un aviso que miente acaba ignorándose.
+      const env = { ...loadEnv(modo, process.cwd(), ""), ...process.env };
       const faltan = ["VITE_LEGAL_HOLDER", "VITE_LEGAL_TAX_ID"].filter(
-        (nombre) => !process.env[nombre]?.trim()
+        (nombre) => !env[nombre]?.trim()
       );
       if (faltan.length === 0) return;
       this.warn(
