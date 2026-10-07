@@ -309,7 +309,15 @@ function main() {
   // Las dos claves que cuestan dinero solo se ponen si están en el .env. Así
   // el script sirve igual antes y después de contratarlas, y nadie tiene que
   // acordarse de comentar una línea.
-  for (const nombre of ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY"]) {
+  // Los datos del titular son personales, asi que no se escriben aqui: salen
+  // del .env, que esta fuera del repositorio. Sin ellos el aviso legal se
+  // publica sin identificar a nadie, que incumple el art. 10 de la LSSI.
+  for (const nombre of [
+    "GEMINI_API_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "VITE_LEGAL_HOLDER",
+    "VITE_LEGAL_TAX_ID",
+  ]) {
     const valor = local[nombre];
     if (valor) variables[nombre] = valor;
     else console.log(`(${nombre} no está en el .env: no la toco)`);
