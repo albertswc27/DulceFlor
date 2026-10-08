@@ -38,22 +38,22 @@ público, **no se guardan aquí**: están anotados fuera del repositorio (memori
 de trabajo del proyecto) y deben incorporarse a la web mediante variables de
 entorno o un fichero no versionado cuando se redacte el aviso legal.
 
-⚠️ Antes de publicarlos hay que **confirmar el número de documento con el
-cliente**: en dos mensajes distintos aparecen dos variantes que difieren en un
-dígito.
+✅ **Resuelto el 07/10/2026.** Había dos variantes del documento que diferían en
+un dígito, y la letra de control lo decide sola: a `16902215` le corresponde la
+**K**, así que `16902215K` es el bueno; a `16002215` le tocaría una **B**, de
+modo que `16002215K` nunca pudo existir. Ya está puesto y publicado.
 
 ## Datos confirmados que sí pueden publicarse
 
 - Nombre comercial: Dulce Flor Repostería Casera.
 - Dirección: C. Ntra. Sra. de Montserrat, 13, bajos · 08922 Santa Coloma de Gramenet.
-- WhatsApp de contacto: +34 624 21 31 13.
+- WhatsApp de contacto: +34 604 23 45 18.
 - Instagram: @dulceflor.bcn.
-- Horario: 10:00–22:00 todos los días.
+- Horario (actualizado 01/10/2026 y confirmado con el cartel de la tienda): martes a sábado 10:00–21:00, domingos 11:00–20:00, **lunes cerrado**.
 
 ## Pendiente de confirmar antes de redactar los textos
 
 - Nombre fiscal/razón social exacta tal como debe figurar.
-- Número de documento definitivo (ver aviso anterior).
 - Email de contacto legal, si lo hay.
 - Responsable del tratamiento de datos y plazo de conservación de los pedidos.
 

@@ -135,9 +135,15 @@ export const SLOT_INTERVAL_MINUTES = 30;
  * Dos teléfonos con funciones distintas (confirmado 24/08/2026):
  * los pedidos entran por WhatsApp y las llamadas las atiende otra persona.
  * No mezclarlos: llamar al de WhatsApp no garantiza respuesta.
+ *
+ * El de WhatsApp cambió el 08/10/2026: hasta entonces era el número PERSONAL
+ * de la propietaria y pidió quitarlo. De aquí salen el botón de contacto de
+ * toda la web y el enlace que abre el pedido ya redactado, así que tocarlo
+ * cambia a dónde llegan los pedidos: es la dirección del negocio, no un dato
+ * decorativo.
  */
-export const WHATSAPP_PHONE = "34624213113";
-export const WHATSAPP_PHONE_DISPLAY = "+34 624 21 31 13";
+export const WHATSAPP_PHONE = "34604234518";
+export const WHATSAPP_PHONE_DISPLAY = "+34 604 23 45 18";
 
 /** Teléfono de atención telefónica (llamadas, no pedidos por escrito). */
 export const PHONE_CALLS = "34614280430";

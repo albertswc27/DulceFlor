@@ -11,7 +11,7 @@ Fuente de verdad de catálogo y precios: [`src/domain/catalog.ts`](../src/domain
 | Paga y señal | 30 % cuando el total **supera** 40 € (40,00 € exactos NO la requieren) | `DEPOSIT_THRESHOLD_CENTS = 4000`, `DEPOSIT_PERCENTAGE = 30` |
 | Métodos de señal | Bizum, transferencia bancaria o pago presencial. **Sin pago online** | — |
 | Pedidos ≤ 40 € | Se abonan al recoger/recibir | — |
-| WhatsApp | +34 624 21 31 13 — **pedidos y consultas por escrito** | `WHATSAPP_PHONE = "34624213113"` |
+| WhatsApp | **+34 604 23 45 18** — pedidos y consultas por escrito. Cambiado el 08/10/2026: antes era el número personal de la propietaria y pidió quitarlo | `WHATSAPP_PHONE = "34604234518"` |
 | Teléfono de llamadas | +34 614 280 430 (confirmado 24/08/2026). Lo atiende otra persona del negocio: **las llamadas no entran por el número de WhatsApp** | `PHONE_CALLS` |
 | Estado inicial del pedido | «Pendiente de confirmación por Dulce Flor» (la web nunca afirma que la tienda ha aceptado) | `status: "pending"` |
 
