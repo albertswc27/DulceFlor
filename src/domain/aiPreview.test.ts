@@ -298,3 +298,28 @@ describe("el refinado no puede saltarse lo ya elegido", () => {
     expect(prompt).toMatch(/No añadas pisos/i);
   });
 });
+
+describe("caras inventadas no, personajes conocidos sí", () => {
+  it("prohíbe la cara de una persona anónima pero permite los personajes", () => {
+    // Probándolo, «genera un retrato de una persona» acabó con la cara
+    // fotorrealista de una señora mayor INVENTADA impresa sobre la tarta.
+    // Dulce Flor sí vende foto en papel comestible, pero la foto la trae el
+    // cliente: dibujar una cara cualquiera promete algo que no se entrega.
+    //
+    // Los personajes conocidos son otra cosa y van a propósito: es lo que la
+    // tienda pone con un topper y lo que el cliente pide por su nombre.
+    expect(AI_SYSTEM_PROMPT).toMatch(/NUNCA dibujes la cara de una persona/i);
+    expect(AI_SYSTEM_PROMPT).toMatch(/PERSONAJES CONOCIDOS sí/);
+  });
+});
+
+describe("la foto que trae el cliente", () => {
+  it("cubre también «la foto de mi abuela», no solo «un retrato»", () => {
+    // Con «un retrato de una persona» ya salía una placa en blanco, pero con
+    // «con la foto de mi abuela en papel comestible» seguía inventándose una
+    // cara: se leía como una petición legítima de producto.
+    expect(AI_SYSTEM_PROMPT).toMatch(/la foto de mi abuela/);
+    expect(AI_SYSTEM_PROMPT).toMatch(/MARCO o una PLACA LISOS Y EN BLANCO/);
+    expect(AI_SYSTEM_PROMPT).toMatch(/NUNCA dibujes la cara de una persona/i);
+  });
+});

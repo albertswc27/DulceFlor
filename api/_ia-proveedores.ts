@@ -210,6 +210,26 @@ function gemini(apiKey: string, modelo: string): ProveedorImagen {
       }
 
       if (!respuesta.ok) {
+        // Google bloquea por su cuenta los personajes con dueño y las
+        // personas famosas: pedir «con Spiderman» o «con Shakira» devuelve un
+        // 400 de política de contenido, por mucho que nosotros lo
+        // permitamos. Decir «vuelve a intentarlo» en ese caso es mentira:
+        // con el mismo texto va a fallar siempre. Mejor explicar la salida.
+        const mensajeProveedor = JSON.stringify(json).toLowerCase();
+        const bloqueado =
+          respuesta.status === 400 &&
+          /prohibited content|blocked|safety|policy/.test(mensajeProveedor);
+        if (bloqueado) {
+          return {
+            ok: false,
+            code: "contenido_bloqueado",
+            message:
+              "Ese personaje no lo podemos dibujar. Prueba con los colores y el tema " +
+              "(por ejemplo «tonos azules y rojos, con telarañas»), y cuéntanos el " +
+              "personaje en los cambios especiales: lo ponemos con un topper.",
+            retriable: false,
+          };
+        }
         return {
           ok: false,
           code: `http_${respuesta.status}`,

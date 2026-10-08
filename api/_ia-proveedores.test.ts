@@ -145,3 +145,36 @@ describe("el refinado edita la imagen anterior, no genera otra", () => {
     expect(input[1]).toMatchObject({ type: "image" });
   });
 });
+
+describe("cuando el proveedor bloquea el contenido", () => {
+  it("lo dice y ofrece una salida, en vez de «vuelve a intentarlo»", async () => {
+    // Google rechaza por su cuenta los personajes con dueño y las personas
+    // famosas: «con Spiderman» o «con Shakira» devuelven 400 por política de
+    // contenido. Decir «vuelve a intentarlo» ahí es mentira, porque con el
+    // mismo texto va a fallar siempre.
+    vi.stubGlobal("fetch", async () =>
+      new Response(
+        JSON.stringify({ error: { message: "Request blocked due to prohibited content guidelines." } }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    );
+
+    const resultado = await proveedor().generar(PETICION);
+    expect(resultado.ok).toBe(false);
+    if (resultado.ok) return;
+    expect(resultado.code).toBe("contenido_bloqueado");
+    expect(resultado.retriable).toBe(false);
+    expect(resultado.message).toMatch(/no lo podemos dibujar/i);
+    expect(resultado.message).toMatch(/topper/i);
+  });
+
+  it("un error normal del proveedor sigue diciendo que se reintente", async () => {
+    vi.stubGlobal("fetch", async () =>
+      new Response(JSON.stringify({ error: { message: "internal" } }), { status: 500 })
+    );
+    const resultado = await proveedor().generar(PETICION);
+    expect(resultado.ok).toBe(false);
+    if (resultado.ok) return;
+    expect(resultado.retriable).toBe(true);
+  });
+});

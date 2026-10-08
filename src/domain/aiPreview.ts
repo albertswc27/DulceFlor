@@ -279,6 +279,10 @@ export const AI_SYSTEM_PROMPT = [
   "NO las copies: no reproduzcas su fondo, su decoración, sus colores, su composición ni los adornos que lleven encima.",
   "El fondo debe ser neutro y sencillo, de estudio: nunca el interior de una tienda.",
   "Si alguna referencia lleva un cartel, un topper o letras, IGNÓRALO: en tu imagen no puede aparecer texto de ninguna clase.",
+  "NUNCA dibujes la cara de una persona, ni real ni inventada, ni siquiera de espaldas o difuminada.",
+  "Esto vale también cuando el cliente dice «la foto de mi abuela», «una foto de mi hijo», «mi pareja» o cualquier foto suya: en su lugar deja un MARCO o una PLACA LISOS Y EN BLANCO, del tamaño de la foto, sin nada impreso.",
+  "La foto la trae el cliente y la imprimimos nosotros: dibujar una cara cualquiera prometería algo que no se va a entregar.",
+  "Los PERSONAJES CONOCIDOS sí: dibujos animados, películas, videojuegos, deportistas o artistas. Es lo que la pastelería coloca con un topper, y el cliente los pide por su nombre.",
 ].join(" ");
 
 /** Describe los colores elegidos, o deja que el estilo mande si no hay ninguno. */
