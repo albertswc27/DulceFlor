@@ -124,8 +124,16 @@ function gemini(apiKey: string, modelo: string): ProveedorImagen {
     name: "gemini",
     async generar({ sistema, texto, referencias, interaccionAnterior }) {
       const input: Array<Record<string, unknown>> = [{ type: "text", text: texto }];
-      for (const referencia of referencias) {
-        input.push({ type: "image", mime_type: "image/jpeg", data: referencia });
+      // Al REFINAR no se mandan las fotos de referencia. Comprobado contra la
+      // API: mandándolas, el modelo vuelve a generar a partir de ellas y
+      // devuelve una tarta distinta en vez de la anterior con el cambio
+      // pedido; sin mandarlas, edita la imagen de verdad. Es justo lo que
+      // hace que gastar el segundo intento en «ponle perlas blancas» no sea
+      // una lotería.
+      if (!interaccionAnterior) {
+        for (const referencia of referencias) {
+          input.push({ type: "image", mime_type: "image/jpeg", data: referencia });
+        }
       }
 
       const cuerpo: Record<string, unknown> = {

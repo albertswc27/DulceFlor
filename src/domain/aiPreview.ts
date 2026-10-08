@@ -275,7 +275,10 @@ export const AI_SYSTEM_PROMPT = [
   "Nada de tartas de concurso, esculturas de azúcar, pisos imposibles, purpurina irreal ni acabados industriales.",
   "NO escribas ningún texto, letra, número ni firma sobre la tarta ni en la imagen.",
   "Si la descripción pide una dedicatoria, coloca en su lugar una placa lisa de chocolate blanco EN BLANCO, sin nada escrito.",
-  "Sigue el estilo, la textura y el nivel de acabado de las fotografías de referencia que se adjuntan.",
+  "Las fotografías de referencia son SOLO para el estilo: la textura de la crema, el nivel de acabado y el aire artesanal.",
+  "NO las copies: no reproduzcas su fondo, su decoración, sus colores, su composición ni los adornos que lleven encima.",
+  "El fondo debe ser neutro y sencillo, de estudio: nunca el interior de una tienda.",
+  "Si alguna referencia lleva un cartel, un topper o letras, IGNÓRALO: en tu imagen no puede aparecer texto de ninguna clase.",
 ].join(" ");
 
 /** Describe los colores elegidos, o deja que el estilo mande si no hay ninguno. */

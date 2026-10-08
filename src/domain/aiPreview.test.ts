@@ -250,3 +250,15 @@ describe("las tablas locales no pueden quedarse atrás del catálogo", () => {
     }
   });
 });
+
+describe("las fotos de referencia son para el estilo, no para copiarlas", () => {
+  it("se prohíbe expresamente reproducir fondo, decoración y composición", () => {
+    // Pasó de verdad: salían tartas con el interior de la tienda de fondo, los
+    // mismos adornos que la foto de referencia y hasta un topper con «happy
+    // birthday» escrito, que es justo lo que no puede aparecer.
+    expect(AI_SYSTEM_PROMPT).toMatch(/NO las copies/i);
+    expect(AI_SYSTEM_PROMPT).toMatch(/fondo debe ser neutro/i);
+    expect(AI_SYSTEM_PROMPT).toMatch(/nunca el interior de una tienda/i);
+    expect(AI_SYSTEM_PROMPT).toMatch(/IGNÓRALO/);
+  });
+});

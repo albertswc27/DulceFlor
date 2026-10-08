@@ -122,3 +122,26 @@ describe("leer la respuesta", () => {
     expect(extraerImagenBase64({ id: "interactions/abc123" })).toBeNull();
   });
 });
+
+describe("el refinado edita la imagen anterior, no genera otra", () => {
+  it("al refinar NO se mandan las fotos de referencia", async () => {
+    // Comprobado contra la API real: mandándolas, el modelo vuelve a generar a
+    // partir de ellas y devuelve una tarta distinta —con el fondo de la tienda
+    // incluido— en vez de la anterior con el cambio pedido. Es el fallo que
+    // convertía «ponle perlas blancas» en una lotería.
+    await proveedor().generar({ ...PETICION, interaccionAnterior: "interactions/abc" });
+
+    const input = ultimoCuerpo.input as Array<Record<string, unknown>>;
+    expect(input).toHaveLength(1);
+    expect(input[0]).toMatchObject({ type: "text" });
+    expect(ultimoCuerpo.previous_interaction_id).toBe("interactions/abc");
+  });
+
+  it("en la PRIMERA imagen sí van, que son las que fijan el estilo", async () => {
+    await proveedor().generar(PETICION);
+
+    const input = ultimoCuerpo.input as Array<Record<string, unknown>>;
+    expect(input.length).toBeGreaterThan(1);
+    expect(input[1]).toMatchObject({ type: "image" });
+  });
+});
