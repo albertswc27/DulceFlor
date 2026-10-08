@@ -268,7 +268,7 @@ export default {
 
     const salida = await proveedor.proveedor.generar({
       sistema: AI_SYSTEM_PROMPT,
-      texto: refine ? buildRefinePrompt(refine) : buildImagePrompt(opciones),
+      texto: refine ? buildRefinePrompt(refine, opciones) : buildImagePrompt(opciones),
       referencias,
       interaccionAnterior,
     });

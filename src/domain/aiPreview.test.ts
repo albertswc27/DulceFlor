@@ -262,3 +262,39 @@ describe("las fotos de referencia son para el estilo, no para copiarlas", () => 
     expect(AI_SYSTEM_PROMPT).toMatch(/IGNÓRALO/);
   });
 });
+
+describe("el refinado no puede saltarse lo ya elegido", () => {
+  const OPC = {
+    finish: "buttercream" as const,
+    colourIds: ["rosa"],
+    detail: "",
+    tierId: "10-12",
+    discId: "2d",
+  };
+
+  it("repite el tamaño, para que un cambio no lo altere", () => {
+    // Probándolo, «hazla de dos pisos» convertía en dos pisos una tarta de
+    // uno: el cliente había elegido (y pagado) otra cosa.
+    const prompt = buildRefinePrompt("hazla de dos pisos", OPC);
+    expect(prompt).toContain("13 cm");
+    expect(prompt).toMatch(/No cambies el tamaño ni el número de pisos/i);
+    expect(prompt).toMatch(/No añadas pisos/i);
+  });
+
+  it("prohíbe el texto EN LA IMAGEN, no solo sobre la tarta", () => {
+    // «escríbele Feliz Cumpleaños Marta» acabó escrito en grande dentro de la
+    // imagen, flotando sobre la tarta. Cumplía la letra de la regla vieja
+    // («sobre la tarta») y se saltaba lo que importa.
+    const prompt = buildRefinePrompt("escribele Feliz Cumpleanos Marta", OPC);
+    expect(prompt).toMatch(/ni en ninguna otra parte de la imagen/i);
+    expect(prompt).toMatch(/placa lisa de chocolate blanco EN BLANCO/);
+  });
+
+  it("sin configuración sigue siendo seguro", () => {
+    // El endpoint siempre la pasa, pero que el valor por defecto no deje el
+    // prompt desnudo.
+    const prompt = buildRefinePrompt("ponle perlas");
+    expect(prompt).toMatch(/NO escribas ningún texto/i);
+    expect(prompt).toMatch(/No añadas pisos/i);
+  });
+});

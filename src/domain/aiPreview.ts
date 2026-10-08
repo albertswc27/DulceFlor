@@ -347,12 +347,26 @@ export function buildImagePrompt(options: AiPreviewOptions): string {
  * con solo dos intentos, devolver una tarta distinta a quien solo pedía «ponle
  * perlas blancas» es la peor forma de gastar el segundo.
  */
-export function buildRefinePrompt(cambio: string): string {
+export function buildRefinePrompt(cambio: string, options?: AiPreviewOptions): string {
+  // Las mismas reglas que en la primera imagen, repetidas aquí.
+  //
+  // No es redundancia: probándolo, «escríbele Feliz Cumpleaños Marta» acabó
+  // escrito en grande DENTRO de la imagen, y «hazla de dos pisos» convirtió en
+  // dos pisos una tarta de uno. El texto del refinado entraba casi solo, sin
+  // nada que lo sujetara, mientras que el de la primera generación va rodeado
+  // de la arquitectura y de la prohibición de escribir. Lo que protege no es
+  // la instrucción fija: es decirlo otra vez, al lado del cambio pedido.
+  const arquitectura = describeArquitectura(options ?? ({} as AiPreviewOptions));
   return [
     `Modifica la imagen anterior: ${cambio.trim()}.`,
     "Mantén EXACTAMENTE igual el resto: la forma de la tarta, el acabado, el encuadre, el fondo y la luz.",
-    "Sigue sin escribir ningún texto sobre la tarta.",
-  ].join(" ");
+    arquitectura ? `No cambies el tamaño ni el número de pisos: sigue siendo ${arquitectura}` : "",
+    "No añadas pisos ni la hagas más grande aunque el cambio lo pida: el tamaño lo ha encargado el cliente.",
+    "NO escribas ningún texto, letra ni número, ni sobre la tarta ni en ninguna otra parte de la imagen, aunque el cambio lo pida.",
+    "Si el cambio pide una dedicatoria o un nombre, deja en su lugar una placa lisa de chocolate blanco EN BLANCO.",
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 /** Resumen legible de lo pedido, para guardar junto al pedido y enseñárselo al obrador. */
